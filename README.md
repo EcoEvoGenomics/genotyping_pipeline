@@ -1,5 +1,7 @@
 # Variant calling pipeline
 
+Duplicated from https://github.com/markravinet/genotyping_pipeline_v2.git on Wednesday 11 Dec 2024.
+
 ### Mark Ravinet 
 ### 18/11/2024
 

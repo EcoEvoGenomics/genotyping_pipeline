@@ -17,7 +17,7 @@ params.min_geno_depth=5
 params.max_geno_depth=30
 params.keep="./path/to/file"
 
-// Step 1 - rm_indels -  remove spanning deletions,indels and normalise
+// Step 1 - rm_indels -  re-normalise after removing spanning deletions, indels
 process rm_indels {
 
   input:
@@ -62,8 +62,10 @@ process vcf_filter {
     # for pop structure
     vcftools --gzvcf $rm_indel_vcf  --remove-indels --remove-filtered-all \
     --keep ${params.keep} \
-    --min-alleles 2 --max-alleles 2 \
-    --max-missing ${params.miss} --minQ ${params.q_site1} \
+    --min-alleles 2 \
+    --max-alleles 2 \
+    --max-missing ${params.miss} \
+    --minQ ${params.q_site1} \
     --min-meanDP ${params.min_depth} --max-meanDP ${params.max_depth} \
     --minDP ${params.min_geno_depth} --maxDP ${params.max_geno_depth} \
     --recode --recode-INFO-all --stdout | \

@@ -89,8 +89,6 @@ process vcf_concat {
 // normalise vcf
 process vcf_normalise {
 
-    publishDir 'vcf', saveAs: { filename -> "$filename" }
-
     input:
     tuple \
     val(key),

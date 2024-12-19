@@ -2,8 +2,8 @@
 
 # Admin:
 #SBATCH --job-name=concat_vcf
-#SBATCH --output=/cluster/work/users/eriksro/pdom_india/logs/SLURM-%j-%x.out
-#SBATCH --error=/cluster/work/users/eriksro/pdom_india/logs/SLURM-%j-%x.err
+#SBATCH --output=SLURM-%j-%x.out
+#SBATCH --error=SLURM-%j-%x.err
 #SBATCH --account=nn10082k
 
 # Resource allocation:

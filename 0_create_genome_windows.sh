@@ -5,7 +5,8 @@
 # set variables
 REF_IDX=$1
 WINDOW=$2
-OUTPUT=$3
+SCAFFOLD_NAME=$3
+OUTPUT=$4
 # REF_IDX=/share/Passer/data/reference/house_sparrow_ref.fa.fai
 # WINDOW=10000000
 # OUTPUT=sparrow_genome_windows.list
@@ -15,7 +16,7 @@ cut -f 1-2 ${REF_IDX} > genome_size.txt
 
 # make the windows and cat together
 bedtools makewindows -g genome_size.txt -w ${WINDOW} | \
-grep -v "scaffold" | awk '{print $1":"$2"-"$3}' \
+grep -v ${SCAFFOLD_NAME} | awk '{print $1":"$2"-"$3}' \
 > $OUTPUT
 
 # GATK will fail if the coords include 0, so edit to start from 1
@@ -24,8 +25,8 @@ sed -i_bak 's/:0-/:1-/g' $OUTPUT
 # creates 115 genome windows
 
 # for scaffolds
-bedtools makewindows -g genome_size.txt -w 10000000 | \
-grep "scaffold" | awk '{print $1":"$2"-"$3}' \
+bedtools makewindows -g genome_size.txt -w ${WINDOW} | \
+grep ${SCAFFOLD_NAME} | awk '{print $1":"$2"-"$3}' \
 > scaffolds.list
 
 # GATK will fail if the coords include 0, so edit to start from 1
@@ -42,6 +43,10 @@ num_files=10
 # Split the actual file, maintaining lines.
 split -d --lines=${lines_per_file} scaffolds.list2 scaffolds:
 
-# add scafs to windows list
-for i in scaffolds:*; do echo $i; done >> $OUTPUT
+# add scafs to windows list only if any exist
+n_scaffolds=$(ls scaffolds:* | wc -l)
 
+if [ ${n_scaffolds} -gt 0 ]
+then
+    for i in scaffolds:*; do echo $i; done >> $OUTPUT
+fi

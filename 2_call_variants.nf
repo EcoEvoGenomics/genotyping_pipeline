@@ -56,11 +56,11 @@ process genotyping {
     then
         # if window is a scaffold
         bcftools mpileup -d 8000 --ignore-RG -R ${baseDir}/${windows} -a AD,DP,SP -Ou -f ${params.ref} -b ${bams} \
-        | bcftools call --ploidy-file ${ploidyFile} -f GQ,GP -mO z -o ${windows}.vcf.gz
+        | bcftools call --threads ${task.cpus} --ploidy-file ${ploidyFile} -f GQ,GP -mO z -o ${windows}.vcf.gz
     else
         # for normal genome windows
         bcftools mpileup -d 8000 --ignore-RG -r ${windows} -a AD,DP,SP -Ou -f ${params.ref} -b ${bams} \
-        | bcftools call --ploidy-file ${ploidyFile} -f GQ,GP -mO z -o ${windows}.vcf.gz
+        | bcftools call --threads ${task.cpus} --ploidy-file ${ploidyFile} -f GQ,GP -mO z -o ${windows}.vcf.gz
     fi
     """
 }
@@ -81,15 +81,13 @@ process vcf_concat {
     # sort the vcfs first 
     sort_vcfs=\$(echo $vcfs | tr ' ' '\n' | sort -t"-" -k2 -n | tr '\n' ' ')
     # then run bctools
-    bcftools concat --threads 4 -n -O z -o ${key}_concat.vcf.gz \${sort_vcfs}
-    bcftools index ${key}_concat.vcf.gz
+    bcftools concat --threads ${task.cpus} -n -O z -o ${key}_concat.vcf.gz \${sort_vcfs}
+    bcftools index --threads ${task.cpus} ${key}_concat.vcf.gz
     """
 }
 
 // normalise vcf
-process norm {
-
-    publishDir 'vcf', saveAs: { filename -> "$filename" }
+process vcf_normalise {
 
     input:
     tuple \
@@ -104,14 +102,14 @@ process norm {
     file ("${key}_norm.vcf.gz.csi")
 
     """
-    bcftools norm --fasta-ref ${params.ref} -O z -o ${key}_norm.vcf.gz ${key}_concat.vcf.gz
-    bcftools index ${key}_norm.vcf.gz
+    bcftools norm --threads ${task.cpus} --fasta-ref ${params.ref} -O z -o ${key}_norm.vcf.gz ${key}_concat.vcf.gz
+    bcftools index --threads ${task.cpus} ${key}_norm.vcf.gz
     """
     
 }
 
 // reheader vcf
-process rename {
+process vcf_reheader {
 
     publishDir 'vcf', saveAs: { filename -> "$filename" }
 
@@ -129,8 +127,8 @@ process rename {
 
     """
     bcftools query -l ${key}_norm.vcf.gz | xargs -n 1 basename | awk -F '_' '{print \$1}' > samples
-    bcftools reheader -s samples -o ${key}.vcf.gz ${key}_norm.vcf.gz
-    bcftools index ${key}.vcf.gz
+    bcftools reheader --threads ${task.cpus} -s samples -o ${key}.vcf.gz ${key}_norm.vcf.gz
+    bcftools index --threads ${task.cpus} ${key}.vcf.gz
     """
     
 }
@@ -146,5 +144,5 @@ workflow{
         return tuple(key, file)
       }
     | groupTuple( by:0,sort:true ) \
-    | vcf_concat | norm | rename
+    | vcf_concat | vcf_normalise | vcf_reheader
 }

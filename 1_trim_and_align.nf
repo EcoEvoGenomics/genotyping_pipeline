@@ -63,7 +63,7 @@ process trimming {
     ## set the adapter fasta - need to find a way to change this
     ADAPT_FAST=${params.trim}/${adapter}.fa
     ## run trimmometic
-    trimmomatic PE $f_read $r_read \
+    trimmomatic PE -threads ${task.cpus} $f_read $r_read \
     ${new_sample}.R1.trim_pair.fastq.gz ${new_sample}.R1.trim_unpair.fastq.gz \
     ${new_sample}.R2.trim_pair.fastq.gz ${new_sample}.R2.trim_unpair.fastq.gz \
     ILLUMINACLIP:\${ADAPT_FAST}:2:30:10 LEADING:10 TRAILING:10 SLIDINGWINDOW:5:10 MINLEN:50 \
@@ -129,21 +129,21 @@ process align {
     ### MAP PAIRED
     echo "Aligning ${sample} paired reads"
     # run the alignment on paired reads
-    bwa mem -M -t 16 -R "\${READGROUP}" ${params.ref} ${sample}.R1.trim_pair.fastq.gz ${sample}.R2.trim_pair.fastq.gz \
+    bwa mem -M -t ${task.cpus} -R "\${READGROUP}" ${params.ref} ${sample}.R1.trim_pair.fastq.gz ${sample}.R2.trim_pair.fastq.gz \
     | samtools view -b | samtools sort -T ${sample} > ${sample}_pair.bam
 
 
     ### MAP UNPAIR FORWARD
     echo "Aligning ${sample} unpaired forward reads."
     # run alignment
-    bwa mem -M -t 16 -R "\${READGROUP}" ${params.ref} ${sample}.R1.trim_unpair.fastq.gz \
+    bwa mem -M -t ${task.cpus} -R "\${READGROUP}" ${params.ref} ${sample}.R1.trim_unpair.fastq.gz \
     | samtools view -b | samtools sort -T ${sample} > ${sample}_F_unpair.bam
 
 
     ### MAP UNPAIR REVERSE
     echo "Aligning ${sample} unpaired reverse reads."
     # run alignment
-    bwa mem -M -t 16 -R "\${READGROUP}" ${params.ref} ${sample}.R2.trim_unpair.fastq.gz \
+    bwa mem -M -t ${task.cpus} -R "\${READGROUP}" ${params.ref} ${sample}.R2.trim_unpair.fastq.gz \
     | samtools view -b | samtools sort -T ${sample} > ${sample}_R_unpair.bam
 
     """
@@ -170,10 +170,10 @@ process merge_sort {
     ### MERGE SAMPLES
     echo "Merging bams for ${sample}"
     # merge
-    samtools merge -rf ${sample}_merge.bam ${bam_list}
+    samtools merge -rf -@ ${task.cpus} ${sample}_merge.bam ${bam_list}
     # sort
     echo "Sorting merged bam for ${sample}"
-    samtools sort -T ${sample}_tmp -o ${sample}_merge_sort.bam ${sample}_merge.bam
+    samtools sort -@ ${task.cpus} -T ${sample}_tmp -o ${sample}_merge_sort.bam ${sample}_merge.bam
     """
 
 }
@@ -214,8 +214,8 @@ process cram_convert {
     tuple val(sample), path("${sample}_dedup.cram"), path("${sample}_dedup.cram.crai")
 
     """
-    samtools view -T ${params.ref} -C -o ${sample}_dedup.cram ${sample}_dedup.bam
-    samtools index ${sample}_dedup.cram 
+    samtools view -@ ${task.cpus} -T ${params.ref} -C -o ${sample}_dedup.cram ${sample}_dedup.bam
+    samtools index -@ ${task.cpus} ${sample}_dedup.cram 
     """
 }
 
@@ -239,7 +239,7 @@ process calc_stats {
     echo -e "${sample}\t\${STATS}" > ${sample}_meancov.txt
 
     # run flagstat
-    samtools flagstat ${cram} > ${sample}_flagstat.csv
+    samtools flagstat -@ ${task.cpus} ${cram} > ${sample}_flagstat.csv
     # extract the columns that are wanted
     awk 'OFS="," {print \$1,\$3}' ${sample}_flagstat.csv > ${sample}.col.csv
     # add a header of the sample name

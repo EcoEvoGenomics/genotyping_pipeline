@@ -18,7 +18,7 @@ Channel
 //bams.view()
 
 // Step 1 - calculate  statistics
-process cov {
+process align_downsample {
 
     publishDir 'align_downsample', saveAs: { filename -> "$filename" }, mode: 'copy'
     
@@ -53,5 +53,5 @@ process cov {
 // workflow starts here!
 
 workflow{    
-    cov(bams) | view
+    align_downsample(bams) | view
 }

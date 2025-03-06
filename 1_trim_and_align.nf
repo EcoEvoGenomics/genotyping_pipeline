@@ -46,7 +46,7 @@ process trimming {
     publishDir 'trim', saveAs: { filename -> "$filename" }
 
     input: 
-    tuple val(sample), val(new_sample), path(f_read)
+    tuple val(f_sample), val(f_new_sample), path(f_read)
     tuple val(sample), val(new_sample), path(r_read)
     val(adapter)
 
@@ -63,6 +63,7 @@ process trimming {
     path("${f_read}_fastqc.zip"), \
     path("${r_read}_fastqc.zip")
 
+    script:
     """
     ## run fastqc
     zcat ${f_read} | fastqc -o ./ stdin:${f_read}.fastq.gz
@@ -104,6 +105,7 @@ process align {
     path("${sample}_F_unpair.bam"), \
     path("${sample}_R_unpair.bam")
 
+    script:
     """
     ### CREATE READ GROUP
     # create base string from file info
@@ -172,6 +174,7 @@ process merge_sort {
     output:
     tuple val(sample), path("${sample}_merge_sort.bam")
 
+    
     script:
     def bam_list = bams instanceof List ? bams.join(" ") : bams
     """
@@ -183,7 +186,6 @@ process merge_sort {
     echo "Sorting merged bam for ${sample}"
     samtools sort -@ ${task.cpus} -T ${sample}_tmp -o ${sample}_merge_sort.bam ${sample}_merge.bam
     """
-
 }
 
 // Step 4 - Mark duplicates in BAM file
@@ -198,6 +200,7 @@ process mark_dup {
     output:
     tuple val(sample), path("${sample}_dedup.bam"), path("${sample}_dedup.bai")
 
+    script:
     """
     # mark duplicates
     echo "**** Running Picard MarkDuplicates on ${sample} ****"
@@ -221,6 +224,7 @@ process cram_convert {
     output:
     tuple val(sample), path("${sample}_dedup.cram"), path("${sample}_dedup.cram.crai")
 
+    script:
     """
     samtools view -@ ${task.cpus} -T ${params.ref} -C -o ${sample}_dedup.cram ${sample}_dedup.bam
     samtools index -@ ${task.cpus} ${sample}_dedup.cram 
@@ -241,6 +245,7 @@ process calc_stats {
     output:
     tuple path("${sample}_meancov.txt"), path("${sample}.map.stat.csv"), path("${sample}_flagstat.csv")
 
+    script:
     """
     # work out mean coverage
     STATS=\$(samtools depth ${cram} | awk '{sum += \$3} END {print sum / NR}' )

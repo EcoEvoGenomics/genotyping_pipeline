@@ -39,7 +39,6 @@ process rm_indels {
 
   bcftools index --threads ${task.cpus} ${anno_vcf.simpleName}.vcf.gz
   """
-
 }
 
 // Step 2 - filter for pop structure and genome scan
@@ -116,7 +115,6 @@ process vcf_filter {
 
   fi
   """
-
 }
 
 // workflow starts here!

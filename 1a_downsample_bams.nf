@@ -51,7 +51,6 @@ process align_downsample {
         echo "Depth is \${COV} - i.e. less than ${params.depth} - no need to downsample."
     fi
     """
-
 }
 
 // workflow starts here!

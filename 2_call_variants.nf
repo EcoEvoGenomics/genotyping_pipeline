@@ -109,7 +109,6 @@ process vcf_normalise {
     bcftools norm --threads ${task.cpus} --fasta-ref ${params.ref} -O z -o ${key}_norm.vcf.gz ${key}_concat.vcf.gz
     bcftools index --threads ${task.cpus} ${key}_norm.vcf.gz
     """
-    
 }
 
 // reheader vcf
@@ -134,7 +133,6 @@ process vcf_reheader {
     bcftools reheader --threads ${task.cpus} -s samples -o ${key}.vcf.gz ${key}_norm.vcf.gz
     bcftools index --threads ${task.cpus} ${key}.vcf.gz
     """
-    
 }
 
 // workflow starts here!

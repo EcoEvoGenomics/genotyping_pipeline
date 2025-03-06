@@ -262,5 +262,4 @@ process calc_stats {
     rm ${sample}.col.csv
     rm ${sample}.head.txt
     """
-
 }

@@ -12,10 +12,6 @@
 params.ref = file('/cluster/projects/nn10082k/ref/house_sparrow_genome_assembly-18-11-14_masked.fa')
 params.trim = file('/cluster/projects/nn10082k/trimmomatic_adapters/')
 
-// read in a csv of sample, read 1 and read 2
-// params.samples = file('samples_test.csv')
-
-// create multiple channels from this csv
 Channel
     .from( file(params.samples))
     .splitCsv()
@@ -28,11 +24,6 @@ Channel
         }
     .set{result}
 
-// View results (to test)
-// result.samples.view()
-// result.f_reads.view()
-// result.r_reads.view()
-//result.adapter.view()
 
 // Step 1 - quality trimming
 process trimming {

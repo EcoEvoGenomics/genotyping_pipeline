@@ -10,9 +10,12 @@
 
 // Input parameters
 params.ref = file('/cluster/projects/nn10082k/ref/house_sparrow_genome_assembly-18-11-14_masked.fa')
+params.ref = "--ref"
 params.trim = file('/cluster/projects/nn10082k/trimmomatic_adapters/')
 
-Channel
+// Workflow
+workflow{
+    Channel
     .from( file(params.samples))
     .splitCsv()
     .multiMap { it ->
@@ -24,8 +27,19 @@ Channel
         }
     .set{result}
 
+    trimming(result.f_reads, result.r_reads, result.adapter) | align \
+    // this will take all the outputs and group them - accounting for other lanes
+    | flatten \
+    | map { file ->
+        def key = file.name.toString().tokenize('_').get(0)
+        return tuple(key, file)
+    } \
+    | groupTuple(by: 0, sort: true, remainder: true) \
+    | merge_sort \
+    | mark_dup | cram_convert | calc_stats 
+}
 
-// Step 1 - quality trimming
+// Step 1 - Read trimming
 process trimming {
 
     errorStrategy 'ignore'
@@ -65,7 +79,7 @@ process trimming {
     """
 }
 
-// Step 2 - align to reference genome
+// Step 2 - Align to reference genome
 process align {
 
     //publishDir 'align', saveAs: { filename -> "$filename" }
@@ -143,7 +157,7 @@ process align {
     """
 }
 
-// Step 3 - merge and sort
+// Step 3 - Merge and sort BAM file
 process merge_sort {
 
     //module 'bwa-uoneasy/0.7.17-GCC-9.3.0'
@@ -172,7 +186,7 @@ process merge_sort {
 
 }
 
-// Step 4 - mark duplicates
+// Step 4 - Mark duplicates in BAM file
 process mark_dup {
     
     //publishDir 'align', saveAs: { filename -> "$filename" }
@@ -195,7 +209,7 @@ process mark_dup {
     """
 }
 
-// Step 5 - convert to cram
+// Step 5 - Convert BAM file to CRAM file
 process cram_convert {
     
     publishDir 'align', saveAs: { filename -> "$filename" }
@@ -213,7 +227,7 @@ process cram_convert {
     """
 }
 
-// Step 6 - calculate  statistics
+// Step 6 - Calculate alignment statistics
 process calc_stats {
 
     //module 'samtools-uoneasy/1.12-GCC-9.3.0'
@@ -244,21 +258,4 @@ process calc_stats {
     rm ${sample}.head.txt
     """
 
-}
-
-// workflow starts here!
-
-workflow{
-    // set the reference genome from the command line:
-    params.ref = "--ref"
-    trimming(result.f_reads, result.r_reads, result.adapter) | align \
-    // this will take all the outputs and group them - accounting for other lanes
-    | flatten \
-    | map { file ->
-        def key = file.name.toString().tokenize('_').get(0)
-        return tuple(key, file)
-    } \
-    | groupTuple(by: 0, sort: true, remainder: true) \
-    | merge_sort \
-    | mark_dup | cram_convert | calc_stats 
 }

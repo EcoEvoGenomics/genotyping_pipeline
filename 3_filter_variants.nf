@@ -1,8 +1,12 @@
 #!/usr/bin/env nextflow
 
-// nextflow pipeline for variant filtering
-// developed by Mark Ravinet - 07/06/2023
-// v 1.2 - 20/06/2023
+// CEES Ecological and evolutionary genomics group - genotyping pipeline
+// https://github.com/EcoEvoGenomics/genotyping_pipeline
+//
+// Workflow: Filter VCF
+//
+// Developed by Mark Ravinet
+// Co-developed and maintained by Erik Sandertun Røed
 
 // script paramaters
 anno_vcfs = Channel.fromPath( './vcf/*.vcf.gz' )

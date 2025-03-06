@@ -1,11 +1,14 @@
 #!/usr/bin/env nextflow
 
-// nextflow pipeline for genotyping samples
-// developed by Mark Ravinet - 06/02/2023
-// v 0.3 - 15/06/2023
-// v 0.4 - 24/06/2024
+// CEES Ecological and evolutionary genomics group - genotyping pipeline
+// https://github.com/EcoEvoGenomics/genotyping_pipeline
+//
+// Workflow: Trim and align
+//
+// Developed by Mark Ravinet
+// Co-developed and maintained by Erik Sandertun Røed
 
-// script paramaters
+// Input parameters
 params.ref = file('/cluster/projects/nn10082k/ref/house_sparrow_genome_assembly-18-11-14_masked.fa')
 params.trim = file('/cluster/projects/nn10082k/trimmomatic_adapters/')
 

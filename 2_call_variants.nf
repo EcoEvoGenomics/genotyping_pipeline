@@ -1,8 +1,12 @@
 #!/usr/bin/env nextflow
 
-// nextflow pipeline for variant calling
-// developed by Mark Ravinet - 08/03/2023
-// v 0.3 - 20/06/2023
+// CEES Ecological and evolutionary genomics group - genotyping pipeline
+// https://github.com/EcoEvoGenomics/genotyping_pipeline
+//
+// Workflow: Call VCF
+//
+// Developed by Mark Ravinet
+// Co-developed and maintained by Erik Sandertun Røed
 
 // script paramaters
 params.ref = file('/share/Passer/data/reference/house_sparrow_ref.fa')

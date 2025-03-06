@@ -1,8 +1,12 @@
 #!/usr/bin/env nextflow
 
-// nextflow pipeline for downsampling bams
-// developed by Mark Ravinet - 21/06/2023
-// v 0.1 - 21/06/2023
+// CEES Ecological and evolutionary genomics group - genotyping pipeline
+// https://github.com/EcoEvoGenomics/genotyping_pipeline
+//
+// Workflow: Downsample BAMs
+//
+// Developed by Mark Ravinet
+// Co-developed and maintained by Erik Sandertun Røed
 
 // set depth cut off
 params.depth = 10

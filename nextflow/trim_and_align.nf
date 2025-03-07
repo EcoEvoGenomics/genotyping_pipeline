@@ -21,7 +21,7 @@ workflow {
         .multiMap { cols -> sample: [cols[0], cols[1], cols[2], cols[4]] }
         .set { samples }
 
-    trimming(samples.sample) \
+    trim(samples.sample) \
     | align \
     | flatten \
     | map { file ->
@@ -33,8 +33,8 @@ workflow {
     | mark_dup | cram_convert | calc_stats 
 }
 
-// Step 1 - Read trimming
-process trimming {
+// Step 1 - Read trim
+process trim {
 
     errorStrategy 'ignore'
     publishDir '${params.publish_dir}/trim', saveAs: { filename -> "$filename" }, mode: 'copy'

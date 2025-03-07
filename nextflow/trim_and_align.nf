@@ -16,11 +16,13 @@ params.publish_dir = './output'
 // Workflow
 workflow {
     
+    // Workflow input
     Channel.fromPath(params.samples)
         .splitCsv()
-        .multiMap { cols -> sample: [cols[0], cols[1], cols[2], cols[4]] }
+        .multiMap { cols -> sample: [cols[0], cols[1], cols[2], cols[3]] }
         .set { samples }
 
+    // Workflow processes
     trim(samples.sample) \
     | align \
     | flatten \
@@ -30,17 +32,20 @@ workflow {
     } \
     | groupTuple(by: 0, sort: true, remainder: true) \
     | merge_sort \
-    | mark_dup | cram_convert | calc_stats 
+    | mark_dup \
+    | cram_convert \
+    | calc_stats
+
 }
 
 // Step 1 - Read trim
 process trim {
 
     errorStrategy 'ignore'
-    publishDir '${params.publish_dir}/trim', saveAs: { filename -> "$filename" }, mode: 'copy'
+    publishDir "${params.publish_dir}/trim", saveAs: { filename -> "$filename" }, mode: 'copy'
 
     input: 
-    tuple val(sample), val(f_read), path(r_read), val(adapter)
+    tuple val(sample), path(f_read), path(r_read), val(adapter)
 
     output:
     tuple \
@@ -201,7 +206,7 @@ process mark_dup {
 // Step 5 - Convert BAM file to CRAM file
 process cram_convert {
     
-    publishDir '${params.publish_dir}/align', saveAs: { filename -> "$filename" }, mode: 'copy'
+    publishDir "${params.publish_dir}/align", saveAs: { filename -> "$filename" }, mode: 'copy'
     errorStrategy 'ignore'
 
     input:
@@ -220,7 +225,7 @@ process cram_convert {
 // Step 6 - Calculate alignment statistics
 process calc_stats {
 
-    publishDir '${params.publish_dir}/stats', saveAs: { filename -> "$filename" }, mode: 'copy'
+    publishDir "${params.publish_dir}/stats", saveAs: { filename -> "$filename" }, mode: 'copy'
     errorStrategy 'ignore'
 
     input:

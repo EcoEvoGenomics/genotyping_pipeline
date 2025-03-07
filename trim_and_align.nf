@@ -8,9 +8,8 @@
 // Developed by Mark Ravinet
 // Co-developed and maintained by Erik Sandertun Røed
 
-// Input parameters
+// Default input parameters
 params.ref = file('/cluster/projects/nn10082k/ref/house_sparrow_genome_assembly-18-11-14_masked.fa')
-params.ref = "--ref"
 params.trim = file('/cluster/projects/nn10082k/trimmomatic_adapters/')
 
 // Workflow
@@ -83,7 +82,6 @@ process trimming {
 // Step 2 - Align to reference genome
 process align {
 
-    //publishDir 'align', saveAs: { filename -> "$filename" }
     errorStrategy 'ignore'
 
     input:
@@ -162,10 +160,6 @@ process align {
 // Step 3 - Merge and sort BAM file
 process merge_sort {
 
-    //module 'bwa-uoneasy/0.7.17-GCC-9.3.0'
-    //module 'samtools-uoneasy/1.12-GCC-9.3.0'
-
-    //publishDir 'align', saveAs: { filename -> "$filename" }
     errorStrategy 'ignore'
 
     input:
@@ -190,8 +184,7 @@ process merge_sort {
 
 // Step 4 - Mark duplicates in BAM file
 process mark_dup {
-    
-    //publishDir 'align', saveAs: { filename -> "$filename" }
+
     errorStrategy 'ignore'
 
     input:
@@ -233,8 +226,6 @@ process cram_convert {
 
 // Step 6 - Calculate alignment statistics
 process calc_stats {
-
-    //module 'samtools-uoneasy/1.12-GCC-9.3.0'
 
     publishDir 'stats', saveAs: { filename -> "$filename" }, mode: 'copy'
     errorStrategy 'ignore'

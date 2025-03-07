@@ -17,6 +17,7 @@
 # User definitions
 pipeline_directory=
 sample_csv=
+output_dir=
 
 # Prepare environment
 set -o errexit
@@ -36,7 +37,8 @@ cd $pipeline_directory
 # Trim and align
 nextflow run ./nextflow/trim_and_align.nf \
     -c ./nextflow/config/trim_and_align.config \
-    --samples $sample_csv
+    --samples $sample_csv \
+    --output_dir $output_dir
 
 # Call variants
 nextflow run ./nextflow/call_variants.nf \

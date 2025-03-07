@@ -225,7 +225,7 @@ process cram_convert {
 // Step 6 - Calculate alignment statistics
 process calc_stats {
 
-    publishDir "${params.publish_dir}/stats", saveAs: { filename -> "$filename" }, mode: 'copy'
+    publishDir "${params.publish_dir}/align", saveAs: { filename -> "$filename" }, mode: 'copy'
     errorStrategy 'ignore'
 
     input:

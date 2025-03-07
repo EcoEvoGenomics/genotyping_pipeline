@@ -14,21 +14,15 @@ params.trim = file('/cluster/projects/nn10082k/trimmomatic_adapters/')
 params.publish_dir = './output'
 
 // Workflow
-workflow{
-    Channel
-    .from(file(params.samples))
-    .splitCsv()
-    .multiMap { it ->
-        samples: [it[0]]
-        new_samples: [it[1]]
-        f_reads: [it[0], it[1], it[2]]
-        r_reads: [it[0], it[1], it[3]]
-        adapter: it[4]
-        }
-    .set{result}
+workflow {
+    
+    Channel.fromPath(params.samples)
+        .splitCsv()
+        .multiMap { cols -> sample: [cols[0], cols[1], cols[2], cols[4]] }
+        .set { samples }
 
-    trimming(result.f_reads, result.r_reads, result.adapter) | align \
-    // this will take all the outputs and group them - accounting for other lanes
+    trimming(samples.sample) \
+    | align \
     | flatten \
     | map { file ->
         def key = file.name.toString().tokenize('_').get(0)
@@ -46,20 +40,18 @@ process trimming {
     publishDir '${params.publish_dir}/trim', saveAs: { filename -> "$filename" }, mode: 'copy'
 
     input: 
-    tuple val(f_sample), val(f_new_sample), path(f_read)
-    tuple val(sample), val(new_sample), path(r_read)
-    val(adapter)
+    tuple val(sample), val(f_read), path(r_read), val(adapter)
 
     output:
     tuple \
-    val(new_sample), \
+    val(sample), \
     path(f_read), \
     path(r_read), \
-    path("${new_sample}.R1.trim_pair.fastq.gz"), \
-    path("${new_sample}.R2.trim_pair.fastq.gz"), \
-    path("${new_sample}.R1.trim_unpair.fastq.gz"), \
-    path("${new_sample}.R2.trim_unpair.fastq.gz"), \
-    path("${new_sample}.stats"), \
+    path("${sample}.R1.trim_pair.fastq.gz"), \
+    path("${sample}.R2.trim_pair.fastq.gz"), \
+    path("${sample}.R1.trim_unpair.fastq.gz"), \
+    path("${sample}.R2.trim_unpair.fastq.gz"), \
+    path("${sample}.stats"), \
     path("${f_read}_fastqc.zip"), \
     path("${r_read}_fastqc.zip")
 
@@ -73,10 +65,10 @@ process trimming {
     ADAPT_FAST=${params.trim}/${adapter}.fa
     ## run trimmometic
     trimmomatic PE -threads ${task.cpus} $f_read $r_read \
-    ${new_sample}.R1.trim_pair.fastq.gz ${new_sample}.R1.trim_unpair.fastq.gz \
-    ${new_sample}.R2.trim_pair.fastq.gz ${new_sample}.R2.trim_unpair.fastq.gz \
+    ${sample}.R1.trim_pair.fastq.gz ${sample}.R1.trim_unpair.fastq.gz \
+    ${sample}.R2.trim_pair.fastq.gz ${sample}.R2.trim_unpair.fastq.gz \
     ILLUMINACLIP:\${ADAPT_FAST}:2:30:10 LEADING:10 TRAILING:10 SLIDINGWINDOW:5:10 MINLEN:50 \
-    |& tee ${new_sample}.stats
+    |& tee ${sample}.stats
     """
 }
 

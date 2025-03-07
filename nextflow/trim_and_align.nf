@@ -11,11 +11,12 @@
 // Default input parameters
 params.ref = file('/cluster/projects/nn10082k/ref/house_sparrow_genome_assembly-18-11-14_masked.fa')
 params.trim = file('/cluster/projects/nn10082k/trimmomatic_adapters/')
+params.publish_dir = './output'
 
 // Workflow
 workflow{
     Channel
-    .from( file(params.samples))
+    .from(file(params.samples))
     .splitCsv()
     .multiMap { it ->
         samples: [it[0]]
@@ -42,7 +43,7 @@ workflow{
 process trimming {
 
     errorStrategy 'ignore'
-    publishDir 'trim', saveAs: { filename -> "$filename" }
+    publishDir '${params.publish_dir}/trim', saveAs: { filename -> "$filename" }
 
     input: 
     tuple val(f_sample), val(f_new_sample), path(f_read)
@@ -208,7 +209,7 @@ process mark_dup {
 // Step 5 - Convert BAM file to CRAM file
 process cram_convert {
     
-    publishDir 'align', saveAs: { filename -> "$filename" }
+    publishDir '${params.publish_dir}/align', saveAs: { filename -> "$filename" }
     errorStrategy 'ignore'
 
     input:
@@ -227,7 +228,7 @@ process cram_convert {
 // Step 6 - Calculate alignment statistics
 process calc_stats {
 
-    publishDir 'stats', saveAs: { filename -> "$filename" }, mode: 'copy'
+    publishDir '${params.publish_dir}/stats', saveAs: { filename -> "$filename" }, mode: 'copy'
     errorStrategy 'ignore'
 
     input:

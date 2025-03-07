@@ -1,35 +1,52 @@
 #!/bin/bash
-# written 29/06/2023
 
-# nextflow management script 
-
-# Job name:
-#SBATCH --job-name=india
-#
-# Project:
+# ADMIN
+#SBATCH --job-name=genotyping
+#SBATCH --output=SLURM-%j-%x.out
+#SBATCH --error=SLURM-%j-%x.err
 #SBATCH --account=nn10082k
 #
-# Wall clock limit (hh:mm:ss):
-#SBATCH --time=120:00:00
-#
-# Processor and memory usage:
-#SBATCH --mem-per-cpu=8G
+# RESOURCE ALLOCATION
+#SBATCH --nodes=1
+#SBATCH --tasks=1
+#SBATCH --ntasks-per-node=1
 #SBATCH --cpus-per-task=1
+#SBATCH --mem-per-cpu=2G
+#SBATCH --time=01:00:00
 
- # notify end of job
-#SBATCH --mail-user=mark.ravinet@ibv.uio.no
-#SBATCH --mail-type=FAIL
+# User definitions
+pipeline_directory=
+sample_csv=
 
+# Prepare environment
+set -o errexit
+set -o nounset
+module --quiet purge
+
+# Load modules
 module load Miniconda3/22.11.1-1
-export CONDA_PKGS_DIRS=/cluster/projects/nn10082k/conda_users/msravine/package-cache
+
+# Activate conda environment
 source ${EBROOTMINICONDA3}/bin/activate
 conda activate /cluster/projects/nn10082k/conda_group/nextflow
 
-cd /path/to/working/directory/
+# Begin work
+cd $pipeline_directory
 
-REF=/cluster/projects/nn10082k/ref/house_sparrow_genome_assembly-18-11-14_masked.fa
+# Trim and align
+nextflow run ./nextflow/trim_and_align.nf \
+    -c ./nextflow/config/trim_and_align.config \
+    --samples $sample_csv
 
-# run nextflow pipeline - not recommended to run all in one go - comment out commands you don't want to run
-nextflow run 1_trim_map_realign.nf --samples /path/to/samples.csv --ref $REF 
-#nextflow run 2_call_variants.nf --bams genotyping_cram_list.txt --ref $REF --windows sparrow_genome_windows.list
-#nextflow run 3_filter_variants.nf  --miss 0.5 --min_depth 3 --max_depth 30
+# Call variants
+nextflow run ./nextflow/call_variants.nf \
+    -c ./nextflow/config/call_variants.config \
+    --bams $bams \
+    --windows $windows
+
+# Filter variants
+nextflow run ./nextflow/filter_variants.nf \
+    -c ./nextflow/config/filter_variants.nf \
+    --filtering-params $filtering_params
+
+# End work

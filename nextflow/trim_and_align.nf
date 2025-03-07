@@ -43,7 +43,7 @@ workflow{
 process trimming {
 
     errorStrategy 'ignore'
-    publishDir '${params.publish_dir}/trim', saveAs: { filename -> "$filename" }
+    publishDir '${params.publish_dir}/trim', saveAs: { filename -> "$filename" }, mode: 'copy'
 
     input: 
     tuple val(f_sample), val(f_new_sample), path(f_read)
@@ -209,7 +209,7 @@ process mark_dup {
 // Step 5 - Convert BAM file to CRAM file
 process cram_convert {
     
-    publishDir '${params.publish_dir}/align', saveAs: { filename -> "$filename" }
+    publishDir '${params.publish_dir}/align', saveAs: { filename -> "$filename" }, mode: 'copy'
     errorStrategy 'ignore'
 
     input:

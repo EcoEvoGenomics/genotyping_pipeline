@@ -35,20 +35,20 @@ conda activate /cluster/projects/nn10082k/conda_group/nextflow
 cd $pipeline_directory
 
 # Trim and align
-nextflow run ./nextflow/trim_and_align.nf \
-    -c ./nextflow/config/trim_and_align.config \
+nextflow run ./pipeline/nextflow/trim_and_align.nf \
+    -c ./pipeline/config/trim_and_align.config \
     --samples $sample_csv \
     --publish_dir $output_dir
 
 # Call variants
-nextflow run ./nextflow/call_variants.nf \
-    -c ./nextflow/config/call_variants.config \
+nextflow run ./pipeline/nextflow/call_variants.nf \
+    -c ./pipeline/config/call_variants.config \
     --bams $bams \
     --windows $windows
 
 # Filter variants
-nextflow run ./nextflow/filter_variants.nf \
-    -c ./nextflow/config/filter_variants.nf \
+nextflow run ./pipeline/nextflow/filter_variants.nf \
+    -c ./pipeline/config/filter_variants.nf \
     --filtering-params $filtering_params
 
 # End work

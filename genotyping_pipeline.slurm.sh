@@ -51,6 +51,7 @@
     vcf_filt_keep=""
     
     # NB: Only change if you know what you are doing (ask Erik), typically for re-filtering
+    #     Also, . must be the genotyping_pipeline repository
     output_dir=./output
     trim_align_output_dir=${output_dir}/trim_align
     call_vcf_output_dir=${output_dir}/call_vcf
@@ -103,7 +104,7 @@ if [ $call_vcf = 'yes' ]; then
         -c ./pipeline/config/call_variants.config \
         --ref $ref_genome \
         --bams $bam_list \
-        --windows $windows_dir/genome_windows.list \
+        --windows_dir $windows_dir \
         --ploidyFile $ref_ploidy_file \
         --publish_dir $call_vcf_output_dir
 fi

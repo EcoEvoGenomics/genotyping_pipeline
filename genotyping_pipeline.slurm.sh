@@ -122,7 +122,8 @@ if [ $filt_vcf = 'yes' ]; then
         "keep" $vcf_filt_keep "\n" \
         > $filt_vcf_output_dir/filt_params.txt
     nextflow run ./pipeline/nextflow/filter_variants.nf \
-        -c ./pipeline/config/filter_variants.nf \
+        -c ./pipeline/config/filter_variants.config \
+        --vcf_dir $call_vcf_output_dir/vcf \
         --miss $vcf_filt_miss \
         --q_site1 $vcf_filt_q_site1 \
         --q_site2 $vcf_filt_q_site2 \

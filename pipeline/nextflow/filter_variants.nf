@@ -10,9 +10,10 @@
 
 // Script parameters
 params.publish_dir = './output'
+params.vcf_dir = "${params.publish_dir}/call_vcf/vcf"
 
 // script paramaters
-anno_vcfs = Channel.fromPath( './vcf/*.vcf.gz' )
+anno_vcfs = Channel.fromPath( "${params.vcf_dir}/*.vcf.gz" )
 
 // Set filtering params
 params.miss=0.8

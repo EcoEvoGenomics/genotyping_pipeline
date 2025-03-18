@@ -30,7 +30,7 @@
 
     # Reference genome
     ref_genome=/cluster/projects/nn10082k/ref/house_sparrow_genome_assembly-18-11-14_masked.fa
-    ref_index=/cluster/projects/nn10082k/ref/house_sparrow_genome_assembly-18-11-14_masked.fai
+    ref_index=/cluster/projects/nn10082k/ref/house_sparrow_genome_assembly-18-11-14_masked.fa.fai
     ref_scaffold_name='scaffold'
 
     # Directory of trimming adapters
@@ -56,7 +56,7 @@
     filt_vcf_output_dir=${output_dir}/filt_vcf
     concat_vcf_output_dir=${filt_vcf_output_dir}
 
-### ---------------------- ###
+### --- End user input --- ###
 
 # Prepare environment
 set -o errexit

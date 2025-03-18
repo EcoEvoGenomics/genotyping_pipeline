@@ -60,7 +60,9 @@ process genotyping {
     if [[ "${windows}" == "scaff"* ]];
     then
         # if window is a scaffold
-        bcftools mpileup -d 8000 --ignore-RG -R ${baseDir}/../../${params.windows_dir}/${windows} -a AD,DP,SP -Ou -f ${params.ref} -b ${bams} \    else
+        bcftools mpileup -d 8000 --ignore-RG -R ${baseDir}/../../${params.windows_dir}/${windows} -a AD,DP,SP -Ou -f ${params.ref} -b ${bams} \
+        | bcftools call --threads ${task.cpus} --ploidy-file ${ploidyFile} -f GQ,GP -mO z -o ${windows}.vcf.gz
+    else
         # for normal genome windows
         bcftools mpileup -d 8000 --ignore-RG -r ${windows} -a AD,DP,SP -Ou -f ${params.ref} -b ${bams} \
         | bcftools call --threads ${task.cpus} --ploidy-file ${ploidyFile} -f GQ,GP -mO z -o ${windows}.vcf.gz

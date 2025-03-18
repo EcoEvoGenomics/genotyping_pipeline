@@ -32,6 +32,7 @@
     ref_genome=/cluster/projects/nn10082k/ref/house_sparrow_genome_assembly-18-11-14_masked.fa
     ref_index=/cluster/projects/nn10082k/ref/house_sparrow_genome_assembly-18-11-14_masked.fa.fai
     ref_scaffold_name='scaffold'
+    ref_ploidy_file=./pipeline/defaults/default.ploidy
 
     # Directory of trimming adapters
     adapter_dir=/cluster/projects/nn10082k/trimmomatic_adapters/
@@ -103,6 +104,7 @@ if [ $call_vcf = 'yes' ]; then
         --ref $ref_genome \
         --bams $bam_list \
         --windows $windows_dir/genome_windows.list \
+        --ploidyFile $ref_ploidy_file \
         --publish_dir $call_vcf_output_dir
 fi
 

@@ -85,6 +85,7 @@ if [ $trim_align = 'yes' ]; then
     mkmissingdir $trim_align_output_dir
     nextflow run ./pipeline/nextflow/trim_and_align.nf \
         -c ./pipeline/config/trim_and_align.config \
+        --ref $ref_genome \
         --samples $sample_csv \
         --trim $adapter_dir \
         --publish_dir $trim_align_output_dir
@@ -99,6 +100,7 @@ if [ $call_vcf = 'yes' ]; then
     find $PWD/$trim_align_output_dir/align/ -name '*.*am' > $bam_list
     nextflow run ./pipeline/nextflow/call_variants.nf \
         -c ./pipeline/config/call_variants.config \
+        --ref $ref_genome \
         --bams $bam_list \
         --windows $windows_dir/genome_windows.list \
         --publish_dir $call_vcf_output_dir

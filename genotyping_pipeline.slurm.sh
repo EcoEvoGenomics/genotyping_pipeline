@@ -92,14 +92,15 @@ fi
 
 if [ $call_vcf = 'yes' ]; then
     mkmissingdir $call_vcf_output_dir
-    windows=$output_dir/genome_windows.list
-    bash ./pipeline/shell/create_genome_windows.sh $ref_index $window_size $ref_scaffold_name $windows
+    windows_dir=$call_vcf_output_dir/genome_windows
+    mkmissingdir $windows_dir
+    bash ./pipeline/shell/create_genome_windows.sh $ref_index $window_size $ref_scaffold_name $windows_dir
     bam_list=${call_vcf_output_dir}/genotyped_bams.list
     find $PWD/$trim_align_output_dir/align/ -name '*.*am' > $bam_list
     nextflow run ./pipeline/nextflow/call_variants.nf \
         -c ./pipeline/config/call_variants.config \
         --bams $bam_list \
-        --windows $windows \
+        --windows $windows_dir/genome_windows.list \
         --publish_dir $call_vcf_output_dir
 fi
 

@@ -4,25 +4,27 @@
 
 # Set variables
 REF_IDX=$1
-WINDOW=$2
+WINDOW_SIZE=$2
 SCAFFOLD_NAME=$3
-OUTPUT=$4
+OUTPUT_DIR=$4
+
+cd $OUTPUT_DIR
 
 # make genome size file
 cut -f 1-2 ${REF_IDX} > genome_size.txt
 
 # make the windows and cat together
-bedtools makewindows -g genome_size.txt -w ${WINDOW} | \
+bedtools makewindows -g genome_size.txt -w ${WINDOW_SIZE} | \
 grep -v ${SCAFFOLD_NAME} | awk '{print $1":"$2"-"$3}' \
-> $OUTPUT
+> genome_windows.list
 
 # GATK will fail if the coords include 0, so edit to start from 1
-sed -i_bak 's/:0-/:1-/g' $OUTPUT
+sed -i_bak 's/:0-/:1-/g' genome_windows.list
 
 # creates 115 genome windows
 
 # for scaffolds
-bedtools makewindows -g genome_size.txt -w ${WINDOW} | \
+bedtools makewindows -g genome_size.txt -w ${WINDOW_SIZE} | \
 grep ${SCAFFOLD_NAME} | awk '{print $1":"$2"-"$3}' \
 > scaffolds.list
 
@@ -45,5 +47,5 @@ n_scaffolds=$(ls scaffolds:* | wc -l)
 
 if [ ${n_scaffolds} -gt 0 ]
 then
-    for i in scaffolds:*; do echo $i; done >> $OUTPUT
+    for i in scaffolds:*; do echo $i; done >> genome_windows.list
 fi

@@ -1,15 +1,12 @@
 #!/bin/sh
 
-# make genome windows
+# Make genome windows
 
-# set variables
+# Set variables
 REF_IDX=$1
 WINDOW=$2
 SCAFFOLD_NAME=$3
 OUTPUT=$4
-# REF_IDX=/share/Passer/data/reference/house_sparrow_ref.fa.fai
-# WINDOW=10000000
-# OUTPUT=sparrow_genome_windows.list
 
 # make genome size file
 cut -f 1-2 ${REF_IDX} > genome_size.txt

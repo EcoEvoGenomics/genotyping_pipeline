@@ -86,6 +86,7 @@ if [ $trim_align = 'yes' ]; then
     nextflow run ./pipeline/nextflow/trim_and_align.nf \
         -c ./pipeline/config/trim_and_align.config \
         --samples $sample_csv \
+        --trim $adapter_dir \
         --publish_dir $trim_align_output_dir
 fi
 

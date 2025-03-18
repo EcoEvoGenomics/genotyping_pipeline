@@ -40,12 +40,12 @@ num_files=10
 ((lines_per_file = (total_lines + num_files - 1) / num_files))
 
 # Split the actual file, maintaining lines.
-split -d --lines=${lines_per_file} scaffolds.list2 scaffolds:
+split -d --lines=${lines_per_file} scaffolds.list2 scaffolds_
 
 # add scafs to windows list only if any exist
-n_scaffolds=$(ls scaffolds:* | wc -l)
+n_scaffolds=$(ls scaffolds_* | wc -l)
 
 if [ ${n_scaffolds} -gt 0 ]
 then
-    for i in scaffolds:*; do echo $i; done >> genome_windows.list
+    for i in scaffolds_*; do echo $i; done >> genome_windows.list
 fi

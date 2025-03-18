@@ -10,6 +10,7 @@
 
 // script paramaters
 params.ref = file('/share/Passer/data/reference/house_sparrow_ref.fa')
+params.publish_dir = './output'
 
 // read in a file of bams
 //params.bams = file('test_bams.list')
@@ -114,7 +115,7 @@ process vcf_normalise {
 // reheader vcf
 process vcf_reheader {
 
-    publishDir 'vcf', saveAs: { filename -> "$filename" }
+    publishDir "${params.publish_dir}/vcf", saveAs: { filename -> "$filename" }
 
     input:
     tuple \

@@ -8,6 +8,9 @@
 // Developed by Mark Ravinet
 // Co-developed and maintained by Erik Sandertun Røed
 
+// Script parameters
+params.publish_dir = './output'
+
 // script paramaters
 anno_vcfs = Channel.fromPath( './vcf/*.vcf.gz' )
 
@@ -45,7 +48,7 @@ process rm_indels {
 process vcf_filter {
 
   // publish simlinks into a final vcf directory
-  publishDir 'vcf_filtered', saveAs: { filename -> "$filename" }, mode: 'copy'
+  publishDir "${params.publish_dir}/vcf_filtered", saveAs: { filename -> "$filename" }, mode: 'copy'
 
   input:
   tuple file(rm_indel_vcf), file(rm_indel_vcf_index) 

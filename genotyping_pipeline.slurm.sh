@@ -26,7 +26,7 @@
     trim_align=yes
     call_vcf=yes
     filt_vcf=yes
-    concat_vcf=yes
+    concat_vcf=no # This step currently does not work
 
     # Reference genome
     ref_genome=/cluster/projects/nn10082k/ref/house_sparrow_genome_assembly-18-11-14_masked.fa

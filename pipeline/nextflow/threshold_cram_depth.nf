@@ -3,7 +3,7 @@
 // CEES Ecological and evolutionary genomics group - genotyping pipeline
 // https://github.com/EcoEvoGenomics/genotyping_pipeline
 //
-// Workflow: Downsample BAMs
+// Workflow: Downsample CRAMs
 //
 // Developed by Mark Ravinet
 // Co-developed and maintained by Erik Sandertun Røed

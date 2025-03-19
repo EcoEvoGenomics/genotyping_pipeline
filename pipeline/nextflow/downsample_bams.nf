@@ -28,25 +28,20 @@ process align_downsample {
     path (bam)
 
     output:
-    tuple stdout, path("${bam.simpleName}_ds.bam"), path("${bam.simpleName}_ds.bam.bai"), optional: true
+    tuple stdout, path("${bam.simpleName}_ds.bam"), path("${bam.simpleName}_ds.bam.bai")
 
     script:
     """
-    # work out mean coverage
-    ##COV=\$(samtools depth ${bam} | awk '{sum += \$3} END {result = sum / NR; printf "%.2f\\n", result}' )
-    COV=\$(samtools depth ${bam} | awk '{sum += \$3} END {result = sum / NR; printf "%d\\n", result}' )
+    mean_coverage=\$(samtools depth ${bam} | awk '{sum += \$3} END {result = sum / NR; printf "%d\\n", result}' )
+    fraction_sampled=\$(echo "scale=1; ${params.depth}/\${mean_coverage}" | bc)
 
-    if (( \${COV} > ${params.depth} )); then
-
-        echo "Depth for ${bam} is \${COV} - i.e. greater than ${params.depth} - downsampling."
-        #FRAC=\$(expr ${params.depth} \* \${COV})
-        FRAC=\$(echo "scale=1; ${params.depth}/\${COV}" | bc)
-        echo "Will downsampled by \${FRAC}"
-        samtools view -bs \${FRAC} ${bam} > ${bam.simpleName}_ds.bam
-        samtools index ${bam.simpleName}_ds.bam
-
+    if (( \${mean_coverage} < ${params.depth} )); then
+        echo "Depth for ${bam} is \${mean_coverage}, lower than ${params.depth}. Downsampled file will be identical to input."
     else
-        echo "Depth is \${COV} - i.e. less than ${params.depth} - no need to downsample."
+        echo "Downsampling ${bam} by \${fraction_sampled} ..."
     fi
+
+    samtools view -bs \${fraction_sampled} ${bam} > ${bam.simpleName}_ds.bam
+    samtools index ${bam.simpleName}_ds.bam
     """
 }

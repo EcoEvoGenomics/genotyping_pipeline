@@ -96,7 +96,7 @@ process vcf_concat {
     """
 }
 
-// Step 3 - 
+// Step 3 - Normalise VCF
 process vcf_normalise {
 
     input:
@@ -118,7 +118,7 @@ process vcf_normalise {
     """
 }
 
-// reheader vcf
+// Step 4 - Reheader VCF
 process vcf_reheader {
 
     publishDir "${params.publish_dir}/vcf", saveAs: { filename -> "$filename" }

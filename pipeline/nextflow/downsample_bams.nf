@@ -17,7 +17,7 @@ workflow{
     Channel.fromList(bams_list)
         .set{bams}
 
-    align_downsample(bams) | view
+    align_downsample(bams)
 }
 
 process align_downsample {
@@ -28,7 +28,7 @@ process align_downsample {
     path (bam)
 
     output:
-    tuple stdout, path("${bam.simpleName}_ds.bam"), path("${bam.simpleName}_ds.bam.bai")
+    tuple path("${bam.simpleName}_ds.bam"), path("${bam.simpleName}_ds.bam.bai")
 
     script:
     """

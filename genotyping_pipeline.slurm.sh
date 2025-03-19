@@ -22,9 +22,9 @@
     # Path to .CSV with each row as "ID, F_READ_PATH, R_READ_PATH, ADAPTER"
     sample_csv=
 
-    # Which steps to run? Note: downsample_bams and combine_vcfs are optional, but steps must be run in order.
+    # Which steps to run? Note: threshold_depth and combine_vcfs are optional, but steps must be run in order.
     trim_align=yes
-    downsample_bams=yes
+    threshold_depth=yes
     call_vcf=yes
     filt_vcf=yes
     combine_vcfs=yes
@@ -39,7 +39,7 @@
     adapter_dir=/cluster/projects/nn10082k/trimmomatic_adapters/
 
     # BAM maximum depth before downsampling
-    bam_max_depth=20
+    depth_threshold=20
 
     # Genotyping settings
     window_size=10000000
@@ -104,17 +104,17 @@ if [ $trim_align = 'yes' ]; then
         --publish_dir $trim_align_output_dir
 fi
 
-if [ $downsample_bams = 'yes' ]; then
+if [ $threshold_depth = 'yes' ]; then
     
-    chkprevious "Step: downsample_bams" $trim_align_output_dir
+    chkprevious "Step: threshold_depth" $trim_align_output_dir
 
-    undownsampled_bams=${trim_align_output_dir}/undownsampled_bams.list
-    find $PWD/$trim_align_output_dir/align/ -name '*.*am' > $undownsampled_bams
+    raw_bams=${trim_align_output_dir}/raw_bams.list
+    find $PWD/$trim_align_output_dir/align/ -name '*.*am' > $raw_bams
 
     nextflow run ./pipeline/nextflow/downsample_bams.nf \
         -c ./pipeline/config/downsample_bams.config \
-        --depth $bam_max_depth \
-        --bams $undownsampled_bams \
+        --depth $depth_threshold \
+        --bams $raw_bams \
         --publish_dir $trim_align_output_dir
 fi
 
@@ -128,9 +128,9 @@ if [ $call_vcf = 'yes' ]; then
     bash ./pipeline/shell/create_genome_windows.sh $ref_index $window_size $ref_scaffold_name $windows_dir
 
     bam_list=${call_vcf_output_dir}/genotyped_bams.list
-    if [ -e ${trim_align_output_dir}/align_downsample ]; then
-        echo "Downsampled BAMs exist in ${trim_align_output_dir}/align_downsample. Genotyping downsampled BAMs ..."
-        find $PWD/$trim_align_output_dir/align_downsample/ -name '*.*am' > $bam_list
+    if [ -e ${trim_align_output_dir}/align_maxdepth ]; then
+        echo "Downsampled BAMs exist in ${trim_align_output_dir}/align_maxdepth. Genotyping downsampled BAMs ..."
+        find $PWD/$trim_align_output_dir/align_maxdepth/ -name '*.*am' > $bam_list
     else
         echo "Genotyping non-downsampled BAMs from ${trim_align_output_dir} ..."
         find $PWD/$trim_align_output_dir/align/ -name '*.*am' > $bam_list

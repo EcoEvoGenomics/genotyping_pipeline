@@ -22,13 +22,13 @@ workflow{
 
 process align_downsample {
 
-    publishDir "${params.publish_dir}/align_downsample", saveAs: { filename -> "$filename" }, mode: 'copy'
+    publishDir "${params.publish_dir}/align_maxdepth", saveAs: { filename -> "$filename" }, mode: 'copy'
     
     input:
     path (bam)
 
     output:
-    tuple path("${bam.simpleName}_ds.bam"), path("${bam.simpleName}_ds.bam.bai")
+    tuple path("${bam.simpleName}_maxdepth.bam"), path("${bam.simpleName}_maxdepth.bam.bai")
 
     script:
     """
@@ -41,7 +41,7 @@ process align_downsample {
         echo "Downsampling ${bam} by \${fraction_sampled} ..."
     fi
 
-    samtools view -bs \${fraction_sampled} ${bam} > ${bam.simpleName}_ds.cram
-    samtools index ${bam.simpleName}_ds.cram
+    samtools view -bs \${fraction_sampled} ${bam} > ${bam.simpleName}_maxdepth.cram
+    samtools index ${bam.simpleName}_maxdepth.cram
     """
 }

@@ -8,14 +8,11 @@
 // Developed by Mark Ravinet
 // Co-developed and maintained by Erik Sandertun Røed
 
-// Script parameters
-params.publish_dir = './output'
+// Default parameters
 params.vcf_dir = "${params.publish_dir}/call_vcf/vcf"
+params.publish_dir = './output'
 
-// script paramaters
-anno_vcfs = Channel.fromPath( "${params.vcf_dir}/*.vcf.gz" )
-
-// Set filtering params
+// Default filtering parameters
 params.miss=0.8
 params.q_site1=30
 params.q_site2=30
@@ -23,9 +20,14 @@ params.min_depth=5
 params.max_depth=30
 params.min_geno_depth=5
 params.max_geno_depth=30
-params.keep="./path/to/file"
+params.keep=""
 
-// Step 1 - rm_indels -  re-normalise after removing spanning deletions, indels
+// Workflow
+workflow{
+  Channel.fromPath("${params.vcf_dir}/*.vcf.gz") | rm_indels | vcf_filter
+}
+
+// Step 1 - Remove spanning indels and re-normalise
 process rm_indels {
 
   input:
@@ -36,8 +38,7 @@ process rm_indels {
     file ("${anno_vcf.simpleName}.vcf.gz"), \
     file ("${anno_vcf.simpleName}.vcf.gz.csi") 
 
-  //path '.vcf.gz*' into rm_indel_vcfs
-
+  script:
   """
   bcftools view --threads ${task.cpus} -V indels -e 'ALT="*" | N_ALT>1' $anno_vcf | bcftools norm --threads ${task.cpus} -D -O z -o ${anno_vcf.simpleName}.vcf.gz
 
@@ -45,10 +46,9 @@ process rm_indels {
   """
 }
 
-// Step 2 - filter for pop structure and genome scan
+// Step 2 - Filtering, both for population structure analyses and genome scans
 process vcf_filter {
 
-  // publish simlinks into a final vcf directory
   publishDir "${params.publish_dir}/vcf_filtered", saveAs: { filename -> "$filename" }, mode: 'copy'
 
   input:
@@ -61,6 +61,7 @@ process vcf_filter {
     file ("${rm_indel_vcf.simpleName}_filtered_gs.vcf.gz"), \
     file ("${rm_indel_vcf.simpleName}_filtered_gs.vcf.gz.csi") 
 
+  script:
   """
   if [[ -f ${params.keep} ]]; then
 
@@ -119,10 +120,4 @@ process vcf_filter {
 
   fi
   """
-}
-
-// workflow starts here!
-
-workflow{
-  rm_indels(anno_vcfs) | vcf_filter
 }

@@ -83,6 +83,14 @@ mkmissingdir() {
     fi
 }
 
+# Function to check previous step is done
+chkprevious() {
+    if [ ! -e $2 ]; then
+        echo "Error. ${1} expected output from previous step to exist in directory ${2}."
+        exit
+    fi
+}
+
 # Begin work
 cd $repository_path
 mkmissingdir $output_dir
@@ -99,10 +107,7 @@ fi
 
 if [ $downsample_bams = 'yes' ]; then
     
-    if [ ! -e $trim_align_output_dir ]; then
-        echo "Error. Expected to downsample BAMs, but no BAMs exist in specified directory."
-        exit 1
-    fi
+    chkprevious "Step: downsample_bams" $trim_align_output_dir
 
     undownsampled_bams=${trim_align_output_dir}/undownsampled_bams.list
     find $PWD/$trim_align_output_dir/align/ -name '*.*am' > $undownsampled_bams
@@ -115,7 +120,10 @@ if [ $downsample_bams = 'yes' ]; then
 fi
 
 if [ $call_vcf = 'yes' ]; then
+
+    chkprevious "Step: call_vcf" $trim_align_output_dir
     mkmissingdir $call_vcf_output_dir
+
     windows_dir=$call_vcf_output_dir/genome_windows
     mkmissingdir $windows_dir
     bash ./pipeline/shell/create_genome_windows.sh $ref_index $window_size $ref_scaffold_name $windows_dir
@@ -140,7 +148,10 @@ if [ $call_vcf = 'yes' ]; then
 fi
 
 if [ $filt_vcf = 'yes' ]; then
+
+    chkprevious "Step: filt_vcf" $call_vcf_output_dir
     mkmissingdir $filt_vcf_output_dir
+
     echo "VCF filtering parameters:\n" \
         "miss" $vcf_filt_miss "\n" \
         "q_site1" $vcf_filt_q_site1 "\n" \
@@ -151,6 +162,7 @@ if [ $filt_vcf = 'yes' ]; then
         "max_geno_depth" $vcf_filt_max_geno_depth "\n" \
         "keep" $vcf_filt_keep "\n" \
         > $filt_vcf_output_dir/filt_params.txt
+
     nextflow run ./pipeline/nextflow/filter_variants.nf \
         -c ./pipeline/config/filter_variants.config \
         --vcf_dir $call_vcf_output_dir/vcf \

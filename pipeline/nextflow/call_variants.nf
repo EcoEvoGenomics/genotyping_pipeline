@@ -22,9 +22,9 @@ workflow{
     Channel.fromPath(params.ploidy_file).set{ploidy_file}
     Channel.fromPath(params.windows_dir).set{windows_dir}
     Channel.fromList(windows_list).set{windows}
-    Channel.from(file(params.bams)).set{bams}
+    Channel.from(file(params.crams)).set{crams}
 
-    genotyping(bams, ploidy_file, windows_dir, windows) \
+    genotyping(crams, ploidy_file, windows_dir, windows) \
     | map { file ->
         def key = file.baseName.toString().tokenize(':').get(0)
         return tuple(key, file)
@@ -38,7 +38,7 @@ workflow{
 process genotyping {
 
     input:
-    path bams
+    path crams
     path ploidy_file
     path windows_dir
     each windows
@@ -51,11 +51,11 @@ process genotyping {
     if [[ "${windows}" == "scaff"* ]];
     then
         # if window is a scaffold
-        bcftools mpileup -d 8000 --ignore-RG -R ${windows_dir}/${windows} -a AD,DP,SP -Ou -f ${params.ref} -b ${bams} \
+        bcftools mpileup -d 8000 --ignore-RG -R ${windows_dir}/${windows} -a AD,DP,SP -Ou -f ${params.ref} -b ${crams} \
         | bcftools call --threads ${task.cpus} --ploidy-file ${ploidy_file} -f GQ,GP -mO z -o ${windows}.vcf.gz
     else
         # for normal genome windows
-        bcftools mpileup -d 8000 --ignore-RG -r ${windows} -a AD,DP,SP -Ou -f ${params.ref} -b ${bams} \
+        bcftools mpileup -d 8000 --ignore-RG -r ${windows} -a AD,DP,SP -Ou -f ${params.ref} -b ${crams} \
         | bcftools call --threads ${task.cpus} --ploidy-file ${ploidy_file} -f GQ,GP -mO z -o ${windows}.vcf.gz
     fi
     """

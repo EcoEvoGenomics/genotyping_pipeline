@@ -12,32 +12,19 @@
 params.ref = file('/cluster/projects/nn10082k/ref/house_sparrow_genome_assembly-18-11-14_masked.fa')
 params.publish_dir = './output'
 params.windows_dir = './output/call_vcf/genome_windows/'
+params.ploidy_file = file('./pipeline/defaults/default.ploidy')
 
 // Workflow
 workflow{    
-    
-    // Ploidy file for genotyping
-    if (!params.ploidyFile){
-        println "No ploidy file provided - by default, all chromosomes will be called as diploid."
-        ploidyFile = file('default.ploidy')
-    } else {
-        ploidyFile = file(params.ploidyFile)
-    }
 
-    // List of genome windows
-    windows_list = file(params.windows)
-        .readLines()
-    
-    Channel.fromList(windows_list)
-        .set{windows}
+    windows_list = file("${params.windows_dir}/genome_windows.list").readLines()
+        
+    Channel.fromPath(params.ploidy_file).set{ploidy_file}
+    Channel.fromPath(params.windows_dir).set{windows_dir}
+    Channel.fromList(windows_list).set{windows}
+    Channel.from(file(params.bams)).set{bams}
 
-    Channel.fromPath(params.windows_dir)
-        .set{windows_dir}
-
-    Channel.from(file(params.bams))
-        .set{bams}
-
-    genotyping(bams, ploidyFile, windows_dir, windows) \
+    genotyping(bams, ploidy_file, windows_dir, windows) \
     | map { file ->
         def key = file.baseName.toString().tokenize(':').get(0)
         return tuple(key, file)
@@ -52,7 +39,7 @@ process genotyping {
 
     input:
     path bams
-    path ploidyFile
+    path ploidy_file
     path windows_dir
     each windows
 
@@ -65,11 +52,11 @@ process genotyping {
     then
         # if window is a scaffold
         bcftools mpileup -d 8000 --ignore-RG -R ${windows_dir}/${windows} -a AD,DP,SP -Ou -f ${params.ref} -b ${bams} \
-        | bcftools call --threads ${task.cpus} --ploidy-file ${ploidyFile} -f GQ,GP -mO z -o ${windows}.vcf.gz
+        | bcftools call --threads ${task.cpus} --ploidy-file ${ploidy_file} -f GQ,GP -mO z -o ${windows}.vcf.gz
     else
         # for normal genome windows
         bcftools mpileup -d 8000 --ignore-RG -r ${windows} -a AD,DP,SP -Ou -f ${params.ref} -b ${bams} \
-        | bcftools call --threads ${task.cpus} --ploidy-file ${ploidyFile} -f GQ,GP -mO z -o ${windows}.vcf.gz
+        | bcftools call --threads ${task.cpus} --ploidy-file ${ploidy_file} -f GQ,GP -mO z -o ${windows}.vcf.gz
     fi
     """
 }

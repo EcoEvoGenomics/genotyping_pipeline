@@ -105,7 +105,7 @@ if [ $call_vcf = 'yes' ]; then
         --ref $ref_genome \
         --bams $bam_list \
         --windows_dir $windows_dir \
-        --ploidyFile $ref_ploidy_file \
+        --ploidy_file $ref_ploidy_file \
         --publish_dir $call_vcf_output_dir
 fi
 

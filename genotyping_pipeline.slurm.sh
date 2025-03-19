@@ -22,12 +22,12 @@
     # Path to .CSV with each row as "ID, F_READ_PATH, R_READ_PATH, ADAPTER"
     sample_csv=
 
-    # Which steps to run?
+    # Which steps to run? Note: downsample_bams and combine_vcfs are optional, but steps must be run in order.
     trim_align=yes
     downsample_bams=yes
     call_vcf=yes
     filt_vcf=yes
-    concat_vcf=no # This step currently does not work
+    combine_vcfs=yes
 
     # Reference genome
     ref_genome=/cluster/projects/nn10082k/ref/house_sparrow_genome_assembly-18-11-14_masked.fa
@@ -60,7 +60,6 @@
     trim_align_output_dir=${output_dir}/trim_align
     call_vcf_output_dir=${output_dir}/raw_vcf
     filt_vcf_output_dir=${output_dir}/filt_vcf
-    concat_vcf_output_dir=${filt_vcf_output_dir}
 
 ### --- End user input --- ###
 
@@ -176,16 +175,17 @@ if [ $filt_vcf = 'yes' ]; then
         --publish_dir $filt_vcf_output_dir
 fi
 
-if [ $concat_vcf = 'yes' ]; then
-    mkmissingdir $concat_vcf_output_dir
-    vcf_list=${concat_vcf_output_dir}/concatenated_vcfs.list
-    find $PWD/$filt_vcf_output_dir/vcf_filtered/ -name '*.vcf' > $vcf_list
-    sbatch ./pipeline/shell/concat_vcfs.slurm.sh \
-        --export=\
-        PIPELINE_REPOSITORY_DIR=$repository_path,\
-        VCF_LIST=$vcf_list,\
-        OUTPUT_VCF=$concat_vcf_output_dir/concatenated.vcf.gz,\
-        OUTPUT_VCF_NORM=$concat_vcf_output_dir/concatenated_normalised.vcf.gz
+if [ $combine_vcfs = 'yes' ]; then
+    
+    chkprevious "Step: combine_vcfs" $filt_vcf_output_dir
+
+    nextflow run ./pipeline/nextflow/combine_vcf.nf \
+        -c ./pipeline/config/combine_vcf.config \
+        --input_dir $filt_vcf_output_dir/vcf_filtered \
+        --pop_structure_label '_ps' \
+        --genome_scan_label '_gs' \
+        --publish_dir $filt_vcf_output_dir
+
 fi
 
 # End work

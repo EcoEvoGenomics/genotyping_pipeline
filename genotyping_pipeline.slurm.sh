@@ -58,7 +58,7 @@
     #     Also, . must be the genotyping_pipeline repository
     output_dir=./output
     trim_align_output_dir=${output_dir}/trim_align
-    call_vcf_output_dir=${output_dir}/call_vcf
+    call_vcf_output_dir=${output_dir}/raw_vcf
     filt_vcf_output_dir=${output_dir}/filt_vcf
     concat_vcf_output_dir=${filt_vcf_output_dir}
 

@@ -129,9 +129,8 @@ if [ $call_vcf = 'yes' ]; then
     bash ./pipeline/shell/create_genome_windows.sh $ref_index $window_size $ref_scaffold_name $windows_dir
 
     bam_list=${call_vcf_output_dir}/genotyped_bams.list
-
-    if [ -e ${trim_align_output_dir}/downsample_align ]; then
-        echo "Downsampled BAMs exist in ${trim_align_output_dir}/downsample_align. Genotyping downsampled BAMs ..."
+    if [ -e ${trim_align_output_dir}/align_downsample ]; then
+        echo "Downsampled BAMs exist in ${trim_align_output_dir}/align_downsample. Genotyping downsampled BAMs ..."
         find $PWD/$trim_align_output_dir/align_downsample/ -name '*.*am' > $bam_list
     else
         echo "Genotyping non-downsampled BAMs from ${trim_align_output_dir} ..."

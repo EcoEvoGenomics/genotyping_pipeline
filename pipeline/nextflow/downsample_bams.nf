@@ -41,7 +41,7 @@ process align_downsample {
         echo "Downsampling ${bam} by \${fraction_sampled} ..."
     fi
 
-    samtools view -bs \${fraction_sampled} ${bam} > ${bam.simpleName}_ds.bam
-    samtools index ${bam.simpleName}_ds.bam
+    samtools view -bs \${fraction_sampled} ${bam} > ${bam.simpleName}_ds.cram
+    samtools index ${bam.simpleName}_ds.cram
     """
 }

@@ -8,44 +8,42 @@
 // Developed by Mark Ravinet
 // Co-developed and maintained by Erik Sandertun Røed
 
-// script paramaters
-params.ref = file('/share/Passer/data/reference/house_sparrow_ref.fa')
+// Default input parameters
+params.ref = file('/cluster/projects/nn10082k/ref/house_sparrow_genome_assembly-18-11-14_masked.fa')
 params.publish_dir = './output'
 
-// read in a file of bams
-//params.bams = file('test_bams.list')
-// read in a file of genome windows
-// params.windows = file('sparrow_genome_windows.list')
+// Workflow
+workflow{    
+    
+    // Ploidy file for genotyping
+    if (!params.ploidyFile){
+        println "No ploidy file provided - by default, all chromosomes will be called as diploid."
+        ploidyFile = file('default.ploidy')
+    } else {
+        ploidyFile = file(params.ploidyFile)
+    }
 
-windows_list = file("${params.windows_dir}/genome_windows.list")
-    .readLines()
-    //.each { println it }
+    // List of genome windows
+    windows_list = file(params.windows)
+        .readLines()
+    
+    Channel.fromList(windows_list)
+        .set{windows}
 
-// create bams channel
-Channel
-    .from( file(params.bams))
-    .set{bams}
-// create windows channel
-Channel
-    .fromList( windows_list )
-    .set{windows}
+    Channel.from(file(params.bams))
+        .set{bams}
 
-// ploidy file for genotyping
-if (!params.ploidyFile){
-    println "No ploidy file provided - by default, all chromosomes will be called as diploid."
-    ploidyFile = file('default.ploidy')
-} else {
-    ploidyFile = file(params.ploidyFile)
+    genotyping(bams, ploidyFile, windows) \
+    | map { file ->
+        def key = file.baseName.toString().tokenize(':').get(0)
+        return tuple(key, file)
+      }
+    | groupTuple( by:0,sort:true ) \
+    | vcf_concat | vcf_normalise | vcf_reheader
+
 }
 
-// View results (to test)
-// bams.view()
-// windows.view()
-// chrs.view()
-// result.bams.view()
-// result.samples.view()
-
-// genotyping
+// Step 1 - Genotyping
 process genotyping {
 
     input:
@@ -56,6 +54,7 @@ process genotyping {
     output:
     path ("${windows}.vcf.gz")
 
+    script:
     """
     if [[ "${windows}" == "scaff"* ]];
     then
@@ -70,7 +69,7 @@ process genotyping {
     """
 }
 
-// concat - based on key value
+// Step 2 - Concatenate based on key values
 process vcf_concat {
 
     input:
@@ -82,6 +81,7 @@ process vcf_concat {
     file ("${key}_concat.vcf.gz"), \
     file ("${key}_concat.vcf.gz.csi")
 
+    script:
     """
     # sort the vcfs first 
     sort_vcfs=\$(echo $vcfs | tr ' ' '\n' | sort -t"-" -k2 -n | tr '\n' ' ')
@@ -91,7 +91,7 @@ process vcf_concat {
     """
 }
 
-// normalise vcf
+// Step 3 - 
 process vcf_normalise {
 
     input:
@@ -106,6 +106,7 @@ process vcf_normalise {
     file ("${key}_norm.vcf.gz"), \
     file ("${key}_norm.vcf.gz.csi")
 
+    script:
     """
     bcftools norm --threads ${task.cpus} --fasta-ref ${params.ref} -O z -o ${key}_norm.vcf.gz ${key}_concat.vcf.gz
     bcftools index --threads ${task.cpus} ${key}_norm.vcf.gz
@@ -129,23 +130,10 @@ process vcf_reheader {
     file ("${key}.vcf.gz"), \
     file ("${key}.vcf.gz.csi")
 
+    script:
     """
     bcftools query -l ${key}_norm.vcf.gz | xargs -n 1 basename | awk -F '_' '{print \$1}' > samples
     bcftools reheader --threads ${task.cpus} -s samples -o ${key}.vcf.gz ${key}_norm.vcf.gz
     bcftools index --threads ${task.cpus} ${key}.vcf.gz
     """
-}
-
-// workflow starts here!
-
-workflow{    
-    // set the reference genome from the command line:
-    params.ref = "--ref"
-    genotyping(bams, ploidyFile, windows) \
-    | map { file ->
-        def key = file.baseName.toString().tokenize(':').get(0)
-        return tuple(key, file)
-      }
-    | groupTuple( by:0,sort:true ) \
-    | vcf_concat | vcf_normalise | vcf_reheader
 }

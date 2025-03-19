@@ -24,6 +24,7 @@
 
     # Which steps to run?
     trim_align=yes
+    downsample_bams=yes
     call_vcf=yes
     filt_vcf=yes
     concat_vcf=no # This step currently does not work
@@ -36,6 +37,9 @@
 
     # Directory of trimming adapters
     adapter_dir=/cluster/projects/nn10082k/trimmomatic_adapters/
+
+    # BAM maximum depth before downsampling
+    bam_max_depth=20
 
     # Genotyping settings
     window_size=10000000
@@ -50,7 +54,7 @@
     vcf_filt_max_geno_depth=30
     vcf_filt_keep=""
     
-    # NB: Only change if you know what you are doing (ask Erik), typically for re-filtering
+    # NB: Only change if you know what you are doing (ask Erik), typically for re-filtering a VCF
     #     Also, . must be the genotyping_pipeline repository
     output_dir=./output
     trim_align_output_dir=${output_dir}/trim_align
@@ -93,13 +97,39 @@ if [ $trim_align = 'yes' ]; then
         --publish_dir $trim_align_output_dir
 fi
 
+if [ $downsample_bams = 'yes' ]; then
+    
+    if [ ! -e $trim_align_output_dir ]; then
+        echo "Error. Expected to downsample BAMs, but no BAMs exist in specified directory."
+        exit 1
+    fi
+
+    undownsampled_bams=${trim_align_output_dir}/undownsampled_bams.list
+    find $PWD/$trim_align_output_dir/align/ -name '*.*am' > $undownsampled_bams
+
+    nextflow run ./pipeline/nextflow/downsample_bams.nf \
+        -c ./pipeline/config/downsample_bams.config \
+        --depth $bam_max_depth \
+        --bams $undownsampled_bams \
+        --publish_dir $trim_align_output_dir
+fi
+
 if [ $call_vcf = 'yes' ]; then
     mkmissingdir $call_vcf_output_dir
     windows_dir=$call_vcf_output_dir/genome_windows
     mkmissingdir $windows_dir
     bash ./pipeline/shell/create_genome_windows.sh $ref_index $window_size $ref_scaffold_name $windows_dir
+
     bam_list=${call_vcf_output_dir}/genotyped_bams.list
-    find $PWD/$trim_align_output_dir/align/ -name '*.*am' > $bam_list
+
+    if [ -e ${trim_align_output_dir}/downsample_align ]; then
+        echo "Downsampled BAMs exist in ${trim_align_output_dir}/downsample_align. Genotyping downsampled BAMs ..."
+        find $PWD/$trim_align_output_dir/align_downsample/ -name '*.*am' > $bam_list
+    else
+        echo "Genotyping non-downsampled BAMs from ${trim_align_output_dir} ..."
+        find $PWD/$trim_align_output_dir/align/ -name '*.*am' > $bam_list
+    fi
+
     nextflow run ./pipeline/nextflow/call_variants.nf \
         -c ./pipeline/config/call_variants.config \
         --ref $ref_genome \

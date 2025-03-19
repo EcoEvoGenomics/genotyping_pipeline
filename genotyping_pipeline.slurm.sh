@@ -108,13 +108,14 @@ if [ $threshold_depth = 'yes' ]; then
     
     chkprevious "Step: threshold_depth" $trim_align_output_dir
 
-    raw_bams=${trim_align_output_dir}/raw_bams.list
-    find $PWD/$trim_align_output_dir/align/ -name '*.*am' > $raw_bams
+    raw_crams=${trim_align_output_dir}/raw_crams.list
+    find $PWD/$trim_align_output_dir/align/ -name '*.*am' > $raw_crams
 
-    nextflow run ./pipeline/nextflow/downsample_bams.nf \
-        -c ./pipeline/config/downsample_bams.config \
+    nextflow run ./pipeline/nextflow/threshold_cram_depth.nf \
+        -c ./pipeline/config/threshold_cram_depth.config \
+        --ref $ref_genome \
         --depth $depth_threshold \
-        --bams $raw_bams \
+        --crams $raw_crams \
         --publish_dir $trim_align_output_dir
 fi
 
@@ -127,19 +128,19 @@ if [ $call_vcf = 'yes' ]; then
     mkmissingdir $windows_dir
     bash ./pipeline/shell/create_genome_windows.sh $ref_index $window_size $ref_scaffold_name $windows_dir
 
-    bam_list=${call_vcf_output_dir}/genotyped_bams.list
+    cram_list=${call_vcf_output_dir}/genotyped_crams.list
     if [ -e ${trim_align_output_dir}/align_maxdepth ]; then
-        echo "Downsampled BAMs exist in ${trim_align_output_dir}/align_maxdepth. Genotyping downsampled BAMs ..."
-        find $PWD/$trim_align_output_dir/align_maxdepth/ -name '*.*am' > $bam_list
+        echo "Downsampled CRAMs exist in ${trim_align_output_dir}/align_maxdepth. Genotyping downsampled CRAMs ..."
+        find $PWD/$trim_align_output_dir/align_maxdepth/ -name '*.*am' > $cram_list
     else
-        echo "Genotyping non-downsampled BAMs from ${trim_align_output_dir} ..."
-        find $PWD/$trim_align_output_dir/align/ -name '*.*am' > $bam_list
+        echo "Genotyping non-downsampled CRAMs from ${trim_align_output_dir} ..."
+        find $PWD/$trim_align_output_dir/align/ -name '*.*am' > $cram_list
     fi
 
     nextflow run ./pipeline/nextflow/call_variants.nf \
         -c ./pipeline/config/call_variants.config \
         --ref $ref_genome \
-        --bams $bam_list \
+        --crams $cram_list \
         --windows_dir $windows_dir \
         --ploidy_file $ref_ploidy_file \
         --publish_dir $call_vcf_output_dir

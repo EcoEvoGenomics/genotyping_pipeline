@@ -70,7 +70,7 @@ module load Miniconda3/22.11.1-1
 
 # Activate conda environment
 source ${EBROOTMINICONDA3}/bin/activate
-conda activate /cluster/projects/nn10082k/conda_group/nextflow
+conda activate /cluster/projects/nn10082k/conda_users/eriksro/genotyping_pipeline_experimental
 
 # Function to handle missing output directories
 mkmissingdir() {

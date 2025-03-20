@@ -96,7 +96,7 @@ mkmissingdir $output_dir
 
 if [ $trim_align = 'yes' ]; then
     mkmissingdir $trim_align_output_dir
-    
+
     nextflow run ./pipeline/nextflow/trim_and_align.nf \
         -c ./pipeline/config/trim_and_align.config \
         --ref $ref_genome \
@@ -162,7 +162,7 @@ if [ $filt_vcf = 'yes' ]; then
 
     nextflow run ./pipeline/nextflow/filter_variants.nf \
         -c ./pipeline/config/filter_variants.config \
-        --vcf_dir $call_vcf_output_dir/vcf \
+        --vcf_dir $call_vcf_output_dir \
         --miss $vcf_filt_miss \
         --q_site1 $vcf_filt_q_site1 \
         --q_site2 $vcf_filt_q_site2 \

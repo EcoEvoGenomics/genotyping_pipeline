@@ -9,7 +9,7 @@
 // Co-developed and maintained by Erik Sandertun Røed
 
 // Default parameters
-params.vcf_dir = "${params.publish_dir}/call_vcf/vcf"
+params.vcf_dir = "${params.publish_dir}/raw_vcf"
 params.publish_dir = './output'
 
 // Default filtering parameters
@@ -24,25 +24,42 @@ params.keep=""
 
 // Workflow
 workflow{
-  Channel.fromPath("${params.vcf_dir}/*.vcf.gz") | rm_indels | vcf_filter
+  Channel.fromPath("${params.vcf_dir}/genome_windows").set{windows_dir}
+  Channel.fromList(file("${params.vcf_dir}/genome_windows/genome_windows.list").readLines()).set{windows}
+
+  Channel
+    .fromPath("${params.vcf_dir}/vcf/*.vcf.gz")
+    .map { vcf -> 
+      def csi = vcf.toString().replace('vcf.gz', 'vcf.gz.csi')
+      tuple(file(vcf), file(csi))
+    }
+    .set{raw_vcfs}
+
+  def filt = raw_vcfs | rm_indels | vcf_filter
+
+  def unfilt_qc = qc_pre(raw_vcfs, windows_dir, windows).collect()
+  def filt_qc_ps = qc_ps_post(filt, windows_dir, windows).collect()
+  def filt_qc_gs = qc_gs_post(filt, windows_dir, windows).collect()
+
+  combine_qc(unfilt_qc, filt_qc_ps, filt_qc_gs)
 }
 
 // Filtering, Step 1 - Remove spanning indels and re-normalise
 process rm_indels {
 
   input:
-  path (anno_vcf)
+  tuple file(raw_vcf), file(raw_vcf_index)
 
   output:
   tuple \
-    file ("${anno_vcf.simpleName}.vcf.gz"), \
-    file ("${anno_vcf.simpleName}.vcf.gz.csi") 
+    file ("${raw_vcf.simpleName}_rm_indel.vcf.gz"), \
+    file ("${raw_vcf.simpleName}_rm_indel.vcf.gz.csi") 
 
   script:
   """
-  bcftools view --threads ${task.cpus} -V indels -e 'ALT="*" | N_ALT>1' $anno_vcf | bcftools norm --threads ${task.cpus} -D -O z -o ${anno_vcf.simpleName}.vcf.gz
-
-  bcftools index --threads ${task.cpus} ${anno_vcf.simpleName}.vcf.gz
+  bcftools view --threads ${task.cpus} -V indels -e 'ALT="*" | N_ALT>1' $raw_vcf \
+    | bcftools norm --threads ${task.cpus} -D -O z -o ${raw_vcf.simpleName}_rm_indel.vcf.gz
+  bcftools index --threads ${task.cpus} ${raw_vcf.simpleName}_rm_indel.vcf.gz
   """
 }
 

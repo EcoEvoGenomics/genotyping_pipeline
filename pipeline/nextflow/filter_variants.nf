@@ -27,7 +27,7 @@ workflow{
   Channel.fromPath("${params.vcf_dir}/*.vcf.gz") | rm_indels | vcf_filter
 }
 
-// Step 1 - Remove spanning indels and re-normalise
+// Filtering, Step 1 - Remove spanning indels and re-normalise
 process rm_indels {
 
   input:
@@ -46,7 +46,7 @@ process rm_indels {
   """
 }
 
-// Step 2 - Filtering, both for population structure analyses and genome scans
+// Filtering, Step 2 - Filtering for population structure analyses and for genome scans
 process vcf_filter {
 
   publishDir "${params.publish_dir}/vcf_filtered", saveAs: { filename -> "$filename" }, mode: 'copy'

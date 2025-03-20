@@ -22,11 +22,12 @@
     # Path to .CSV with each row as "ID, F_READ_PATH, R_READ_PATH, ADAPTER"
     sample_csv=
 
-    # Which steps to run?
+    # Which steps to run? Note: threshold_depth and combine_vcfs are optional, but steps must be run in order.
     trim_align=yes
+    threshold_depth=yes
     call_vcf=yes
     filt_vcf=yes
-    concat_vcf=no # This step currently does not work
+    combine_vcfs=yes
 
     # Reference genome
     ref_genome=/cluster/projects/nn10082k/ref/house_sparrow_genome_assembly-18-11-14_masked.fa
@@ -36,6 +37,9 @@
 
     # Directory of trimming adapters
     adapter_dir=/cluster/projects/nn10082k/trimmomatic_adapters/
+
+    # BAM maximum depth before downsampling
+    depth_threshold=20
 
     # Genotyping settings
     window_size=10000000
@@ -50,13 +54,12 @@
     vcf_filt_max_geno_depth=30
     vcf_filt_keep=""
     
-    # NB: Only change if you know what you are doing (ask Erik), typically for re-filtering
+    # NB: Only change if you know what you are doing (ask Erik), typically for re-filtering a VCF
     #     Also, . must be the genotyping_pipeline repository
     output_dir=./output
     trim_align_output_dir=${output_dir}/trim_align
-    call_vcf_output_dir=${output_dir}/call_vcf
+    call_vcf_output_dir=${output_dir}/raw_vcf
     filt_vcf_output_dir=${output_dir}/filt_vcf
-    concat_vcf_output_dir=${filt_vcf_output_dir}
 
 ### --- End user input --- ###
 
@@ -79,12 +82,21 @@ mkmissingdir() {
     fi
 }
 
+# Function to check previous step is done
+chkprevious() {
+    if [ ! -e $2 ]; then
+        echo "Error. ${1} expected output from previous step to exist in directory ${2}."
+        exit
+    fi
+}
+
 # Begin work
 cd $repository_path
 mkmissingdir $output_dir
 
 if [ $trim_align = 'yes' ]; then
     mkmissingdir $trim_align_output_dir
+    
     nextflow run ./pipeline/nextflow/trim_and_align.nf \
         -c ./pipeline/config/trim_and_align.config \
         --ref $ref_genome \
@@ -93,24 +105,50 @@ if [ $trim_align = 'yes' ]; then
         --publish_dir $trim_align_output_dir
 fi
 
+if [ $threshold_depth = 'yes' ]; then
+    chkprevious "Step: threshold_depth" $trim_align_output_dir
+
+    raw_crams=${trim_align_output_dir}/raw_crams.list
+    find $PWD/$trim_align_output_dir/align/ -name '*.*am' > $raw_crams
+
+    nextflow run ./pipeline/nextflow/threshold_cram_depth.nf \
+        -c ./pipeline/config/threshold_cram_depth.config \
+        --ref $ref_genome \
+        --depth $depth_threshold \
+        --crams $raw_crams \
+        --publish_dir $trim_align_output_dir
+fi
+
 if [ $call_vcf = 'yes' ]; then
+    chkprevious "Step: call_vcf" $trim_align_output_dir
     mkmissingdir $call_vcf_output_dir
+
     windows_dir=$call_vcf_output_dir/genome_windows
     mkmissingdir $windows_dir
     bash ./pipeline/shell/create_genome_windows.sh $ref_index $window_size $ref_scaffold_name $windows_dir
-    bam_list=${call_vcf_output_dir}/genotyped_bams.list
-    find $PWD/$trim_align_output_dir/align/ -name '*.*am' > $bam_list
+
+    cram_list=${call_vcf_output_dir}/genotyped_crams.list
+    if [ -e ${trim_align_output_dir}/align_maxdepth ]; then
+        echo "Downsampled CRAMs exist in ${trim_align_output_dir}/align_maxdepth. Genotyping downsampled CRAMs ..."
+        find $PWD/$trim_align_output_dir/align_maxdepth/ -name '*.*am' > $cram_list
+    else
+        echo "Genotyping non-downsampled CRAMs from ${trim_align_output_dir} ..."
+        find $PWD/$trim_align_output_dir/align/ -name '*.*am' > $cram_list
+    fi
+
     nextflow run ./pipeline/nextflow/call_variants.nf \
         -c ./pipeline/config/call_variants.config \
         --ref $ref_genome \
-        --bams $bam_list \
+        --crams $cram_list \
         --windows_dir $windows_dir \
         --ploidy_file $ref_ploidy_file \
         --publish_dir $call_vcf_output_dir
 fi
 
 if [ $filt_vcf = 'yes' ]; then
+    chkprevious "Step: filt_vcf" $call_vcf_output_dir
     mkmissingdir $filt_vcf_output_dir
+
     printf "miss %s\nq_site1 %s\nq_site2 %s\nmin_depth %s\nmax_depth %s\nmin_geno_depth %s\nmax_geno_depth %s\nkeep %s\n" \
         "$vcf_filt_miss" \
         "$vcf_filt_q_site1" \
@@ -121,6 +159,7 @@ if [ $filt_vcf = 'yes' ]; then
         "$vcf_filt_max_geno_depth" \
         "$vcf_filt_keep" \
         > $filt_vcf_output_dir/filt_params.txt
+
     nextflow run ./pipeline/nextflow/filter_variants.nf \
         -c ./pipeline/config/filter_variants.config \
         --vcf_dir $call_vcf_output_dir/vcf \
@@ -135,16 +174,15 @@ if [ $filt_vcf = 'yes' ]; then
         --publish_dir $filt_vcf_output_dir
 fi
 
-if [ $concat_vcf = 'yes' ]; then
-    mkmissingdir $concat_vcf_output_dir
-    vcf_list=${concat_vcf_output_dir}/concatenated_vcfs.list
-    find $PWD/$filt_vcf_output_dir/vcf_filtered/ -name '*.vcf' > $vcf_list
-    sbatch ./pipeline/shell/concat_vcfs.slurm.sh \
-        --export=\
-        PIPELINE_REPOSITORY_DIR=$repository_path,\
-        VCF_LIST=$vcf_list,\
-        OUTPUT_VCF=$concat_vcf_output_dir/concatenated.vcf.gz,\
-        OUTPUT_VCF_NORM=$concat_vcf_output_dir/concatenated_normalised.vcf.gz
+if [ $combine_vcfs = 'yes' ]; then
+    chkprevious "Step: combine_vcfs" $filt_vcf_output_dir
+
+    nextflow run ./pipeline/nextflow/combine_vcf.nf \
+        -c ./pipeline/config/combine_vcf.config \
+        --input_dir $filt_vcf_output_dir/vcf_filtered \
+        --pop_structure_label '_ps' \
+        --genome_scan_label '_gs' \
+        --publish_dir $filt_vcf_output_dir
 fi
 
 # End work

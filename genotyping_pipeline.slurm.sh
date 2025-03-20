@@ -111,15 +111,15 @@ fi
 
 if [ $filt_vcf = 'yes' ]; then
     mkmissingdir $filt_vcf_output_dir
-    echo "VCF filtering parameters:\n" \
-        "miss" $vcf_filt_miss "\n" \
-        "q_site1" $vcf_filt_q_site1 "\n" \
-        "q_site2" $vcf_filt_q_site2 "\n" \
-        "min_depth" $vcf_filt_min_depth "\n" \
-        "max_depth" $vcf_filt_max_depth "\n" \
-        "min_geno_depth" $vcf_filt_min_geno_depth "\n" \
-        "max_geno_depth" $vcf_filt_max_geno_depth "\n" \
-        "keep" $vcf_filt_keep "\n" \
+    printf "miss %s\nq_site1 %s\nq_site2 %s\nmin_depth %s\nmax_depth %s\nmin_geno_depth %s\nmax_geno_depth %s\nkeep %s\n" \
+        "$vcf_filt_miss" \
+        "$vcf_filt_q_site1" \
+        "$vcf_filt_q_site2" \
+        "$vcf_filt_min_depth" \
+        "$vcf_filt_max_depth" \
+        "$vcf_filt_min_geno_depth" \
+        "$vcf_filt_max_geno_depth" \
+        "$vcf_filt_keep" \
         > $filt_vcf_output_dir/filt_params.txt
     nextflow run ./pipeline/nextflow/filter_variants.nf \
         -c ./pipeline/config/filter_variants.config \

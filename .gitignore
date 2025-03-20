@@ -2,3 +2,4 @@
 .nextflow.log
 /.nextflow
 /work
+/output

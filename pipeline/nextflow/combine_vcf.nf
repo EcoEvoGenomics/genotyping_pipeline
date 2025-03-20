@@ -14,12 +14,19 @@ params.pop_structure_label = '_ps'
 params.genome_scan_label = '_gs'
 params.publish_dir = './output/'
 
-// Workflow
 workflow  {
-   Channel.fromPath("${params.input_dir}/*${params.pop_structure_label}.vcf.gz").set{pop_structure}
-   Channel.fromPath("${params.input_dir}/*${params.genome_scan_label}.vcf.gz").set{genome_scan}
-   combine_vcf(pop_structure) | renormalise_vcf
-   combine_vcf(genome_scan) | renormalise_vcf
+    population_structure()
+    genome_scan()
+}
+
+workflow population_structure {
+    Channel.fromPath("${params.input_dir}/*${params.pop_structure_label}.vcf.gz").collect().set{pop_structure}
+    combine_vcf('combined_ps', pop_structure) | renormalise_vcf
+}
+
+workflow genome_scan {
+    Channel.fromPath("${params.input_dir}/*${params.genome_scan_label}.vcf.gz").collect().set{genome_scan}
+    combine_vcf('combined_gs', genome_scan) | renormalise_vcf
 }
 
 process combine_vcf {
@@ -27,15 +34,16 @@ process combine_vcf {
     publishDir "${params.publish_dir}/combined_vcf", saveAs: { filename -> "$filename" }
 
     input:
+    val name
     path list_of_vcfs, stageAs: "staged/*"
     
     output:
-    path "${list_of_vcfs.name()}.vcf.gz"
+    path "${name}.vcf.gz"
 
     script:
     """
-    bcftools concat --threads 8 -n -O z -o ${list_of_vcfs.name()}.vcf.gz staged/*
-    bcftools index ${list_of_vcfs.name()}.vcf.gz
+    bcftools concat --threads 8 -n -O z -o ${name}.vcf.gz staged/*
+    bcftools index ${name}.vcf.gz
     """
 }
 

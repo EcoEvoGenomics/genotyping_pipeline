@@ -121,3 +121,91 @@ process vcf_filter {
   fi
   """
 }
+
+// Run QC for unfiltered VCFs
+process qc_pre {
+
+  input:
+  tuple file(vcf), file(csi)
+  path windows_dir
+  each window
+
+  output:
+  path "${vcf.simpleName}_${window}_qc_pre.txt"
+
+  script:
+  """
+  bcftools stats --threads ${task.cpus} --regions ${window} ${vcf} > ${vcf.simpleName}_${window}_qc_pre.txt
+  """
+}
+
+// Run QC for filtered VCFs (population structure, ps)
+process qc_ps_post {
+
+  input:
+  tuple file(ps_vcf), file(ps_csi), file(gs_vcf), file(gs_csi)
+  path windows_dir
+  each window
+
+  output:
+  path "${ps_vcf.simpleName}_${window}_qc_ps_post.txt"
+
+  script:
+  """
+  if [[ "${window}" == "scaffold"* ]];
+  then
+    bcftools stats --threads ${task.cpus} --regions-file ${windows_dir}/${window} ${ps_vcf} \
+    > ${ps_vcf.simpleName}_${window}_qc_ps_post.txt
+  else
+    bcftools stats --threads ${task.cpus} --regions ${window} ${ps_vcf} \
+    > ${ps_vcf.simpleName}_${window}_qc_ps_post.txt
+  fi
+  """
+}
+
+// Run QC for filtered VCFs (genome scan, gs)
+process qc_gs_post {
+
+  input:
+  tuple file(ps_vcf), file(ps_csi), file(gs_vcf), file(gs_csi)
+  path windows_dir
+  each window
+
+  output:
+  path "${gs_vcf.simpleName}_${window}_qc_gs_post.txt"
+
+  script:
+  """
+  if [[ "${window}" == "scaffold"* ]];
+  then
+    bcftools stats --threads ${task.cpus} --regions-file ${windows_dir}/${window} ${gs_vcf} \
+    > ${gs_vcf.simpleName}_${window}_qc_gs_post.txt
+  else
+    bcftools stats --threads ${task.cpus} --regions ${window} ${gs_vcf} \
+    > ${gs_vcf.simpleName}_${window}_qc_gs_post.txt
+  fi
+  """
+}
+
+// Combine output of QC processes
+process combine_qc {
+
+  publishDir "${params.publish_dir}/qc", saveAs: { filename -> "$filename" }, mode: 'copy'
+
+  input:
+  path qc_pre_files
+  path qc_post_ps_files
+  path qc_post_gs_files
+  
+  output:
+  path "stats_pre.txt"
+  path "stats_ps_post.txt"
+  path "stats_gs_post.txt"
+
+  script:
+  """
+  cat ${qc_pre_files} > stats_pre.txt
+  cat ${qc_post_ps_files} > stats_ps_post.txt
+  cat ${qc_post_gs_files} > stats_gs_post.txt
+  """
+}

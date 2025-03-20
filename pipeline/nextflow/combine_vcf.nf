@@ -55,11 +55,12 @@ process renormalise_vcf {
     path vcf
 
     output:
-    path "${vcf.baseName}_norm.vcf.gz"
+    path "${vcf.getName().replaceAll(/\.vcf\.gz$/, '')}_norm.vcf.gz"
 
     script:
     """
-    bcftools norm -d none -O z -o ${vcf.baseName}_norm.vcf.gz ${vcf}
-    bcftools index ${vcf.baseName}_norm.vcf.gz
+    vcfName="${vcf.getName().replaceAll(/\.vcf\.gz$/, '')}"
+    bcftools norm -d none -O z -o \${vcfName}_norm.vcf.gz ${vcf}
+    bcftools index \${vcfName}_norm.vcf.gz
     """
 }

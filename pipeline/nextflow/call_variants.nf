@@ -108,8 +108,7 @@ process vcf_normalise {
 // Step 4 - Reheader VCF
 process vcf_reheader {
 
-    publishDir "${params.publish_dir}/vcf", saveAs: { filename -> "$filename" }
-
+    publishDir "${params.publish_dir}/vcf", saveAs: { filename -> "$filename" }, mode: 'copy'
     input:
     tuple \
     val(key),

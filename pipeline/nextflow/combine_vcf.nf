@@ -31,8 +31,7 @@ workflow genome_scan {
 
 process combine_vcf {
 
-    publishDir "${params.publish_dir}/combined_vcf", saveAs: { filename -> "$filename" }
-
+    publishDir "${params.publish_dir}/combined_vcf", saveAs: { filename -> "$filename" }, mode: 'copy'
     input:
     val name
     path list_of_vcfs, stageAs: "staged/*"
@@ -49,8 +48,7 @@ process combine_vcf {
 
 process renormalise_vcf {
 
-    publishDir "${params.publish_dir}/combined_vcf", saveAs: { filename -> "$filename" }
-
+    publishDir "${params.publish_dir}/combined_vcf", saveAs: { filename -> "$filename" }, mode: 'copy'
     input:
     path vcf
 

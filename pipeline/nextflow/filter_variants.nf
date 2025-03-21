@@ -69,15 +69,15 @@ process vcf_filter_pop_structure {
   publishDir "${params.publish_dir}/vcf_filtered", saveAs: { filename -> "$filename" }, mode: 'copy'
   
   input:
-  tuple file(rm_indel_vcf), file(rm_indel_vcf_index) 
+  tuple file(vcf), file(vcf_index) 
 
   output:
-  tuple file("${rm_indel_vcf.simpleName}_filt_ps.vcf.gz"), file("${rm_indel_vcf.simpleName}_filt_ps.vcf.gz.csi")
+  tuple file("${vcf.simpleName}_filt_ps.vcf.gz"), file("${vcf.simpleName}_filt_ps.vcf.gz.csi")
 
   script:
   """
   if [[ -f ${params.keep} ]]; then
-    vcftools --gzvcf $rm_indel_vcf --remove-indels --remove-filtered-all \
+    vcftools --gzvcf $vcf --remove-indels --remove-filtered-all \
     --keep ${params.keep} \
     --min-alleles 2 \
     --max-alleles 2 \
@@ -86,9 +86,9 @@ process vcf_filter_pop_structure {
     --min-meanDP ${params.min_depth} --max-meanDP ${params.max_depth} \
     --minDP ${params.min_geno_depth} --maxDP ${params.max_geno_depth} \
     --recode --recode-INFO-all --stdout \
-  | bcftools view --threads ${task.cpus} -e 'N_ALT>1' -O z -o ${rm_indel_vcf.simpleName}_filt_ps.vcf.gz
+  | bcftools view --threads ${task.cpus} -e 'N_ALT>1' -O z -o ${vcf.simpleName}_filt_ps.vcf.gz
   else
-    vcftools --gzvcf $rm_indel_vcf --remove-indels --remove-filtered-all \
+    vcftools --gzvcf $vcf --remove-indels --remove-filtered-all \
     --min-alleles 2 \
     --max-alleles 2 \
     --max-missing ${params.miss} \
@@ -96,9 +96,9 @@ process vcf_filter_pop_structure {
     --min-meanDP ${params.min_depth} --max-meanDP ${params.max_depth} \
     --minDP ${params.min_geno_depth} --maxDP ${params.max_geno_depth} \
     --recode --recode-INFO-all --stdout \
-  | bcftools view --threads ${task.cpus} -e 'N_ALT>1' -O z -o ${rm_indel_vcf.simpleName}_filt_ps.vcf.gz
+  | bcftools view --threads ${task.cpus} -e 'N_ALT>1' -O z -o ${vcf.simpleName}_filt_ps.vcf.gz
   fi
-  bcftools index --threads ${task.cpus} ${rm_indel_vcf.simpleName}_filt_ps.vcf.gz
+  bcftools index --threads ${task.cpus} ${vcf.simpleName}_filt_ps.vcf.gz
   """
 }
 
@@ -107,32 +107,32 @@ process vcf_filter_genome_scan {
   publishDir "${params.publish_dir}/vcf_filtered", saveAs: { filename -> "$filename" }, mode: 'copy'
 
   input:
-  tuple file(rm_indel_vcf), file(rm_indel_vcf_index) 
+  tuple file(vcf), file(vcf_index) 
 
   output:
-  tuple file("${rm_indel_vcf.simpleName}_filt_gs.vcf.gz"), file("${rm_indel_vcf.simpleName}_filt_gs.vcf.gz.csi")
+  tuple file("${vcf.simpleName}_filt_gs.vcf.gz"), file("${vcf.simpleName}_filt_gs.vcf.gz.csi")
 
   script:
   """
   if [[ -f ${params.keep} ]]; then
-    vcftools --gzvcf $rm_indel_vcf --remove-indels --remove-filtered-all \
+    vcftools --gzvcf $vcf --remove-indels --remove-filtered-all \
     --keep ${params.keep} \
     --max-alleles 2 \
     --minQ ${params.q_site_gs} \
     --min-meanDP ${params.min_depth} --max-meanDP ${params.max_depth} \
     --minDP ${params.min_geno_depth} --maxDP ${params.max_geno_depth} \
     --recode --recode-INFO-all --stdout \
-  | bcftools view --threads ${task.cpus} -e 'N_ALT>1' -O z -o ${rm_indel_vcf.simpleName}_filt_gs.vcf.gz
+  | bcftools view --threads ${task.cpus} -e 'N_ALT>1' -O z -o ${vcf.simpleName}_filt_gs.vcf.gz
   else
-    vcftools --gzvcf $rm_indel_vcf --remove-indels --remove-filtered-all \
+    vcftools --gzvcf $vcf --remove-indels --remove-filtered-all \
     --max-alleles 2 \
     --minQ ${params.q_site_gs} \
     --min-meanDP ${params.min_depth} --max-meanDP ${params.max_depth} \
     --minDP ${params.min_geno_depth} --maxDP ${params.max_geno_depth} \
     --recode --recode-INFO-all --stdout \
-  | bcftools view --threads ${task.cpus} -e 'N_ALT>1' -O z -o ${rm_indel_vcf.simpleName}_filt_gs.vcf.gz
+  | bcftools view --threads ${task.cpus} -e 'N_ALT>1' -O z -o ${vcf.simpleName}_filt_gs.vcf.gz
   fi
-  bcftools index --threads ${task.cpus} ${rm_indel_vcf.simpleName}_filt_gs.vcf.gz
+  bcftools index --threads ${task.cpus} ${vcf.simpleName}_filt_gs.vcf.gz
   """
 }
 

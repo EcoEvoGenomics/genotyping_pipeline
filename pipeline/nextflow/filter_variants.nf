@@ -136,6 +136,7 @@ process vcf_filter_genome_scan {
   """
 }
 
+// Randomly subsample a VCF
 process downsample_vcf {
 
   input:
@@ -158,8 +159,7 @@ process downsample_vcf {
   """
 }
 
-
-// Randomly subsample a VCF and calculate stats
+// Calculate VCF stats
 process get_vcf_stats {
 
   input:
@@ -174,6 +174,7 @@ process get_vcf_stats {
   """
 }
 
+// Collate different VCF stats into a filtering QC report
 process collate_filtering_report {
 
   input:

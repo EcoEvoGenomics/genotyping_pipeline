@@ -9,8 +9,8 @@
 // Co-developed and maintained by Erik Sandertun Røed
 
 // Default parameters
-params.vcf_dir = "${params.publish_dir}/raw_vcf"
 params.publish_dir = './output'
+params.vcf_dir = "${params.publish_dir}/raw_vcf"
 
 // Default filtering parameters
 params.miss=0.8
@@ -21,7 +21,7 @@ params.max_depth=30
 params.min_geno_depth=5
 params.max_geno_depth=30
 params.keep=""
-params.target_sites=10000
+params.stats_downsample_sites=10000
 
 // Workflow
 workflow{
@@ -38,6 +38,7 @@ workflow{
   def indels_removed = raw_vcf_and_index | rm_indels
   filter_pop_structure(indels_removed)
   filter_genome_structure(indels_removed)
+
 }
 
 workflow filter_pop_structure {
@@ -166,7 +167,7 @@ process downsample_vcf {
   """
   # First, calculate ratio of sites to retain ...
   vcf_num_sites=\$(vcftools --vcf ${vcf} --site-counts | grep 'sites' | awk '{print \$5}')
-  retain_ratio=\$(echo "scale=4; ${params.target_sites} / \$vcf_num_sites" | bc)
+  retain_ratio=\$(echo "scale=4; ${params.stats_downsample_sites} / \$vcf_num_sites" | bc)
   
   # Then, downsample ...
   vcfrandomsample -r \$retain_ratio ${vcf} > ${vcf.simpleName}_downsampled.vcf

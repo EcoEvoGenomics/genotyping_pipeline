@@ -53,6 +53,7 @@
     vcf_filt_min_geno_depth=5
     vcf_filt_max_geno_depth=30
     vcf_filt_keep=""
+    stats_downsample_sites=10000
     
     # NB: Only change if you know what you are doing (ask Erik), typically for re-filtering a VCF
     #     Also, . must be the genotyping_pipeline repository
@@ -171,7 +172,8 @@ if [ $filt_vcf = 'yes' ]; then
         --min_geno_depth $vcf_filt_min_geno_depth \
         --max_geno_depth $vcf_filt_max_geno_depth \
         --keep $vcf_filt_keep \
-        --publish_dir $filt_vcf_output_dir
+        --publish_dir $filt_vcf_output_dir \
+        --stats_downsample_sites $stats_downsample_sites
 fi
 
 if [ $combine_vcfs = 'yes' ]; then

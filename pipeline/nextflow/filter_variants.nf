@@ -170,7 +170,7 @@ process downsample_vcf {
   retain_ratio=\$(echo "scale=4; ${params.stats_downsample_sites} / \$vcf_num_sites" | bc)
   
   # Then, downsample ...
-  vcfrandomsample -r \$retain_ratio ${vcf} > ${vcf.simpleName}_downsampled.vcf
+  bcftools view ${vcf} | vcfrandomsample -r \$retain_ratio > ${vcf.simpleName}_downsampled.vcf
   bgzip ${vcf.simpleName}_downsampled.vcf
   bcftools index ${vcf.simpleName}_downsampled.vcf.gz
   """

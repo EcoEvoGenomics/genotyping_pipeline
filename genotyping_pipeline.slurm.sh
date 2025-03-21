@@ -46,8 +46,8 @@
 
     # Filtering settings
     vcf_filt_miss=0.8
-    vcf_filt_q_site1=30
-    vcf_filt_q_site2=30
+    vcf_filt_q_site_ps=30
+    vcf_filt_q_site_gs=30
     vcf_filt_min_depth=5
     vcf_filt_max_depth=30
     vcf_filt_min_geno_depth=5
@@ -149,10 +149,10 @@ if [ $filt_vcf = 'yes' ]; then
     chkprevious "Step: filt_vcf" $call_vcf_output_dir
     mkmissingdir $filt_vcf_output_dir
 
-    printf "miss %s\nq_site1 %s\nq_site2 %s\nmin_depth %s\nmax_depth %s\nmin_geno_depth %s\nmax_geno_depth %s\nkeep %s\n" \
+    printf "miss %s\nq_site_ps %s\nq_site_gs %s\nmin_depth %s\nmax_depth %s\nmin_geno_depth %s\nmax_geno_depth %s\nkeep %s\n" \
         "$vcf_filt_miss" \
-        "$vcf_filt_q_site1" \
-        "$vcf_filt_q_site2" \
+        "$vcf_filt_q_site_ps" \
+        "$vcf_filt_q_site_gs" \
         "$vcf_filt_min_depth" \
         "$vcf_filt_max_depth" \
         "$vcf_filt_min_geno_depth" \
@@ -164,8 +164,8 @@ if [ $filt_vcf = 'yes' ]; then
         -c ./pipeline/config/filter_variants.config \
         --vcf_dir $call_vcf_output_dir \
         --miss $vcf_filt_miss \
-        --q_site1 $vcf_filt_q_site1 \
-        --q_site2 $vcf_filt_q_site2 \
+        --q_site_ps $vcf_filt_q_site_ps \
+        --q_site_gs $vcf_filt_q_site_gs \
         --min_depth $vcf_filt_min_depth \
         --max_depth $vcf_filt_max_depth \
         --min_geno_depth $vcf_filt_min_geno_depth \

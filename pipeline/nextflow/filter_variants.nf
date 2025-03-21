@@ -33,11 +33,31 @@ workflow{
     tuple(file(vcf), file(index))
   }
 
-  def indels_removed = raw_vcf_and_index | rm_indels
-
   raw_vcf_and_index | downsample_vcf | get_vcf_stats | analyse_vcf_stats
+
+  def indels_removed = raw_vcf_and_index | rm_indels
+  filter_pop_structure(indels_removed)
+  filter_genome_structure(indels_removed)
+}
+
+workflow filter_pop_structure {
+  
+  take:
+  indels_removed
+
+  main:
   indels_removed | vcf_filter_pop_structure | downsample_vcf | get_vcf_stats | analyse_vcf_stats
+
+}
+
+workflow filter_genome_structure {
+  
+  take:
+  indels_removed
+
+  main:
   indels_removed | vcf_filter_genome_scan | downsample_vcf | get_vcf_stats | analyse_vcf_stats
+
 }
 
 // Filtering, Step 1 - Remove spanning indels and re-normalise

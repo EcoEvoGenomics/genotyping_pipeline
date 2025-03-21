@@ -166,7 +166,7 @@ process downsample_vcf {
   script:
   """
   # First, calculate ratio of sites to retain ...
-  vcf_num_sites=\$(vcftools --vcf ${vcf} --site-counts | grep 'sites' | awk '{print \$5}')
+  vcf_num_sites=\$(bcftools view -H ${vcf} | wc -l)
   retain_ratio=\$(echo "scale=4; ${params.stats_downsample_sites} / \$vcf_num_sites" | bc)
   
   # Then, downsample ...

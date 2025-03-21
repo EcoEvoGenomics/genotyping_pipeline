@@ -14,8 +14,8 @@ params.publish_dir = './output'
 
 // Default filtering parameters
 params.miss=0.8
-params.q_site_filt_ps=30
-params.q_site_filt_gs=30
+params.q_site_ps=30
+params.q_site_gs=30
 params.min_depth=5
 params.max_depth=30
 params.min_geno_depth=5
@@ -82,7 +82,7 @@ process vcf_filter_pop_structure {
     --min-alleles 2 \
     --max-alleles 2 \
     --max-missing ${params.miss} \
-    --minQ ${params.q_site_filt_ps} \
+    --minQ ${params.q_site_ps} \
     --min-meanDP ${params.min_depth} --max-meanDP ${params.max_depth} \
     --minDP ${params.min_geno_depth} --maxDP ${params.max_geno_depth} \
     --recode --recode-INFO-all --stdout \
@@ -92,7 +92,7 @@ process vcf_filter_pop_structure {
     --min-alleles 2 \
     --max-alleles 2 \
     --max-missing ${params.miss} \
-    --minQ ${params.q_site_filt_ps} \
+    --minQ ${params.q_site_ps} \
     --min-meanDP ${params.min_depth} --max-meanDP ${params.max_depth} \
     --minDP ${params.min_geno_depth} --maxDP ${params.max_geno_depth} \
     --recode --recode-INFO-all --stdout \
@@ -118,7 +118,7 @@ process vcf_filter_genome_scan {
     vcftools --gzvcf $rm_indel_vcf --remove-indels --remove-filtered-all \
     --keep ${params.keep} \
     --max-alleles 2 \
-    --minQ ${params.q_site_filt_gs} \
+    --minQ ${params.q_site_gs} \
     --min-meanDP ${params.min_depth} --max-meanDP ${params.max_depth} \
     --minDP ${params.min_geno_depth} --maxDP ${params.max_geno_depth} \
     --recode --recode-INFO-all --stdout \
@@ -126,7 +126,7 @@ process vcf_filter_genome_scan {
   else
     vcftools --gzvcf $rm_indel_vcf --remove-indels --remove-filtered-all \
     --max-alleles 2 \
-    --minQ ${params.q_site_filt_gs} \
+    --minQ ${params.q_site_gs} \
     --min-meanDP ${params.min_depth} --max-meanDP ${params.max_depth} \
     --minDP ${params.min_geno_depth} --maxDP ${params.max_geno_depth} \
     --recode --recode-INFO-all --stdout \

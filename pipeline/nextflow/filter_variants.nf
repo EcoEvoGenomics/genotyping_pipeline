@@ -33,9 +33,9 @@ workflow{
   }
 
   def indels_removed = raw_vcf_and_index | rm_indels
-  def stats_post_filtering_pop_structure = indels_removed | vcf_filter_pop_structure | vcf_stats
-  def stats_post_filtering_genome_scan = indels_removed | vcf_filter_genome_scan | vcf_stats
-  def stats_pre_filtering = raw_vcf_and_index | vcf_stats
+  def stats_post_filtering_pop_structure = indels_removed | vcf_filter_pop_structure | downsample_vcf | get_vcf_stats
+  def stats_post_filtering_genome_scan = indels_removed | vcf_filter_genome_scan | downsample_vcf | get_vcf_stats
+  def stats_pre_filtering = raw_vcf_and_index | downsample_vcf | get_vcf_stats
 
   collate_filtering_report(
     stats_pre_filtering,
@@ -136,8 +136,31 @@ process vcf_filter_genome_scan {
   """
 }
 
+process downsample_vcf {
+
+  input:
+  val target_sites
+  tuple path(vcf), path(csi)
+
+  output:
+  tuple file("${vcf.simpleName}_downsampled.vcf.gz"), file("${vcf.simpleName}_downsampled.vcf.gz.csi")
+
+  script:
+  """
+  # First, calculate ratio of sites to retain ...
+  vcf_num_sites=\$(vcftools --vcf ${vcf} --site-counts | grep 'sites' | awk '{print \$5}')
+  retain_ratio=\$(echo "scale=4; ${target_sites} / \$vcf_num_sites" | bc)
+  
+  # Then, downsample ...
+  vcfrandomsample -r \$retain_ratio ${vcf} > ${vcf.simpleName}_downsampled.vcf
+  bgzip ${vcf.simpleName}_downsampled.vcf
+  bcftools index ${vcf.simpleName}_downsampled.vcf.gz
+  """
+}
+
+
 // Randomly subsample a VCF and calculate stats
-process vcf_stats {
+process get_vcf_stats {
 
   input:
   tuple file(vcf), file(csi)
@@ -157,7 +180,7 @@ process collate_filtering_report {
   file stats_pre_filtering
   file stats_post_filtering_pop_structure
   file stats_post_filtering_genome_scan
-  
+
   output:
   file ('report.txt')
 

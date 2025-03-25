@@ -199,11 +199,11 @@ process plot_vcf_stats {
   val vcf_name
 
   output:
-  file "analysis_plots/*"
+  file "${vcf_name}/*"
 
   script:
   """
-  mkdir analysis_plots
+  mkdir ${vcf_name}
 
   Rscript -e \"
   library(ggplot2)
@@ -211,32 +211,32 @@ process plot_vcf_stats {
 
   var_qual <- read.table('${vcf_stats_lqual}', sep = '\\t', col.names = c('chr', 'pos', 'qual'), header = TRUE)
   a <- ggplot(var_qual, aes(qual)) + geom_density(fill = 'dodgerblue1', colour = 'black', alpha = 0.3)
-  ggsave('analysis_plots/${vcf_name}_variant_quality.png', plot = a + theme_light())
+  ggsave('${vcf_name}/variant_quality.png', plot = a + theme_light())
 
   var_depth <- read.table('${vcf_stats_ldepth_mean}', sep = '\\t', col.names = c('chr', 'pos', 'mean_depth', 'var_depth'), header = TRUE)
   a <- ggplot(var_depth, aes(mean_depth)) + geom_density(fill = 'dodgerblue1', colour = 'black', alpha = 0.3)
-  ggsave('analysis_plots/${vcf_name}_variant_mean_depth.png', plot = a + theme_light())
+  ggsave('${vcf_name}/variant_mean_depth.png', plot = a + theme_light())
 
   var_miss <- read.table('${vcf_stats_lmiss}', sep = '\\t', col.names = c('chr', 'pos', 'nchr', 'nfiltered', 'nmiss', 'fmiss'), header = TRUE)
   a <- ggplot(var_miss, aes(fmiss)) + geom_density(fill = 'dodgerblue1', colour = 'black', alpha = 0.3)
-  ggsave('analysis_plots/${vcf_name}_variant_missingness.png', plot = a + theme_light())
+  ggsave('${vcf_name}/variant_missingness.png', plot = a + theme_light())
 
   var_freq <- read.table('${vcf_stats_frq}', sep = '\\t', col.names = c('chr', 'pos', 'nalleles', 'nchr', 'a1', 'a2'), fill = TRUE, skip = 1)
   var_freq[["maf"]] <- var_freq %>% select(a1, a2) %>% apply(1, function(z) min(z))
   a <- ggplot(var_freq, aes(maf)) + geom_density(fill = 'dodgerblue1', colour = 'black', alpha = 0.3)
-  ggsave('analysis_plots/${vcf_name}_minor_allele_frequency.png', plot = a + theme_light())
+  ggsave('${vcf_name}/minor_allele_frequency.png', plot = a + theme_light())
   
   ind_depth <- read.table('${vcf_stats_idepth}', sep = '\\t', col.names = c('ind', 'nsites', 'depth'), header = TRUE)
   a <- ggplot(ind_depth, aes(depth)) + geom_histogram(fill = 'dodgerblue1', colour = 'black', alpha = 0.3)
-  ggsave('analysis_plots/${vcf_name}_individual_depth.png', plot = a + theme_light())
+  ggsave('${vcf_name}/individual_depth.png', plot = a + theme_light())
 
   ind_miss  <- read.table('${vcf_stats_imiss}', sep = '\\t', col.names = c('ind', 'ndata', 'nfiltered', 'nmiss', 'fmiss'), header = TRUE)
   a <- ggplot(ind_miss, aes(fmiss)) + geom_histogram(fill = 'dodgerblue1', colour = 'black', alpha = 0.3)
-  ggsave('analysis_plots/${vcf_name}_individual_missingness.png', plot = a + theme_light())
+  ggsave('${vcf_name}/individual_missingness.png', plot = a + theme_light())
 
   ind_het <- read.table('${vcf_stats_het}', sep = '\\t', col.names = c('ind','ho', 'he', 'nsites', 'f'), header = TRUE)
   a <- ggplot(ind_het, aes(f)) + geom_histogram(fill = 'dodgerblue1', colour = 'black', alpha = 0.3)
-  ggsave('analysis_plots/${vcf_name}_individual_het.png', plot = a + theme_light())
+  ggsave('${vcf_name}/individual_het.png', plot = a + theme_light())
   \"
   """
 }

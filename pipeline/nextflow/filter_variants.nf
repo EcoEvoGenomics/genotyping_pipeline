@@ -210,7 +210,7 @@ process analyse_vcf_stats {
   script:
   """
   Rscript -e \"
-  library(tidyverse)
+  library(ggplot2)
 
   # Rename files to simplify processing in R
   file.copy('${vcf_stats_frq}', './vcf.frq')

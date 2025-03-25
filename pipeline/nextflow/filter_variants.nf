@@ -33,15 +33,25 @@ workflow{
     tuple(file(vcf), file(index))
   }
 
-  raw_vcf_and_index | downsample_vcf | get_vcf_stats | analyse_vcf_stats
-
   def indels_removed = raw_vcf_and_index | rm_indels
-  filter_pop_structure(indels_removed)
-  filter_genome_structure(indels_removed)
+  
+  uf(indels_removed)
+  ps(indels_removed)
+  gs(indels_removed)
 
 }
 
-workflow filter_pop_structure {
+workflow uf {
+
+  take:
+  indels_removed
+
+  main:
+  indels_removed | downsample_vcf | get_vcf_stats | analyse_vcf_stats
+
+}
+
+workflow ps {
   
   take:
   indels_removed
@@ -51,7 +61,7 @@ workflow filter_pop_structure {
 
 }
 
-workflow filter_genome_structure {
+workflow gs {
   
   take:
   indels_removed

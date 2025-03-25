@@ -26,47 +26,32 @@ params.stats_downsample_sites=10000
 // Workflow
 workflow{
 
-  def raw_vcf_and_index = Channel
+  def vcf_and_index = Channel
   .fromPath("${params.vcf_dir}/vcf/*.vcf.gz")
   .map { vcf -> 
     def index = vcf.toString().replace('vcf.gz', 'vcf.gz.csi')
     tuple(file(vcf), file(index))
   }
  
-  uf(raw_vcf_and_index)
-  ps(raw_vcf_and_index)
-  gs(raw_vcf_and_index)
+  nonfilt(vcf_and_index)
+  popfilt(vcf_and_index)
+  genfilt(vcf_and_index)
 
 }
 
-workflow uf {
-
-  take:
-  raw_vcf_and_index
-
-  main:
-  raw_vcf_and_index | downsample_vcf | get_vcf_stats | analyse_vcf_stats
-
+workflow nonfilt {
+  take: vcf_and_index
+  main: vcf_and_index | downsample_vcf | get_vcf_stats | analyse_vcf_stats
 }
 
-workflow ps {
-  
-  take:
-  raw_vcf_and_index
-
-  main:
-  raw_vcf_and_index | vcf_filter_pop_structure | downsample_vcf | get_vcf_stats | analyse_vcf_stats
-
+workflow popfilt {
+  take: vcf_and_index
+  main: vcf_and_index | vcf_filter_pop_structure | downsample_vcf | get_vcf_stats | analyse_vcf_stats
 }
 
-workflow gs {
-  
-  take:
-  raw_vcf_and_index
-
-  main:
-  raw_vcf_and_index | vcf_filter_genome_scan | downsample_vcf | get_vcf_stats | analyse_vcf_stats
-
+workflow genfilt {
+  take: vcf_and_index
+  main: vcf_and_index | vcf_filter_genome_scan | downsample_vcf | get_vcf_stats | analyse_vcf_stats
 }
 
 // Filtering for population structure analyses ...
@@ -143,7 +128,7 @@ process vcf_filter_genome_scan {
   """
 }
 
-// Randomly subsample a VCF
+// Randomly subsample a VCF for less intensive stats calculations
 process downsample_vcf {
 
   input:

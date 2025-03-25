@@ -55,11 +55,12 @@
     vcf_filt_keep=""
     stats_downsample_sites=10000
     
-    # NB: Only change if you know what you are doing (ask Erik), typically for re-filtering a VCF
-    #     Also, . must be the genotyping_pipeline repository
+    # NB: You should not change these unless you know what you are doing.
     output_dir=./output
     trim_align_output_dir=${output_dir}/trimmed_and_aligned
     call_vcf_output_dir=${output_dir}/called_variants
+
+    # You can change this, though, if you want to refilter your VCF!
     filt_vcf_output_dir=${output_dir}/filtered_variants
 
 ### --- End user input --- ###

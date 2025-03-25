@@ -221,7 +221,7 @@ process plot_vcf_stats {
   ggsave('${vcf_name}/variant_missingness.png', plot = a + theme_light())
 
   var_freq <- read.table('${vcf_stats_frq}', sep = '\\t', col.names = c('chr', 'pos', 'nalleles', 'nchr', 'a1', 'a2'), fill = TRUE, skip = 1)
-  var_freq[["maf"]] <- apply(var_freq[c('a1', 'a2')], 1, function(z) min(z))
+  var_freq[['maf']] <- apply(var_freq[c('a1', 'a2')], 1, function(z) min(z))
   a <- ggplot(var_freq, aes(maf)) + geom_density(fill = 'dodgerblue1', colour = 'black', alpha = 0.3)
   ggsave('${vcf_name}/minor_allele_frequency.png', plot = a + theme_light())
   

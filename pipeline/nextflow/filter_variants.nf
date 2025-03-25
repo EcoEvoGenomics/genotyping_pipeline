@@ -203,6 +203,8 @@ process plot_vcf_stats {
 
   script:
   """
+  mkdir analysis_plots
+
   Rscript -e \"
   library(ggplot2)
 

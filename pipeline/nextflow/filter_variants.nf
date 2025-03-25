@@ -32,65 +32,44 @@ workflow{
     def index = vcf.toString().replace('vcf.gz', 'vcf.gz.csi')
     tuple(file(vcf), file(index))
   }
-
-  def indels_removed = raw_vcf_and_index | rm_indels
-  
-  uf(indels_removed)
-  ps(indels_removed)
-  gs(indels_removed)
+ 
+  uf(raw_vcf_and_index)
+  ps(raw_vcf_and_index)
+  gs(raw_vcf_and_index)
 
 }
 
 workflow uf {
 
   take:
-  indels_removed
+  raw_vcf_and_index
 
   main:
-  indels_removed | downsample_vcf | get_vcf_stats | analyse_vcf_stats
+  raw_vcf_and_index | downsample_vcf | get_vcf_stats | analyse_vcf_stats
 
 }
 
 workflow ps {
   
   take:
-  indels_removed
+  raw_vcf_and_index
 
   main:
-  indels_removed | vcf_filter_pop_structure | downsample_vcf | get_vcf_stats | analyse_vcf_stats
+  raw_vcf_and_index | vcf_filter_pop_structure | downsample_vcf | get_vcf_stats | analyse_vcf_stats
 
 }
 
 workflow gs {
   
   take:
-  indels_removed
+  raw_vcf_and_index
 
   main:
-  indels_removed | vcf_filter_genome_scan | downsample_vcf | get_vcf_stats | analyse_vcf_stats
+  raw_vcf_and_index | vcf_filter_genome_scan | downsample_vcf | get_vcf_stats | analyse_vcf_stats
 
 }
 
-// Filtering, Step 1 - Remove spanning indels and re-normalise
-process rm_indels {
-
-  input:
-  tuple file(raw_vcf), file(raw_vcf_index)
-
-  output:
-  tuple \
-    file ("${raw_vcf.simpleName}.vcf.gz"), \
-    file ("${raw_vcf.simpleName}.vcf.gz.csi") 
-
-  script:
-  """
-  bcftools view --threads ${task.cpus} -V indels -e 'ALT="*" | N_ALT>1' $raw_vcf \
-    | bcftools norm --threads ${task.cpus} -D -O z -o ${raw_vcf.simpleName}.vcf.gz
-  bcftools index --threads ${task.cpus} ${raw_vcf.simpleName}.vcf.gz
-  """
-}
-
-// Filtering, Step 2 - Filtering for population structure analyses ...
+// Filtering for population structure analyses ...
 process vcf_filter_pop_structure {
 
   publishDir "${params.publish_dir}/vcf_filtered", saveAs: { filename -> "$filename" }, mode: 'copy'

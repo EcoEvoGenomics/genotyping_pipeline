@@ -117,8 +117,7 @@ process vcf_reheader {
     file ("${key}_norm.vcf.gz.csi")
     
     output:
-    file ("${key}.vcf.gz")
-    file ("${key}.vcf.gz.csi")
+    tuple file ("${key}.vcf.gz"), file ("${key}.vcf.gz.csi")
 
     script:
     """
@@ -126,4 +125,23 @@ process vcf_reheader {
     bcftools reheader --threads ${task.cpus} -s samples -o ${key}.vcf.gz ${key}_norm.vcf.gz
     bcftools index --threads ${task.cpus} ${key}.vcf.gz
     """
+}
+
+// Step 5 - Remove spanning indels and re-normalise
+process rm_indels {
+
+  input:
+  tuple file(raw_vcf), file(raw_vcf_index)
+
+  output:
+  tuple \
+    file ("${raw_vcf.simpleName}.vcf.gz"), \
+    file ("${raw_vcf.simpleName}.vcf.gz.csi") 
+
+  script:
+  """
+  bcftools view --threads ${task.cpus} -V indels -e 'ALT="*" | N_ALT>1' $raw_vcf \
+    | bcftools norm --threads ${task.cpus} -D -O z -o ${raw_vcf.simpleName}.vcf.gz
+  bcftools index --threads ${task.cpus} ${raw_vcf.simpleName}.vcf.gz
+  """
 }

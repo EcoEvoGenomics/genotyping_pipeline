@@ -139,15 +139,15 @@ process downsample_vcf {
 
   script:
   """
-  # Ensure number of sampled sites does not exceed sites in VCF (currently redundant)
-  sampled_sites=${params.stats_downsample_sites}
+  # Ensure number of sampled sites does not exceed sites in VCF
   vcf_num_sites=\$(bcftools view -H ${vcf} | wc -l)
-  if (( \$sampled_sites > \$vcf_num_sites )); then
-    sampled_sites=\$vcf_num_sites
+  sampled_ratio=\$(echo "scale=4; ${params.stats_downsample_sites} / \$vcf_num_sites" | bc)
+  if (( $( \$sampled_ratio > 1.0 | bc -l ) )); then
+    sampled_ratio=1
   fi
   
   # Then, downsample ...
-  bcftools view -Ov ${vcf} | vcfrandomsample -r 0.95 > ${vcf.simpleName}_downsampled.vcf
+  bcftools view -Ov ${vcf} | vcfrandomsample -r \$sampled_ratio > ${vcf.simpleName}_downsampled.vcf
   bgzip ${vcf.simpleName}_downsampled.vcf
   bcftools index ${vcf.simpleName}_downsampled.vcf.gz
   """

@@ -165,16 +165,19 @@ process downsample_vcf {
 
   script:
   """
-  # First, calculate ratio of sites to retain ...
+  # Ensure number of sampled sites does not exceed sites in VCF
+  sampled_sites=${params.stats_downsample_sites}
   vcf_num_sites=\$(bcftools view -H ${vcf} | wc -l)
-  retain_ratio=\$(echo "scale=4; ${params.stats_downsample_sites} / \$vcf_num_sites" | bc)
+  if (( \$sampled_sites > \$vcf_num_sites )); then
+    sampled_sites=\$vcf_num_sites
+  fi
   
   # Then, downsample ...
   bcftools view --header-only ${vcf} > ${vcf.simpleName}_downsampled.vcf
   bcftools view --no-header ${vcf} > \
     | awk '{printf("%f\t%s\n",rand(),\$0);}' \
     | sort -t \$'\t'  -T . -k1, \
-    | head -n 200 \
+    | head -n \$sampled_sites \
     | cut -f 2- \
     >> ${vcf.simpleName}_downsample.vcf
   bgzip ${vcf.simpleName}_downsampled.vcf

@@ -108,8 +108,6 @@ process vcf_normalise {
 // Step 4 - Reheader VCF
 process vcf_reheader {
 
-    publishDir "${params.publish_dir}/vcf", saveAs: { filename -> "$filename" }, mode: 'copy'
-
     input:
     tuple \
     val(key),
@@ -129,17 +127,19 @@ process vcf_reheader {
 
 // Step 5 - Remove spanning indels and re-normalise
 process rm_spanning_indels {
+    
+    publishDir "${params.publish_dir}/vcf", saveAs: { filename -> "$filename" }, mode: 'copy'
 
-  input:
-  tuple file(vcf), file(index)
+    input:
+    tuple file(vcf), file(index)
 
-  output:
-  tuple file ("${vcf.simpleName}.vcf.gz"), file ("${vcf.simpleName}.vcf.gz.csi") 
+    output:
+    tuple file ("${vcf.simpleName}.vcf.gz"), file ("${vcf.simpleName}.vcf.gz.csi")
 
-  script:
-  """
-  bcftools view --threads ${task.cpus} -V indels -e 'ALT="*" | N_ALT>1' $vcf \
-  | bcftools norm --threads ${task.cpus} -D -O z -o ${vcf.simpleName}.vcf.gz
-  bcftools index --threads ${task.cpus} ${vcf.simpleName}.vcf.gz
-  """
+    script:
+    """
+    bcftools view --threads ${task.cpus} -V indels -e 'ALT="*" | N_ALT>1' $vcf \
+    | bcftools norm --threads ${task.cpus} -D -O z -o ${vcf.simpleName}.vcf.gz
+    bcftools index --threads ${task.cpus} ${vcf.simpleName}.vcf.gz
+    """
 }

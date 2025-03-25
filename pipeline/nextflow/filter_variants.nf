@@ -175,8 +175,8 @@ process downsample_vcf {
   # Then, downsample ...
   bcftools view --header-only ${vcf} > ${vcf.simpleName}_downsampled.vcf
   bcftools view --no-header ${vcf} > \
-    | awk '{printf("%f\t%s\n",rand(),\$0);}' \
-    | sort -t \$'\t'  -T . -k1, \
+    | awk '{printf("%f\\t%s\\n",rand(),\$0);}' \
+    | sort -t \$'\\t'  -T . -k1, \
     | head -n \$sampled_sites \
     | cut -f 2- \
     >> ${vcf.simpleName}_downsample.vcf

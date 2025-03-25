@@ -234,8 +234,8 @@ process analyse_vcf_stats {
   ggsave('analysis_plots/${vcf_name}_variant_missingness.png', plot = a + theme_light())
 
   var_freq <- read_delim('./vcf.frq', delim = '\\t', col_names = c('chr', 'pos', 'nalleles', 'nchr', 'a1', 'a2'), skip = 1)
-  var_freq\$maf <- var_freq %>% select(a1, a2) %>% apply(1, function(z) min(z))
-  a <- ggplot(var_freq,(maf)) + geom_density(fill = 'dodgerblue1', colour = 'black', alpha = 0.3)
+  var_freq[["maf"]] <- var_freq %>% select(a1, a2) %>% apply(1, function(z) min(z))
+  a <- ggplot(var_freq, aes(maf)) + geom_density(fill = 'dodgerblue1', colour = 'black', alpha = 0.3)
   ggsave('analysis_plots/${vcf_name}_minor_allele_frequency.png', plot = a + theme_light())
   
   ind_depth <- read_delim('./vcf.idepth', delim = '\\t', col_names = c('ind', 'nsites', 'depth'), skip = 1)

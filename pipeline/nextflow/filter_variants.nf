@@ -41,17 +41,17 @@ workflow{
 
 workflow nonfilt {
   take: vcf_and_index
-  main: vcf_and_index | downsample_vcf | get_vcf_stats | analyse_vcf_stats
+  main: vcf_and_index | downsample_vcf | get_vcf_stats | plot_vcf_stats
 }
 
 workflow popfilt {
   take: vcf_and_index
-  main: vcf_and_index | vcf_filter_pop_structure | downsample_vcf | get_vcf_stats | analyse_vcf_stats
+  main: vcf_and_index | vcf_filter_pop_structure | downsample_vcf | get_vcf_stats | plot_vcf_stats
 }
 
 workflow genfilt {
   take: vcf_and_index
-  main: vcf_and_index | vcf_filter_genome_scan | downsample_vcf | get_vcf_stats | analyse_vcf_stats
+  main: vcf_and_index | vcf_filter_genome_scan | downsample_vcf | get_vcf_stats | plot_vcf_stats
 }
 
 // Filtering for population structure analyses ...
@@ -190,7 +190,7 @@ process get_vcf_stats {
 }
 
 // Collate different VCF stats, plot, and output
-process analyse_vcf_stats {
+process plot_vcf_stats {
   
   publishDir "${params.publish_dir}/plots", saveAs: { filename -> "$filename" }, mode: 'copy'
 

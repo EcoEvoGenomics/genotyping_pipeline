@@ -162,6 +162,8 @@ process downsample_vcf {
 // Calculate VCF stats
 process get_vcf_stats {
 
+  publishDir "${params.publish_dir}/stats", saveAs: { filename -> "$filename" }, mode: 'copy'
+
   input:
   tuple path(vcf), path(csi)
 
@@ -190,7 +192,7 @@ process get_vcf_stats {
 // Collate different VCF stats, plot, and output
 process analyse_vcf_stats {
   
-  publishDir "${params.publish_dir}/stats", saveAs: { filename -> "$filename" }, mode: 'copy'
+  publishDir "${params.publish_dir}/plots", saveAs: { filename -> "$filename" }, mode: 'copy'
 
   input:
   file vcf_stats_frq
@@ -204,13 +206,6 @@ process analyse_vcf_stats {
 
   output:
   file "analysis_plots/*"
-  file vcf_stats_frq
-  file vcf_stats_idepth
-  file vcf_stats_ldepth_mean
-  file vcf_stats_lqual
-  file vcf_stats_imiss
-  file vcf_stats_lmiss
-  file vcf_stats_het
 
   script:
   """

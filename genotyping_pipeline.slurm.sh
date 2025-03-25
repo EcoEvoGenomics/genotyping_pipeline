@@ -58,9 +58,9 @@
     # NB: Only change if you know what you are doing (ask Erik), typically for re-filtering a VCF
     #     Also, . must be the genotyping_pipeline repository
     output_dir=./output
-    trim_align_output_dir=${output_dir}/trim_align
-    call_vcf_output_dir=${output_dir}/raw_vcf
-    filt_vcf_output_dir=${output_dir}/filt_vcf
+    trim_align_output_dir=${output_dir}/trimmed_and_aligned
+    call_vcf_output_dir=${output_dir}/called_variants
+    filt_vcf_output_dir=${output_dir}/filtered_variants
 
 ### --- End user input --- ###
 

@@ -139,7 +139,7 @@ process downsample_vcf {
 
   script:
   """
-  # Ensure number of sampled sites does not exceed sites in VCF
+  # Ensure number of sampled sites does not exceed sites in VCF (currently redundant)
   sampled_sites=${params.stats_downsample_sites}
   vcf_num_sites=\$(bcftools view -H ${vcf} | wc -l)
   if (( \$sampled_sites > \$vcf_num_sites )); then
@@ -147,13 +147,7 @@ process downsample_vcf {
   fi
   
   # Then, downsample ...
-  bcftools view --header-only -Ov -o ${vcf.simpleName}_downsampled.vcf ${vcf} 
-  ( bcftools view --no-header -Ov ${vcf} ) \
-  | awk '{printf(\"%f\t%s\n\",rand(),\$0);}' \
-  | sort -t \$'\t'  -T . -k1, \
-  | head -n \$sampled_sites \
-  | cut -f 2- \
-  >> ${vcf.simpleName}_downsampled.vcf
+  bcftools view -Ov ${vcf} | vcfrandomsample -r 0.95 > ${vcf.simpleName}_downsampled.vcf
   bgzip ${vcf.simpleName}_downsampled.vcf
   bcftools index ${vcf.simpleName}_downsampled.vcf.gz
   """

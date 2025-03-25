@@ -30,7 +30,7 @@ workflow{
         return tuple(key, file)
       }
     | groupTuple( by:0,sort:true ) \
-    | vcf_concat | vcf_normalise | vcf_reheader
+    | vcf_concat | vcf_normalise | vcf_reheader | rm_spanning_indels
 
 }
 

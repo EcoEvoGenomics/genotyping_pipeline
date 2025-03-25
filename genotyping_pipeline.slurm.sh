@@ -53,7 +53,7 @@
     vcf_filt_min_geno_depth=5
     vcf_filt_max_geno_depth=30
     vcf_filt_keep=""
-    stats_downsample_sites=100000
+    stats_downsample_sites=10000
     
     # NB: You should not change these unless you know what you are doing.
     output_dir=./output

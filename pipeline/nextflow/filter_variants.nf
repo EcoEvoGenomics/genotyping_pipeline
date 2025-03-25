@@ -207,6 +207,7 @@ process plot_vcf_stats {
 
   Rscript -e \"
   library(ggplot2)
+  library(dplyr)
 
   var_qual <- read.table('${vcf_stats_lqual}', sep = '\\t', col.names = c('chr', 'pos', 'qual'), header = TRUE)
   a <- ggplot(var_qual, aes(qual)) + geom_density(fill = 'dodgerblue1', colour = 'black', alpha = 0.3)

@@ -10,7 +10,7 @@
 
 // Default parameters
 params.publish_dir = './output'
-params.vcf_dir = "${params.publish_dir}/raw_vcf"
+params.vcf_dir = "${params.publish_dir}/called_variants"
 
 // Default filtering parameters
 params.miss=0.8

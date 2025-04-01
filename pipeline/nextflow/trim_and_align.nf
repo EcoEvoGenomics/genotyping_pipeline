@@ -10,7 +10,6 @@
 
 // Default input parameters
 params.ref = file('/cluster/projects/nn10082k/ref/house_sparrow_genome_assembly-18-11-14_masked.fa')
-params.trim = file('/cluster/projects/nn10082k/trimmomatic_adapters/')
 params.publish_dir = './output'
 
 // Workflow

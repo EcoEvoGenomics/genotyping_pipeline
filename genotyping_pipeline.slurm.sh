@@ -19,7 +19,7 @@
     # Path of repository directory
     repository_path=
 
-    # Path to .CSV with each row as "ID, F_READ_PATH, R_READ_PATH, ADAPTER"
+    # Path to .CSV with each row as "ID, F_READ_PATH, R_READ_PATH"
     sample_csv=
 
     # Which steps to run? Note: threshold_depth and combine_vcfs are optional, but steps must be run in order.
@@ -35,9 +35,6 @@
     ref_index=/cluster/projects/nn10082k/ref/house_sparrow_genome_assembly-18-11-14_masked.fa.fai
     ref_scaffold_name='scaffold'
     ref_ploidy_file=./pipeline/defaults/default.ploidy
-
-    # Directory of trimming adapters
-    adapter_dir=/cluster/projects/nn10082k/trimmomatic_adapters/
 
     # BAM maximum depth before downsampling
     depth_threshold=20
@@ -105,7 +102,6 @@ if [ $trim_align = 'yes' ]; then
         -c ./pipeline/config/trim_and_align.config \
         --ref $ref_genome \
         --samples $sample_csv \
-        --trim $adapter_dir \
         --publish_dir $trim_align_output_dir
 fi
 

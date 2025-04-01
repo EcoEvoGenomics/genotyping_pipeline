@@ -19,7 +19,7 @@ workflow {
     // Workflow input
     Channel.fromPath(params.samples)
         .splitCsv()
-        .multiMap { cols -> sample: [cols[0], cols[1], cols[2], cols[3]] }
+        .multiMap { cols -> sample: [cols[0], cols[1], cols[2]] }
         .set { samples }
 
     // Workflow processes
@@ -45,35 +45,28 @@ process trim {
     publishDir "${params.publish_dir}/trim", saveAs: { filename -> "$filename" }, mode: 'copy'
 
     input: 
-    tuple val(sample), path(f_read), path(r_read), val(adapter)
+    tuple val(sample), path(f_read), path(r_read)
 
     output:
     tuple \
     val(sample), \
-    path(f_read), \
-    path(r_read), \
     path("${sample}.R1.trim_pair.fastq.gz"), \
     path("${sample}.R2.trim_pair.fastq.gz"), \
     path("${sample}.R1.trim_unpair.fastq.gz"), \
     path("${sample}.R2.trim_unpair.fastq.gz"), \
-    path("${sample}.stats"), \
-    path("${f_read}_fastqc.zip"), \
-    path("${r_read}_fastqc.zip")
+    path("${sample}_fastp.html")
 
     script:
     """
-    ## run fastqc
-    zcat ${f_read} | fastqc -o ./ stdin:${f_read}.fastq.gz
-    zcat ${r_read} | fastqc -o ./ stdin:${r_read}.fastq.gz
-
-    ## set the adapter fasta - need to find a way to change this
-    ADAPT_FAST=${params.trim}/${adapter}.fa
-    ## run trimmometic
-    trimmomatic PE -threads ${task.cpus} $f_read $r_read \
-    ${sample}.R1.trim_pair.fastq.gz ${sample}.R1.trim_unpair.fastq.gz \
-    ${sample}.R2.trim_pair.fastq.gz ${sample}.R2.trim_unpair.fastq.gz \
-    ILLUMINACLIP:\${ADAPT_FAST}:2:30:10 LEADING:10 TRAILING:10 SLIDINGWINDOW:5:10 MINLEN:50 \
-    |& tee ${sample}.stats
+    fastp \
+    --in1 $f_read \
+    --in2 $r_read \
+    --out1 ${sample}.R1.trim_pair.fastq.gz \
+    --out2 ${sample}.R2.trim_pair.fastq.gz \
+    --unpaired1 ${sample}.R1.trim_unpair.fastq.gz \
+    --unpaired2 ${sample}.R2.trim_unpair.fastq.gz \
+    --html ${sample}_fastp.html \
+    --report-title "${sample}: read trimming report"
     """
 }
 
@@ -85,15 +78,11 @@ process align {
     input:
     tuple \
     val(sample), \
-    path(f_read), \
-    path(r_read), \
     path("${sample}.R1.trim_pair.fastq.gz"), \
     path("${sample}.R2.trim_pair.fastq.gz"), \
     path("${sample}.R1.trim_unpair.fastq.gz"), \
     path("${sample}.R2.trim_unpair.fastq.gz"), \
-    path("${sample}.stats"), \
-    path("${f_read}_fastqc.zip"), \
-    path("${r_read}_fastqc.zip")
+    path("${sample}_fastp.html")
 
     output:
     tuple \

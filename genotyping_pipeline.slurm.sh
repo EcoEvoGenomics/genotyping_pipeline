@@ -28,6 +28,7 @@
     call_vcf=yes
     filt_vcf=yes
     combine_vcfs=yes
+    multiqc=yes
 
     # Reference genome
     ref_genome=/cluster/projects/nn10082k/ref/house_sparrow_genome_assembly-18-11-14_masked.fa
@@ -186,6 +187,10 @@ if [ $combine_vcfs = 'yes' ]; then
         --pop_structure_label '_ps' \
         --genome_scan_label '_gs' \
         --publish_dir $filt_vcf_output_dir
+fi
+
+if [ $multiqc = 'yes' ]; then
+    multiqc --outdir $output_dir $output_dir
 fi
 
 # End work

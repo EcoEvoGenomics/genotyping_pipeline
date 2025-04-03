@@ -49,10 +49,8 @@ process trim {
     output:
     tuple \
     val(sample), \
-    path("${sample}.R1.trim_pair.fastq.gz"), \
-    path("${sample}.R2.trim_pair.fastq.gz"), \
-    path("${sample}.R1.trim_unpair.fastq.gz"), \
-    path("${sample}.R2.trim_unpair.fastq.gz"), \
+    path("${sample}_R1_TRIM.fastq.gz"), \
+    path("${sample}_R2_TRIM.fastq.gz"), \
     path("${sample}_fastp.html")
 
     script:
@@ -60,10 +58,8 @@ process trim {
     fastp \
     --in1 $f_read \
     --in2 $r_read \
-    --out1 ${sample}.R1.trim_pair.fastq.gz \
-    --out2 ${sample}.R2.trim_pair.fastq.gz \
-    --unpaired1 ${sample}.R1.trim_unpair.fastq.gz \
-    --unpaired2 ${sample}.R2.trim_unpair.fastq.gz \
+    --out1 ${sample}_R1_TRIM.fastq.gz \
+    --out2 ${sample}_R2_TRIM.fastq.gz \
     --html ${sample}_fastp.html \
     --report-title "${sample}: read trimming report"
     """
@@ -77,23 +73,18 @@ process align {
     input:
     tuple \
     val(sample), \
-    path("${sample}.R1.trim_pair.fastq.gz"), \
-    path("${sample}.R2.trim_pair.fastq.gz"), \
-    path("${sample}.R1.trim_unpair.fastq.gz"), \
-    path("${sample}.R2.trim_unpair.fastq.gz"), \
+    path("${sample}_R1_TRIM.fastq.gz"), \
+    path("${sample}_R2_TRIM.fastq.gz"), \
     path("${sample}_fastp.html")
 
     output:
-    tuple \
-    path("${sample}_pair.bam"), \
-    path("${sample}_F_unpair.bam"), \
-    path("${sample}_R_unpair.bam")
+    tuple path("${sample}.bam")
 
     script:
     """
     ### CREATE READ GROUP
     # create base string from file info
-    STRING=\$(zcat ${sample}.R1.trim_pair.fastq.gz | head -1)
+    STRING=\$(zcat ${sample}_R1_TRIM.fastq.gz | head -1)
     # break string into information
     # instrument
     INSTRUMENT=\$(echo \${STRING} | awk 'BEGIN {FS = ":"}; { print \$1}' | awk '{sub(/@/,""); print}')
@@ -119,27 +110,10 @@ process align {
     READGROUP="@RG\\tID:\${ID}\\tPL:\${PLATFORM}\\tLB:\${LIBRARY}\\tSM:${sample}\\tPU:\${PU_DATA}"
 
     echo "Using readgroup: \$READGROUP"
+    echo "Aligning ${sample} reads"
 
-    ### MAP PAIRED
-    echo "Aligning ${sample} paired reads"
-    # run the alignment on paired reads
-    bwa mem -M -t ${task.cpus} -R "\${READGROUP}" ${params.ref} ${sample}.R1.trim_pair.fastq.gz ${sample}.R2.trim_pair.fastq.gz \
-    | samtools view -b | samtools sort -T ${sample} > ${sample}_pair.bam
-
-
-    ### MAP UNPAIR FORWARD
-    echo "Aligning ${sample} unpaired forward reads."
-    # run alignment
-    bwa mem -M -t ${task.cpus} -R "\${READGROUP}" ${params.ref} ${sample}.R1.trim_unpair.fastq.gz \
-    | samtools view -b | samtools sort -T ${sample} > ${sample}_F_unpair.bam
-
-
-    ### MAP UNPAIR REVERSE
-    echo "Aligning ${sample} unpaired reverse reads."
-    # run alignment
-    bwa mem -M -t ${task.cpus} -R "\${READGROUP}" ${params.ref} ${sample}.R2.trim_unpair.fastq.gz \
-    | samtools view -b | samtools sort -T ${sample} > ${sample}_R_unpair.bam
-
+    bwa mem -M -t ${task.cpus} -R "\${READGROUP}" ${params.ref} ${sample}_R1_TRIM.fastq.gz ${sample}_R2_TRIM.fastq.gz \
+    | samtools view -b | samtools sort -T ${sample} > ${sample}.bam
     """
 }
 

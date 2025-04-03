@@ -30,7 +30,6 @@ workflow {
         return tuple(key, file)
     } \
     | groupTuple(by: 0, sort: true, remainder: true) \
-    | merge_sort \
     | mark_dup \
     | cram_convert \
     | calc_stats
@@ -103,38 +102,13 @@ process align {
     """
 }
 
-// Step 3 - Merge and sort BAM file
-process merge_sort {
-
-    errorStrategy 'ignore'
-
-    input:
-    tuple val(sample), path(bams, stageAs: "?/bam?.bam")
-
-    output:
-    tuple val(sample), path("${sample}_merge_sort.bam")
-
-    
-    script:
-    def bam_list = bams instanceof List ? bams.join(" ") : bams
-    """
-    ### MERGE SAMPLES
-    echo "Merging bams for ${sample}"
-    # merge
-    samtools merge -rf -@ ${task.cpus} ${sample}_merge.bam ${bam_list}
-    # sort
-    echo "Sorting merged bam for ${sample}"
-    samtools sort -@ ${task.cpus} -T ${sample}_tmp -o ${sample}_merge_sort.bam ${sample}_merge.bam
-    """
-}
-
 // Step 4 - Mark duplicates in BAM file
 process mark_dup {
 
     errorStrategy 'ignore'
 
     input:
-    tuple val(sample), path("merge_sort.bam")
+    tuple val(sample), path("${sample}.bam")
 
     output:
     tuple val(sample), path("${sample}_dedup.bam"), path("${sample}_dedup.bai")
@@ -143,7 +117,7 @@ process mark_dup {
     """
     # mark duplicates
     echo "**** Running Picard MarkDuplicates on ${sample} ****"
-    picard -Xmx16G MarkDuplicates -I merge_sort.bam -O ${sample}_dedup.bam -M ${sample}_dedup_metrics.txt --TMP_DIR ./run_tmp
+    picard -Xmx16G MarkDuplicates -I ${sample}.bam -O ${sample}_dedup.bam -M ${sample}_dedup_metrics.txt --TMP_DIR ./run_tmp
 
     # index bams
     echo "**** Running Picard BuildBamIndex on ${sample} ****"

@@ -78,40 +78,26 @@ process align {
     path("${sample}_fastp.html")
 
     output:
-    tuple path("${sample}.bam")
+    tuple val(sample), path("${sample}.bam")
 
     script:
     """
-    ### CREATE READ GROUP
-    # create base string from file info
-    STRING=\$(zcat ${sample}_R1_TRIM.fastq.gz | head -1)
-    # break string into information
-    # instrument
-    INSTRUMENT=\$(echo \${STRING} | awk 'BEGIN {FS = ":"}; { print \$1}' | awk '{sub(/@/,""); print}')
-    # run id
-    RUN=\$(echo \${STRING} | awk 'BEGIN {FS = ":"}; {print \$2}')
-    # flowcell
-    FLOWCELL=\$(echo \${STRING} | awk 'BEGIN {FS = ":"}; {print \$3}')
-    # flowcell lane
-    FLOWCELL_LANE=\$(echo \${STRING} | awk 'BEGIN {FS = ":"}; {print \$4}')
-    # index sequence
-    INDEX=\$(echo \${STRING} | awk 'BEGIN {FS = ":"}; {print \$10}')
-    # platform (always Illumina)
+    ### CREATE READ GROUP: https://gatk.broadinstitute.org/hc/en-us/articles/360035890671-Read-groups
+    FILE_INFO_STRING=\$(zcat ${sample}_R1_TRIM.fastq.gz | head -1)
+    INSTRUMENT=\$(echo \${FILE_INFO_STRING} | awk 'BEGIN {FS = ":"}; { print \$1}' | awk '{sub(/@/,""); print}')
+    FLOWCELL=\$(echo \${FILE_INFO_STRING} | awk 'BEGIN {FS = ":"}; {print \$3}')
+    FLOWCELL_LANE=\$(echo \${FILE_INFO_STRING} | awk 'BEGIN {FS = ":"}; {print \$4}')
+    INDEX=\$(echo \${FILE_INFO_STRING} | awk 'BEGIN {FS = ":"}; {print \$10}')
     PLATFORM=Illumina
 
-    ## construct read group - see here: https://gatk.broadinstitute.org/hc/en-us/articles/360035890671-Read-groups
-    # first construct ID - must be unique - flowcell and number
-    ID=\${FLOWCELL}.\${FLOWCELL_LANE}
-    # next PU (platform unit) - flowcell , lane and sample barcode
-    PU_DATA=\${FLOWCELL}.\${FLOWCELL_LANE}.\${INDEX}
-    # set library
+    FLOWCELL_ID=\${FLOWCELL}.\${FLOWCELL_LANE}
+    PLATFORM_UNIT=\${FLOWCELL}.\${FLOWCELL_LANE}.\${INDEX}
     LIBRARY=${sample}.\${INDEX}
-    # final read group config
-    READGROUP="@RG\\tID:\${ID}\\tPL:\${PLATFORM}\\tLB:\${LIBRARY}\\tSM:${sample}\\tPU:\${PU_DATA}"
 
+    READGROUP="@RG\\tID:\${FLOWCELL_ID}\\tPL:\${PLATFORM}\\tLB:\${LIBRARY}\\tSM:${sample}\\tPU:\${PLATFORM_UNIT}"
     echo "Using readgroup: \$READGROUP"
-    echo "Aligning ${sample} reads"
 
+    echo "Aligning ${sample} reads"
     bwa mem -M -t ${task.cpus} -R "\${READGROUP}" ${params.ref} ${sample}_R1_TRIM.fastq.gz ${sample}_R2_TRIM.fastq.gz \
     | samtools view -b | samtools sort -T ${sample} > ${sample}.bam
     """

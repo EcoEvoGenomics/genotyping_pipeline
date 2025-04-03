@@ -182,7 +182,7 @@ process cram_downsample {
     """
     mean_coverage=\$(samtools depth original.cram | awk '{sum += \$3} END {result = sum / NR; printf "%d\\n", result}' )
 
-    if (( \${mean_coverage} > ${params.max_cram_depth} )); then
+    if (( \$(echo "scale=4; \${mean_coverage} > ${params.max_cram_depth}" | bc -l) )); then
         fraction_sampled=\$(echo "scale=1; ${params.max_cram_depth} / \${mean_coverage}" | bc)
         samtools view -@ ${task.cpus} -s \${fraction_sampled} -C -T ${params.ref} -o ${sample}.cram original.cram
         samtools index -@ ${task.cpus} ${sample}.cram

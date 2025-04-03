@@ -33,7 +33,7 @@ workflow {
 // Step 1 - Read trim
 process trim {
 
-    publishDir "${params.publish_dir}/trim", saveAs: { filename -> "$filename" }, mode: 'copy'
+    publishDir "${params.publish_dir}/${sample}/", saveAs: { filename -> "$filename" }, mode: 'copy'
 
     input: 
     tuple val(sample), path(f_read), path(r_read)
@@ -42,7 +42,8 @@ process trim {
     val(sample)
     file("${sample}_R1_TRIM.fastq.gz")
     file("${sample}_R2_TRIM.fastq.gz")
-    file("${sample}_fastp.html")
+    file("${sample}.html")
+    file("${sample}.json")
 
     script:
     """
@@ -51,8 +52,9 @@ process trim {
     --in2 $r_read \
     --out1 ${sample}_R1_TRIM.fastq.gz \
     --out2 ${sample}_R2_TRIM.fastq.gz \
-    --html ${sample}_fastp.html \
-    --report_title "${sample}"
+    --report_title "${sample}" \
+    --html ${sample}.html \
+    --json ${sample}.json
     """
 }
 
@@ -115,7 +117,7 @@ process mark_dup {
 // Step 5 - Convert BAM file to CRAM file
 process cram_convert {
     
-    publishDir "${params.publish_dir}/align/${sample}", saveAs: { filename -> "$filename" }, mode: 'copy'
+    publishDir "${params.publish_dir}/${sample}/", saveAs: { filename -> "$filename" }, mode: 'copy'
 
     input:
     val(sample)
@@ -139,7 +141,7 @@ process cram_convert {
 // Step 6 - Calculate alignment statistics
 process calc_stats {
 
-    publishDir "${params.publish_dir}/align/${sample}", saveAs: { filename -> "$filename" }, mode: 'copy'
+    publishDir "${params.publish_dir}/${sample}/", saveAs: { filename -> "$filename" }, mode: 'copy'
 
     input:
     val(sample)
@@ -153,7 +155,7 @@ process calc_stats {
 
     script:
     """
-    samtools coverage -@ ${task.cpus} ${cram} > ${sample}.cov
-    samtools flagstat -@ ${task.cpus} ${cram} > ${sample}.flagstat
+    samtools coverage ${cram} > ${sample}.cov
+    samtools flagstat ${cram} > ${sample}.flagstat
     """
 }

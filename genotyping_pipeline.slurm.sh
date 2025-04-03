@@ -43,6 +43,7 @@
     window_size=10000000
 
     # Filtering settings
+    filtering_label='default'
     vcf_filt_miss=0.8
     vcf_filt_q_site_ps=30
     vcf_filt_q_site_gs=30
@@ -50,16 +51,8 @@
     vcf_filt_max_depth=30
     vcf_filt_min_geno_depth=5
     vcf_filt_max_geno_depth=30
-    vcf_filt_keep=""
+    vcf_filt_keep=''
     stats_downsample_sites=10000
-    
-    # NB: You should not change these unless you know what you are doing.
-    output_dir=./output
-    trim_align_output_dir=${output_dir}/trimmed_and_aligned
-    call_vcf_output_dir=${output_dir}/called_variants
-
-    # You can change this, though, if you want to refilter your VCF!
-    filt_vcf_output_dir=${output_dir}/filtered_variants
 
 ### --- End user input --- ###
 
@@ -92,6 +85,12 @@ chkprevious() {
 
 # Begin work
 cd $repository_path
+
+output_dir=./output
+trim_align_output_dir=${output_dir}/01-aligned_reads
+call_vcf_output_dir=${output_dir}/02-unfiltered_variants
+filt_vcf_output_dir=${output_dir}/03-filtered_variants/${filtering_label}
+
 mkmissingdir $output_dir
 
 if [ $trim_align = 'yes' ]; then

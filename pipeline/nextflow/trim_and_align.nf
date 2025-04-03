@@ -208,7 +208,7 @@ process calc_stats {
     file("${sample}.dedup")
     file("${sample}.cram")
     file("${sample}.cram.crai")
-    file("${sample}.cov")
+    file("${sample}.coverage")
     file("${sample}.flagstat")
 
     script:

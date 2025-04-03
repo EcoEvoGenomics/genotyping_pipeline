@@ -22,11 +22,10 @@
     # Path to .CSV with each row as "ID, F_READ_PATH, R_READ_PATH"
     sample_csv=
 
-    # Which steps to run? Note: combine_vcfs is optional, but steps must be run in order.
+    # Which steps to run? (You can run filt_vcf and multiqc repeatedly after trim_align and call_vcf)
     trim_align=yes
     call_vcf=yes
     filt_vcf=yes
-    combine_vcfs=yes
     multiqc=yes
 
     # Reference genome
@@ -157,10 +156,6 @@ if [ $filt_vcf = 'yes' ]; then
         --keep $vcf_filt_keep \
         --publish_dir $filt_vcf_output_dir \
         --stats_downsample_sites $stats_downsample_sites
-fi
-
-if [ $combine_vcfs = 'yes' ]; then
-    chkprevious "Step: combine_vcfs" $filt_vcf_output_dir
 
     nextflow -log ./.nextflow/nextflow.log \
         run ./pipeline/nextflow/combine_vcf.nf \

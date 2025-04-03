@@ -173,6 +173,12 @@ if [ $combine_vcfs = 'yes' ]; then
 fi
 
 if [ $multiqc = 'yes' ]; then
+    # NB: Temporary solution only!
+    # Deactivate pipeline environment, then conda. Purge and use Saga MultiQC module to get later version.
+    conda deactivate
+    conda deactivate
+    module --quiet purge
+    module load MultiQC/1.22.3-foss-2023b
     multiqc --outdir $output_dir $output_dir
 fi
 

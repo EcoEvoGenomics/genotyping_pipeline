@@ -100,9 +100,9 @@ mkmissingdir $output_dir
 if [ $trim_align = 'yes' ]; then
     mkmissingdir $trim_align_output_dir
 
-    nextflow run ./pipeline/nextflow/trim_and_align.nf \
+    nextflow -log ./.nextflow/nextflow.log \
+        run ./pipeline/nextflow/trim_and_align.nf \
         -c ./pipeline/config/trim_and_align.config \
-        -log ./.nextflow/nextflow.log \
         --ref $ref_genome \
         --samples $sample_csv \
         --trim $adapter_dir \
@@ -115,9 +115,9 @@ if [ $threshold_depth = 'yes' ]; then
     raw_crams=${trim_align_output_dir}/raw_crams.list
     find $PWD/$trim_align_output_dir/align/ -name '*.*am' > $raw_crams
 
-    nextflow run ./pipeline/nextflow/threshold_cram_depth.nf \
+    nextflow -log ./.nextflow/nextflow.log \
+        run ./pipeline/nextflow/threshold_cram_depth.nf \
         -c ./pipeline/config/threshold_cram_depth.config \
-        -log ./.nextflow/nextflow.log \
         --ref $ref_genome \
         --depth $depth_threshold \
         --crams $raw_crams \
@@ -141,9 +141,9 @@ if [ $call_vcf = 'yes' ]; then
         find $PWD/$trim_align_output_dir/align/ -name '*.*am' > $cram_list
     fi
 
-    nextflow run ./pipeline/nextflow/call_variants.nf \
+    nextflow -log ./.nextflow/nextflow.log \
+        run ./pipeline/nextflow/call_variants.nf \
         -c ./pipeline/config/call_variants.config \
-        -log ./.nextflow/nextflow.log \
         --ref $ref_genome \
         --crams $cram_list \
         --windows_dir $windows_dir \
@@ -166,9 +166,9 @@ if [ $filt_vcf = 'yes' ]; then
         "$vcf_filt_keep" \
         > $filt_vcf_output_dir/filt_params.txt
 
-    nextflow run ./pipeline/nextflow/filter_variants.nf \
+    nextflow -log ./.nextflow/nextflow.log \
+        run ./pipeline/nextflow/filter_variants.nf \
         -c ./pipeline/config/filter_variants.config \
-        -log ./.nextflow/nextflow.log \
         --vcf_dir $call_vcf_output_dir \
         --miss $vcf_filt_miss \
         --q_site_ps $vcf_filt_q_site_ps \
@@ -185,9 +185,9 @@ fi
 if [ $combine_vcfs = 'yes' ]; then
     chkprevious "Step: combine_vcfs" $filt_vcf_output_dir
 
-    nextflow run ./pipeline/nextflow/combine_vcf.nf \
+    nextflow -log ./.nextflow/nextflow.log \
+        run ./pipeline/nextflow/combine_vcf.nf \
         -c ./pipeline/config/combine_vcf.config \
-        -log ./.nextflow/nextflow.log \
         --input_dir $filt_vcf_output_dir/vcf_filtered \
         --pop_structure_label '_ps' \
         --genome_scan_label '_gs' \

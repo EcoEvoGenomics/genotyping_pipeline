@@ -15,19 +15,37 @@ params.publish_dir = './output'
 // Workflow
 workflow {
     
-    // Workflow input
+    // Input 'samples' is .CSV with columns for ID, F_READ_PATH, R_READ_PATH
     Channel.fromPath(params.samples)
         .splitCsv()
         .multiMap { cols -> sample: [cols[0], cols[1], cols[2]] }
         .set { samples }
 
-    // Workflow processes
-    trim(samples.sample) \
+    def crams = parse_sample(samples.sample) \
+    | trim \
     | align \
     | mark_dup \
-    | cram_convert \
-    | calc_stats
+    | cram_convert
 
+
+    crams | calc_stats
+}
+
+// Step 0 - Parse sample
+process parse_sample {
+
+    input:
+    tuple val(sample), path(f_read), path(r_read)
+
+    output:
+    val(sample)
+    path(f_read)
+    path(r_read)
+
+    script:
+    """
+    echo "Initiating pipeline for ${sample} ..."
+    """
 }
 
 // Step 1 - Read trim
@@ -36,7 +54,9 @@ process trim {
     publishDir "${params.publish_dir}/${sample}/", saveAs: { filename -> "$filename" }, mode: 'copy'
 
     input: 
-    tuple val(sample), path(f_read), path(r_read)
+    val(sample)
+    path(f_read), name: "${sample}_R1.fastq.gz"
+    path(r_read), name: "${sample}_R2.fastq.gz"
 
     output:
     val(sample)
@@ -48,8 +68,8 @@ process trim {
     script:
     """
     fastp \
-    --in1 $f_read \
-    --in2 $r_read \
+    --in1 ${sample}_R1.fastq.gz \
+    --in2 ${sample}_R2.fastq.gz \
     --out1 ${sample}_R1_TRIM.fastq.gz \
     --out2 ${sample}_R2_TRIM.fastq.gz \
     --report_title "${sample}" \
@@ -117,8 +137,6 @@ process mark_dup {
 
 // Step 5 - Convert BAM file to CRAM file
 process cram_convert {
-    
-    publishDir "${params.publish_dir}/${sample}/", saveAs: { filename -> "$filename" }, mode: 'copy'
 
     input:
     val(sample)

@@ -24,12 +24,6 @@ workflow {
     // Workflow processes
     trim(samples.sample) \
     | align \
-    | flatten \
-    | map { file ->
-        def key = file.name.toString().tokenize('_').get(0)
-        return tuple(key, file)
-    } \
-    | groupTuple(by: 0, sort: true, remainder: true) \
     | mark_dup \
     | cram_convert \
     | calc_stats
@@ -45,11 +39,10 @@ process trim {
     tuple val(sample), path(f_read), path(r_read)
 
     output:
-    tuple \
-    val(sample), \
-    path("${sample}_R1_TRIM.fastq.gz"), \
-    path("${sample}_R2_TRIM.fastq.gz"), \
-    path("${sample}_fastp.html")
+    val(sample)
+    file("${sample}_R1_TRIM.fastq.gz")
+    file("${sample}_R2_TRIM.fastq.gz")
+    file("${sample}_fastp.html")
 
     script:
     """
@@ -67,14 +60,14 @@ process trim {
 process align {
 
     input:
-    tuple \
-    val(sample), \
-    path("${sample}_R1_TRIM.fastq.gz"), \
-    path("${sample}_R2_TRIM.fastq.gz"), \
-    path("${sample}_fastp.html")
+    val(sample)
+    file("${sample}_R1_TRIM.fastq.gz")
+    file("${sample}_R2_TRIM.fastq.gz")
+    file("${sample}_fastp.html")
 
     output:
-    tuple val(sample), path("${sample}.bam")
+    val(sample)
+    file("${sample}.bam")
 
     script:
     """
@@ -93,7 +86,9 @@ process align {
     READGROUP="@RG\\tID:\${FLOWCELL_ID}\\tPL:\${PLATFORM}\\tLB:\${LIBRARY}\\tSM:${sample}\\tPU:\${PLATFORM_UNIT}"
 
     bwa mem -M -t ${task.cpus} -R "\${READGROUP}" ${params.ref} ${sample}_R1_TRIM.fastq.gz ${sample}_R2_TRIM.fastq.gz \
-    | samtools view -b | samtools sort -T ${sample} > ${sample}.bam
+    | samtools view -@ ${task.cpus} -b \
+    | samtools sort -@ ${task.cpus} -T ${sample} \
+    > ${sample}.bam
     """
 }
 
@@ -101,15 +96,18 @@ process align {
 process mark_dup {
 
     input:
-    tuple val(sample), path("${sample}.bam")
+    val(sample)
+    file("${sample}.bam")
 
     output:
-    tuple val(sample), path("${sample}_dedup.bam"), path("${sample}_dedup.bai")
+    val(sample)
+    file("${sample}_dedup.bam")
+    file("${sample}_dedup.bai")
+    file("${sample}.dedup")
 
     script:
     """
-    picard -Xmx16G MarkDuplicates -I ${sample}.bam -O ${sample}_dedup.bam -M ${sample}_dedup_metrics.txt --TMP_DIR ./run_tmp
-
+    picard -Xmx16G MarkDuplicates -I ${sample}.bam -O ${sample}_dedup.bam -M ${sample}.dedup --TMP_DIR ./run_tmp
     picard BuildBamIndex -I ${sample}_dedup.bam --TMP_DIR ./run_tmp
     """
 }
@@ -117,47 +115,45 @@ process mark_dup {
 // Step 5 - Convert BAM file to CRAM file
 process cram_convert {
     
-    publishDir "${params.publish_dir}/align", saveAs: { filename -> "$filename" }, mode: 'copy'
+    publishDir "${params.publish_dir}/align/${sample}", saveAs: { filename -> "$filename" }, mode: 'copy'
 
     input:
-    tuple val(sample), path("${sample}_dedup.bam"), path("${sample}_dedup.bai")
+    val(sample)
+    file("${sample}_dedup.bam")
+    file("${sample}_dedup.bai")
+    file("${sample}.dedup")
 
     output:
-    tuple val(sample), path("${sample}_dedup.cram"), path("${sample}_dedup.cram.crai")
+    val(sample)
+    file("${sample}.cram")
+    file("${sample}.cram.crai")
+    file("${sample}.dedup")
 
     script:
     """
-    samtools view -@ ${task.cpus} -T ${params.ref} -C -o ${sample}_dedup.cram ${sample}_dedup.bam
-    samtools index -@ ${task.cpus} ${sample}_dedup.cram 
+    samtools view -@ ${task.cpus} -T ${params.ref} -C -o ${sample}.cram ${sample}_dedup.bam
+    samtools index -@ ${task.cpus} ${sample}.cram 
     """
 }
 
 // Step 6 - Calculate alignment statistics
 process calc_stats {
 
-    publishDir "${params.publish_dir}/stats", saveAs: { filename -> "$filename" }, mode: 'copy'
+    publishDir "${params.publish_dir}/align/${sample}", saveAs: { filename -> "$filename" }, mode: 'copy'
 
     input:
-    tuple val(sample), path(cram), path(index)
+    val(sample)
+    file(cram)
+    file(index)
+    file(dedupstats)
 
     output:
-    tuple path("${sample}_meancov.txt"), path("${sample}.map.stat.csv"), path("${sample}_flagstat.csv")
+    file("${sample}.cov")
+    file("${sample}.flagstat")
 
     script:
     """
-    # work out mean coverage
-    STATS=\$(samtools depth ${cram} | awk '{sum += \$3} END {print sum / NR}' )
-    echo -e "${sample}\t\${STATS}" > ${sample}_meancov.txt
-
-    # run flagstat
-    samtools flagstat -@ ${task.cpus} ${cram} > ${sample}_flagstat.csv
-    # extract the columns that are wanted
-    awk 'OFS="," {print \$1,\$3}' ${sample}_flagstat.csv > ${sample}.col.csv
-    # add a header of the sample name
-    echo ${sample},${sample} > ${sample}.head.txt
-    cat ${sample}.head.txt ${sample}.col.csv > ${sample}.map.stat.csv
-    # remove the unneccessary files
-    rm ${sample}.col.csv
-    rm ${sample}.head.txt
+    samtools coverage -@ ${task.cpus} ${cram} > ${sample}.cov
+    samtools flagstat -@ ${task.cpus} ${cram} > ${sample}.flagstat
     """
 }

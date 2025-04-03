@@ -39,7 +39,6 @@ workflow {
 // Step 1 - Read trim
 process trim {
 
-    errorStrategy 'ignore'
     publishDir "${params.publish_dir}/trim", saveAs: { filename -> "$filename" }, mode: 'copy'
 
     input: 
@@ -66,8 +65,6 @@ process trim {
 
 // Step 2 - Align to reference genome
 process align {
-
-    errorStrategy 'ignore'
 
     input:
     tuple \
@@ -105,8 +102,6 @@ process align {
 // Step 4 - Mark duplicates in BAM file
 process mark_dup {
 
-    errorStrategy 'ignore'
-
     input:
     tuple val(sample), path("${sample}.bam")
 
@@ -129,7 +124,6 @@ process mark_dup {
 process cram_convert {
     
     publishDir "${params.publish_dir}/align", saveAs: { filename -> "$filename" }, mode: 'copy'
-    errorStrategy 'ignore'
 
     input:
     tuple val(sample), path("${sample}_dedup.bam"), path("${sample}_dedup.bai")
@@ -148,7 +142,6 @@ process cram_convert {
 process calc_stats {
 
     publishDir "${params.publish_dir}/stats", saveAs: { filename -> "$filename" }, mode: 'copy'
-    errorStrategy 'ignore'
 
     input:
     tuple val(sample), path(cram), path(index)

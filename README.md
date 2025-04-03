@@ -255,8 +255,8 @@ nextflow run 3_filter_variants.nf
 However, [as shown here](https://speciationgenomics.github.io/filtering_vcfs/), it is not a good idea to just run filters without checking whether they apply to your dataset. Instead you are able to tweak the filters with a number of options. These are simply provided to the script using option flags and are modified versions of the options for [vcftools](https://vcftools.github.io/examples.html)
 
 - `--miss` - set the missing data at a value between 0 and 1 (where 0 allows 100% missing data and 1 means no missing data); default is 0.8
-- `--q_site1` - site quality threshold (as a phred score) for the population structure vcfs - default is 30
-- `--q_site2` - site quality threshold (as a phred score) for the genome scan vcfs - default is 30
+- `--q_site_ps` - site quality threshold (as a phred score) for the population structure vcfs - default is 30
+- `--q_site_gs` - site quality threshold (as a phred score) for the genome scan vcfs - default is 30
 - `--min_depth` - minimum mean depth of coverage for a variant across all samples - default is 5
 - `--max_depth` - maximum mean depth of coverage for a variant across all samples - default is 30
 - `--min_geno_depth` - minimum genotype depth per sample. If lower than this value, the genotype will be converted to a missing site - default is 5
@@ -265,7 +265,7 @@ However, [as shown here](https://speciationgenomics.github.io/filtering_vcfs/), 
 You can provide all or some of these options to the script using these options. A fully worked example is below:
 
 ```
-nextflow run 3_filter_variants.nf --miss 0.5 --q_site1 30 --q_site2 40 --min_depth 5 --max_depth 15 --min_geno_depth 5 --max_geno_depth 15
+nextflow run 3_filter_variants.nf --miss 0.5 --q_site_ps 30 --q_site_gs 40 --min_depth 5 --max_depth 15 --min_geno_depth 5 --max_geno_depth 15
 ```
 
 You do not need to provide all the options - for example, if you want to just alter the missing data threshold, the following will work.

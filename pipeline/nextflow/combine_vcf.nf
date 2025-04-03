@@ -9,7 +9,7 @@
 // Maintained by Erik Sandertun Røed
 
 // Default parameters
-params.input_dir = '.output/filt_vcf/vcf_filtered'
+params.input_dir = '.output/filtered_variants/vcf_filtered'
 params.pop_structure_label = '_ps'
 params.genome_scan_label = '_gs'
 params.publish_dir = './output/'

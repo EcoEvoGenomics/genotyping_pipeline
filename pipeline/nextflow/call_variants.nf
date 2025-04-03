@@ -11,7 +11,7 @@
 // Default input parameters
 params.ref = file('/cluster/projects/nn10082k/ref/house_sparrow_genome_assembly-18-11-14_masked.fa')
 params.publish_dir = './output'
-params.windows_dir = './output/call_vcf/genome_windows/'
+params.windows_dir = './output/called_variants/genome_windows/'
 params.ploidy_file = file('./pipeline/defaults/default.ploidy')
 
 // Workflow
@@ -30,7 +30,7 @@ workflow{
         return tuple(key, file)
       }
     | groupTuple( by:0,sort:true ) \
-    | vcf_concat | vcf_normalise | vcf_reheader
+    | vcf_concat | vcf_normalise | vcf_reheader | rm_spanning_indels
 
 }
 
@@ -108,7 +108,6 @@ process vcf_normalise {
 // Step 4 - Reheader VCF
 process vcf_reheader {
 
-    publishDir "${params.publish_dir}/vcf", saveAs: { filename -> "$filename" }, mode: 'copy'
     input:
     tuple \
     val(key),
@@ -116,15 +115,31 @@ process vcf_reheader {
     file ("${key}_norm.vcf.gz.csi")
     
     output:
-    tuple \
-    val(key), \
-    file ("${key}.vcf.gz"), \
-    file ("${key}.vcf.gz.csi")
+    tuple file ("${key}.vcf.gz"), file ("${key}.vcf.gz.csi")
 
     script:
     """
     bcftools query -l ${key}_norm.vcf.gz | xargs -n 1 basename | awk -F '_' '{print \$1}' > samples
     bcftools reheader --threads ${task.cpus} -s samples -o ${key}.vcf.gz ${key}_norm.vcf.gz
     bcftools index --threads ${task.cpus} ${key}.vcf.gz
+    """
+}
+
+// Step 5 - Remove spanning indels and re-normalise
+process rm_spanning_indels {
+    
+    publishDir "${params.publish_dir}/vcf", saveAs: { filename -> "$filename" }, mode: 'copy'
+
+    input:
+    tuple file(vcf), file(index)
+
+    output:
+    tuple file ("${vcf.simpleName}.vcf.gz"), file ("${vcf.simpleName}.vcf.gz.csi")
+
+    script:
+    """
+    bcftools view --threads ${task.cpus} -V indels -e 'ALT="*" | N_ALT>1' $vcf \
+    | bcftools norm --threads ${task.cpus} -D -O z -o ${vcf.simpleName}.vcf.gz
+    bcftools index --threads ${task.cpus} ${vcf.simpleName}.vcf.gz
     """
 }

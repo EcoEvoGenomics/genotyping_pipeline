@@ -28,6 +28,7 @@
     call_vcf=yes
     filt_vcf=yes
     combine_vcfs=yes
+    multiqc=yes
 
     # Reference genome
     ref_genome=/cluster/projects/nn10082k/ref/house_sparrow_genome_assembly-18-11-14_masked.fa
@@ -46,20 +47,22 @@
 
     # Filtering settings
     vcf_filt_miss=0.8
-    vcf_filt_q_site1=30
-    vcf_filt_q_site2=30
+    vcf_filt_q_site_ps=30
+    vcf_filt_q_site_gs=30
     vcf_filt_min_depth=5
     vcf_filt_max_depth=30
     vcf_filt_min_geno_depth=5
     vcf_filt_max_geno_depth=30
     vcf_filt_keep=""
+    stats_downsample_sites=10000
     
-    # NB: Only change if you know what you are doing (ask Erik), typically for re-filtering a VCF
-    #     Also, . must be the genotyping_pipeline repository
+    # NB: You should not change these unless you know what you are doing.
     output_dir=./output
-    trim_align_output_dir=${output_dir}/trim_align
-    call_vcf_output_dir=${output_dir}/raw_vcf
-    filt_vcf_output_dir=${output_dir}/filt_vcf
+    trim_align_output_dir=${output_dir}/trimmed_and_aligned
+    call_vcf_output_dir=${output_dir}/called_variants
+
+    # You can change this, though, if you want to refilter your VCF!
+    filt_vcf_output_dir=${output_dir}/filtered_variants
 
 ### --- End user input --- ###
 
@@ -96,7 +99,7 @@ mkmissingdir $output_dir
 
 if [ $trim_align = 'yes' ]; then
     mkmissingdir $trim_align_output_dir
-    
+
     nextflow run ./pipeline/nextflow/trim_and_align.nf \
         -c ./pipeline/config/trim_and_align.config \
         -log ./.nextflow/nextflow.log \
@@ -152,10 +155,10 @@ if [ $filt_vcf = 'yes' ]; then
     chkprevious "Step: filt_vcf" $call_vcf_output_dir
     mkmissingdir $filt_vcf_output_dir
 
-    printf "miss %s\nq_site1 %s\nq_site2 %s\nmin_depth %s\nmax_depth %s\nmin_geno_depth %s\nmax_geno_depth %s\nkeep %s\n" \
+    printf "miss %s\nq_site_ps %s\nq_site_gs %s\nmin_depth %s\nmax_depth %s\nmin_geno_depth %s\nmax_geno_depth %s\nkeep %s\n" \
         "$vcf_filt_miss" \
-        "$vcf_filt_q_site1" \
-        "$vcf_filt_q_site2" \
+        "$vcf_filt_q_site_ps" \
+        "$vcf_filt_q_site_gs" \
         "$vcf_filt_min_depth" \
         "$vcf_filt_max_depth" \
         "$vcf_filt_min_geno_depth" \
@@ -166,16 +169,17 @@ if [ $filt_vcf = 'yes' ]; then
     nextflow run ./pipeline/nextflow/filter_variants.nf \
         -c ./pipeline/config/filter_variants.config \
         -log ./.nextflow/nextflow.log \
-        --vcf_dir $call_vcf_output_dir/vcf \
+        --vcf_dir $call_vcf_output_dir \
         --miss $vcf_filt_miss \
-        --q_site1 $vcf_filt_q_site1 \
-        --q_site2 $vcf_filt_q_site2 \
+        --q_site_ps $vcf_filt_q_site_ps \
+        --q_site_gs $vcf_filt_q_site_gs \
         --min_depth $vcf_filt_min_depth \
         --max_depth $vcf_filt_max_depth \
         --min_geno_depth $vcf_filt_min_geno_depth \
         --max_geno_depth $vcf_filt_max_geno_depth \
         --keep $vcf_filt_keep \
-        --publish_dir $filt_vcf_output_dir
+        --publish_dir $filt_vcf_output_dir \
+        --stats_downsample_sites $stats_downsample_sites
 fi
 
 if [ $combine_vcfs = 'yes' ]; then
@@ -188,6 +192,10 @@ if [ $combine_vcfs = 'yes' ]; then
         --pop_structure_label '_ps' \
         --genome_scan_label '_gs' \
         --publish_dir $filt_vcf_output_dir
+fi
+
+if [ $multiqc = 'yes' ]; then
+    multiqc --outdir $output_dir $output_dir
 fi
 
 # End work

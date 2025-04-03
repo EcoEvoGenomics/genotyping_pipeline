@@ -91,9 +91,7 @@ process align {
     LIBRARY=${sample}.\${INDEX}
 
     READGROUP="@RG\\tID:\${FLOWCELL_ID}\\tPL:\${PLATFORM}\\tLB:\${LIBRARY}\\tSM:${sample}\\tPU:\${PLATFORM_UNIT}"
-    echo "Using readgroup: \$READGROUP"
 
-    echo "Aligning ${sample} reads"
     bwa mem -M -t ${task.cpus} -R "\${READGROUP}" ${params.ref} ${sample}_R1_TRIM.fastq.gz ${sample}_R2_TRIM.fastq.gz \
     | samtools view -b | samtools sort -T ${sample} > ${sample}.bam
     """
@@ -110,12 +108,8 @@ process mark_dup {
 
     script:
     """
-    # mark duplicates
-    echo "**** Running Picard MarkDuplicates on ${sample} ****"
     picard -Xmx16G MarkDuplicates -I ${sample}.bam -O ${sample}_dedup.bam -M ${sample}_dedup_metrics.txt --TMP_DIR ./run_tmp
 
-    # index bams
-    echo "**** Running Picard BuildBamIndex on ${sample} ****"
     picard BuildBamIndex -I ${sample}_dedup.bam --TMP_DIR ./run_tmp
     """
 }

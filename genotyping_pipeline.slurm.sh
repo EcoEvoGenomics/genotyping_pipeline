@@ -37,7 +37,7 @@
 
     # Threshold depth of CRAMs?
     downsample_large_crams=no
-    max_cram_depth=20
+    max_cram_depth=30
 
     # Genotyping settings
     window_size=10000000

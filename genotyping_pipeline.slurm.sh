@@ -22,9 +22,8 @@
     # Path to .CSV with each row as "ID, F_READ_PATH, R_READ_PATH"
     sample_csv=
 
-    # Which steps to run? Note: threshold_depth and combine_vcfs are optional, but steps must be run in order.
+    # Which steps to run? Note: combine_vcfs is optional, but steps must be run in order.
     trim_align=yes
-    threshold_depth=yes
     call_vcf=yes
     filt_vcf=yes
     combine_vcfs=yes
@@ -36,8 +35,9 @@
     ref_scaffold_name='scaffold'
     ref_ploidy_file=./pipeline/defaults/default.ploidy
 
-    # BAM maximum depth before downsampling
-    depth_threshold=20
+    # Threshold depth of CRAMs?
+    downsample_large_crams=no
+    max_cram_depth=20
 
     # Genotyping settings
     window_size=10000000
@@ -102,21 +102,8 @@ if [ $trim_align = 'yes' ]; then
         -c ./pipeline/config/trim_and_align.config \
         --ref $ref_genome \
         --samples $sample_csv \
-        --publish_dir $trim_align_output_dir
-fi
-
-if [ $threshold_depth = 'yes' ]; then
-    chkprevious "Step: threshold_depth" $trim_align_output_dir
-
-    raw_crams=${trim_align_output_dir}/raw_crams.list
-    find $PWD/$trim_align_output_dir/align/ -name '*.*am' > $raw_crams
-
-    nextflow -log ./.nextflow/nextflow.log \
-        run ./pipeline/nextflow/threshold_cram_depth.nf \
-        -c ./pipeline/config/threshold_cram_depth.config \
-        --ref $ref_genome \
-        --depth $depth_threshold \
-        --crams $raw_crams \
+        --downsample_crams $downsample_large_crams \
+        --max_cram_depth $max_cram_depth \
         --publish_dir $trim_align_output_dir
 fi
 
@@ -129,13 +116,7 @@ if [ $call_vcf = 'yes' ]; then
     bash ./pipeline/shell/create_genome_windows.sh $ref_index $window_size $ref_scaffold_name $windows_dir
 
     cram_list=${call_vcf_output_dir}/genotyped_crams.list
-    if [ -e ${trim_align_output_dir}/align_maxdepth ]; then
-        echo "Downsampled CRAMs exist in ${trim_align_output_dir}/align_maxdepth. Genotyping downsampled CRAMs ..."
-        find $PWD/$trim_align_output_dir/align_maxdepth/ -name '*.*am' > $cram_list
-    else
-        echo "Genotyping non-downsampled CRAMs from ${trim_align_output_dir} ..."
-        find $PWD/$trim_align_output_dir/align/ -name '*.*am' > $cram_list
-    fi
+    find $PWD/$trim_align_output_dir -name '*.cram' > $cram_list
 
     nextflow -log ./.nextflow/nextflow.log \
         run ./pipeline/nextflow/call_variants.nf \

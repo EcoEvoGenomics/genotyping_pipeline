@@ -10,6 +10,8 @@
 
 // Default input parameters
 params.ref = file('/cluster/projects/nn10082k/ref/house_sparrow_genome_assembly-18-11-14_masked.fa')
+params.downsample_crams = 'no'
+params.max_cram_depth = 30
 params.publish_dir = './output'
 
 // Workflow
@@ -27,6 +29,9 @@ workflow {
     | mark_dup \
     | cram_convert
 
+    if (params.downsample_crams == 'yes') {
+        crams = crams | cram_downsample
+    }
 
     crams | calc_stats
 }
@@ -157,7 +162,37 @@ process cram_convert {
     """
 }
 
-// Step 6 - Calculate alignment statistics
+// Step 6 (Optional) - Downsample CRAM
+process cram_downsample {
+    
+    input:
+    val(sample)
+    file(cram), name: 'original.cram'
+    file(index), name: 'original.cram.crai'
+    file(dedupstats)
+
+    output:
+    val(sample)
+    file("${sample}.cram")
+    file("${sample}.cram.crai")
+    file("${sample}.dedup")
+
+    script:
+    """
+    mean_coverage=\$(samtools depth original.cram | awk '{sum += \$3} END {result = sum / NR; printf "%d\\n", result}' )
+
+    if (( \${mean_coverage} > ${params.max_cram_depth} )); then
+        fraction_sampled=\$(echo "scale=1; ${params.max_cram_depth} / \${mean_coverage}" | bc)
+        samtools view -@ ${task.cpus} -s \${fraction_sampled} -C -T ${params.ref} -o ${sample}.cram original.cram
+        samtools index -@ ${task.cpus} ${sample}.cram
+    else
+        mv original.cram ${sample}.cram
+        mv original.cram.crai ${sample}.cram.crai
+    fi
+    """
+}
+
+// Step 7 - Calculate alignment statistics
 process calc_stats {
 
     publishDir "${params.publish_dir}/${sample}/", saveAs: { filename -> "$filename" }, mode: 'copy'
@@ -169,6 +204,9 @@ process calc_stats {
     file(dedupstats)
 
     output:
+    file("${sample}.dedup")
+    file("${sample}.cram")
+    file("${sample}.cram.crai")
     file("${sample}.cov")
     file("${sample}.flagstat")
 

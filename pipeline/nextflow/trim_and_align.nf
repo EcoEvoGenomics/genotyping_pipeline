@@ -52,7 +52,7 @@ process trim {
     --out1 ${sample}_R1_TRIM.fastq.gz \
     --out2 ${sample}_R2_TRIM.fastq.gz \
     --html ${sample}_fastp.html \
-    --report-title "${sample}"
+    --report_title "${sample}"
     """
 }
 

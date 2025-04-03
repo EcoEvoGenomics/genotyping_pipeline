@@ -208,12 +208,12 @@ process calc_stats {
     file("${sample}.dedup")
     file("${sample}.cram")
     file("${sample}.cram.crai")
-    file("${sample}.coverage")
+    file("${sample}.tsv")
     file("${sample}.flagstat")
 
     script:
     """
-    samtools coverage ${cram} | grep -v ${params.ref_scaffold_name} > ${sample}.coverage
+    samtools coverage ${cram} | grep -v ${params.ref_scaffold_name} > ${sample}.tsv
     samtools flagstat ${cram} > ${sample}.flagstat
     """
 }

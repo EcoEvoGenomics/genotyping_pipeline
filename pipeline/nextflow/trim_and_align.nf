@@ -60,8 +60,8 @@ process trim {
 
     input: 
     val(sample)
-    path(f_read), name: "${sample}_R1.fastq.gz"
-    path(r_read), name: "${sample}_R2.fastq.gz"
+    file("${sample}_R1.fastq.gz")
+    file("${sample}_R2.fastq.gz")
 
     output:
     val(sample)
@@ -167,8 +167,8 @@ process cram_downsample {
     
     input:
     val(sample)
-    file(cram), name: 'original.cram'
-    file(index), name: 'original.cram.crai'
+    file('original.cram')
+    file('original.cram.crai')
     file(dedupstats)
 
     output:

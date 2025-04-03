@@ -66,6 +66,7 @@ process align {
     file("${sample}_R1_TRIM.fastq.gz")
     file("${sample}_R2_TRIM.fastq.gz")
     file("${sample}_fastp.html")
+    file("${sample}.json")
 
     output:
     val(sample)

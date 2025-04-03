@@ -101,6 +101,7 @@ if [ $trim_align = 'yes' ]; then
         run ./pipeline/nextflow/trim_and_align.nf \
         -c ./pipeline/config/trim_and_align.config \
         --ref $ref_genome \
+        --ref_scaffold_name $ref_scaffold_name \
         --samples $sample_csv \
         --downsample_crams $downsample_large_crams \
         --max_cram_depth $max_cram_depth \

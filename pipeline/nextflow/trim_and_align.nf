@@ -10,6 +10,7 @@
 
 // Default input parameters
 params.ref = file('/cluster/projects/nn10082k/ref/house_sparrow_genome_assembly-18-11-14_masked.fa')
+params.ref_scaffold_name = 'scaffold'
 params.downsample_crams = 'no'
 params.max_cram_depth = 30
 params.publish_dir = './output'
@@ -212,7 +213,7 @@ process calc_stats {
 
     script:
     """
-    samtools coverage ${cram} > ${sample}.cov
+    samtools coverage ${cram} | grep -v ${params.ref_scaffold_name} > ${sample}.coverage
     samtools flagstat ${cram} > ${sample}.flagstat
     """
 }

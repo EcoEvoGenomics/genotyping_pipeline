@@ -135,10 +135,8 @@ process reheader_vcf {
     """
 }
 
-// Step 5 - Get summary stats for each per-chromosome VCF and output to their directory
+// Step 5 - Get summary stats for each per-chromosome VCF
 process summarise_vcf {
-
-    publishDir "${params.publish_dir}/chroms/${vcf.simpleName}", saveAs: { filename -> "$filename" }, mode: 'copy'
 
     input:
     tuple file(vcf), file(csi)

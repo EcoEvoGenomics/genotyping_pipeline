@@ -87,8 +87,8 @@ cd $repository_path
 
 output_dir=./output
 trim_align_output_dir=${output_dir}/01-aligned_reads
-call_vcf_output_dir=${output_dir}/02-unfiltered_variants
-filt_vcf_output_dir=${output_dir}/03-filtered_variants/${filtering_label}
+call_vcf_output_dir=${output_dir}/02-variants_unfiltered
+filt_vcf_output_dir=${output_dir}/03-variants_filtered/${filtering_label}
 
 mkmissingdir $output_dir
 

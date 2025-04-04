@@ -125,8 +125,7 @@ process reheader_vcf {
     file('input.vcf.gz.csi')
     
     output:
-    file("${key}.vcf.gz")
-    file("${key}.vcf.gz.csi")
+    tuple file("${key}.vcf.gz"), file("${key}.vcf.gz.csi")
 
     script:
     """
@@ -142,8 +141,7 @@ process summarise_vcf {
     publishDir "${params.publish_dir}/chroms/${vcf.simpleName}", saveAs: { filename -> "$filename" }, mode: 'copy'
 
     input:
-    file(vcf)
-    file(csi)
+    tuple file(vcf), file(csi)
 
     output:
     file("${vcf.simpleName}.vchk")

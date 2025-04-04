@@ -38,8 +38,8 @@ workflow{
     | summarise_vcf
 
     concatenate_all(
-        (chromosome_vcfs | flatten),
-        (chromosome_vchks | collect),
+        (chromosome_vcfs.collect().flatten()),
+        (chromosome_vchks.collect()),
         'variants_unfiltered'
     )
 

@@ -11,7 +11,7 @@
 // Default input parameters
 params.ref = file('/cluster/projects/nn10082k/ref/house_sparrow_genome_assembly-18-11-14_masked.fa')
 params.publish_dir = './output'
-params.windows_dir = './output/called_variants/genome_windows/'
+params.windows_dir = "${params.publish_dir}/02-variants_unfiltered/genome_windows/"
 params.ploidy_file = file('./pipeline/defaults/default.ploidy')
 
 // Workflow

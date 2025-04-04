@@ -38,7 +38,7 @@ workflow{
     | summarise_vcf
 
     concatenate_all(
-        (chromosome_vcfs.flatten()),
+        (chromosome_vcfs.flatten().collect()),
         (chromosome_vchks.collect()),
         'variants_unfiltered'
     )
@@ -125,8 +125,7 @@ process reheader_vcf {
     file('input.vcf.gz.csi')
     
     output:
-    file("${key}.vcf.gz")
-    file("${key}.vcf.gz.csi")
+    tuple file("${key}.vcf.gz"), file("${key}.vcf.gz.csi")
 
     script:
     """
@@ -140,8 +139,7 @@ process reheader_vcf {
 process summarise_vcf {
 
     input:
-    file(vcf)
-    file(csi)
+    tuple file(vcf), file(csi)
 
     output:
     file("${vcf.simpleName}.vchk")

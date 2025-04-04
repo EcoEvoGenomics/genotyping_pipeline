@@ -24,7 +24,7 @@ workflow{
     Channel.fromList(windows_list).set{windows}
     Channel.from(file(params.crams)).set{crams}
 
-    def chromosome_vcf_stream = genotype_windows(crams, ploidy_file, windows_dir, windows) \
+    def chromosome_vcfs = genotype_windows(crams, ploidy_file, windows_dir, windows) \
     | map { file ->
         def key = file.baseName.toString().tokenize(':').get(0)
         return tuple(key, file)
@@ -34,12 +34,14 @@ workflow{
     | normalise_vcf \
     | reheader_vcf
 
-    def chromosome_vchk_stream = chromosome_vcf_stream \
+    def chromosome_vchks = chromosome_vcfs \
     | summarise_vcf
 
-    def chromosome_vcfs = chromosome_vcf_stream | collect
-    def chromosome_vchks = chromosome_vchk_stream | collect
-    concatenate_all(chromosome_vcfs, chromosome_vchks, 'variants_unfiltered')
+    concatenate_all(
+        (chromosome_vcfs | flatten),
+        (chromosome_vchks | collect),
+        'variants_unfiltered'
+    )
 
 }
 

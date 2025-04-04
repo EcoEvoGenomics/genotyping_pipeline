@@ -149,7 +149,7 @@ process summarise_vcf {
     script:
     """
     bcftools query -l $vcf > samples.list
-    bcftools stats --samples-file samples.list $vcf
+    bcftools stats --samples-file samples.list $vcf > ${vcf.simpleName}.vchk
     """
 }
 

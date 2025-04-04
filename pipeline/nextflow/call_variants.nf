@@ -73,7 +73,7 @@ process genotype_windows {
 process concatenate_windows {
 
     input:
-    tuple val(key), file(window_vcfs_in_key)
+    tuple val(key), path(window_vcfs_in_key)
 
     output:
     val(key)
@@ -93,8 +93,8 @@ process normalise_vcf {
 
     input:
     val(key)
-    file("${key}.vcf.gz"), name: 'input.vcf.gz'
-    file("${key}.vcf.gz.csi"), name: 'input.vcf.gz.csi'
+    file('input.vcf.gz')
+    file('input.vcf.gz.csi')
     
     output:
     val(key)
@@ -121,8 +121,8 @@ process reheader_vcf {
 
     input:
     val(key)
-    file("${key}.vcf.gz"), name: 'input.vcf.gz'
-    file("${key}.vcf.gz.csi"), name: 'input.vcf.gz.csi'
+    file('input.vcf.gz')
+    file('input.vcf.gz.csi')
     
     output:
     file("${key}.vcf.gz")

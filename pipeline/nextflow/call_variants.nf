@@ -130,7 +130,7 @@ process reheader_vcf {
     script:
     """
     bcftools query -l input.vcf.gz | xargs -n 1 basename | awk -F '.' '{print \$1}' > samples.list
-    bcftools reheader --threads ${task.cpus} --samples-list samples.list -o ${key}.vcf.gz input.vcf.gz
+    bcftools reheader --threads ${task.cpus} --samples samples.list -o ${key}.vcf.gz input.vcf.gz
     bcftools index --threads ${task.cpus} ${key}.vcf.gz
     """
 }

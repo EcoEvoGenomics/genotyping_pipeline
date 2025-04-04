@@ -38,8 +38,8 @@ workflow{
     | summarise_vcf
 
     concatenate_all(
-        chromosome_vcfs.out.collect(),
-        chromosome_vchks.out.collect(),
+        collect(chromosome_vcfs),
+        collect(chromosome_vchks),
         'variants_unfiltered'
     )
 
@@ -172,7 +172,7 @@ process concatenate_all {
     script:
     """
     # CONCATENATE VCFs (CHECK IF AN ADDITIONAL NORM STEP IS NECESSARY)
-    bcftools concat --threads ${task.cpus} -n -O z -o ${collection_name}.vcf.gz staged_vcfs/*
+    bcftools concat --threads ${task.cpus} -n -O z -o ${collection_name}.vcf.gz staged_vcfs/*.vcf.gz
     bcftools index --threads ${task.cpus} ${collection_name}.vcf.gz
 
     # CONCATENATE VCHKs

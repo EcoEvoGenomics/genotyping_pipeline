@@ -38,7 +38,7 @@ workflow{
     | summarise_vcf
 
     concatenate_all(
-        (chromosome_vcfs.collect()),
+        (chromosome_vcfs.flatten()),
         (chromosome_vchks.collect()),
         'variants_unfiltered'
     )
@@ -165,6 +165,7 @@ process concatenate_all {
 
     output:
     file("${collection_name}.vcf.gz")
+    file("${collection_name}.vcf.gz.csi")
     file("${collection_name}.vchk")
 
     script:

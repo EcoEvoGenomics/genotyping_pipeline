@@ -40,7 +40,7 @@ workflow{
     concatenate_all(
         (chromosome_vcfs.flatten().collect()),
         (chromosome_vchks.collect()),
-        'variants_unfiltered'
+        'VARIANTS_UNFILTERED'
     )
 
 }

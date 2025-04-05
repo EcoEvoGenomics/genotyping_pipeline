@@ -46,7 +46,7 @@ workflow{
   concatenate_all(
         (filtered_chromosome_vcfs.flatten().collect()),
         (filtered_chromosome_vchks.collect()),
-        "variants_${params.filtering_label}"
+        "VARIANTS_${params.filtering_label}"
     )
 
 }

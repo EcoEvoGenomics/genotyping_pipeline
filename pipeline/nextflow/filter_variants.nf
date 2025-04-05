@@ -108,16 +108,16 @@ process save_filters_to_file {
 
   script:
   """
-  printf 'min-alleles\\t%s\\nmax-alleles\\t%s\\nmax-missing\\t%s\\nq_site\\t%s\\nmin_depth\\t%s\\nmax_depth\\t%s\\nmin_geno_depth\\t%s\\nmax_geno_depth\\t%s\\nkeep\\t%s\\n' \
-    '${params.min_alleles}' \
-    '${params.max_alleles}' \
-    '${params.max_missing}' \
-    '${params.minQ}' \
-    '${params.min_meanDP}' \
-    '${params.max_meanDP}' \
-    '${params.minDP}' \
-    '${params.maxDP}' \
-    '${params.keep}' \
+  printf '%s\\n' \
+    'min_alleles\\t${params.min_alleles}' \
+    'max_alleles\\t${params.max_alleles}' \
+    'max_missing\\t${params.max_missing}' \
+    'min_meanDP\\t${params.min_meanDP}' \
+    'max_meanDP\\t${params.max_meanDP}' \
+    'minDP\\t${params.minDP}' \
+    'maxDP\\t${params.maxDP}' \
+    'minQ\\t${params.minQ}' \
+    'keep\\t${params.keep}' \
     > ${params.filtering_label}_FILTERS.tsv
   """
 }

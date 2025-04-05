@@ -40,12 +40,12 @@
     filtering_label='DEFAULT_POP_STRUCTURE'
     filtering_min_alleles=2
     filtering_max_alleles=2
-    filtering_miss=0.8
-    filtering_q_site=30
-    filtering_min_depth=5
-    filtering_max_depth=30
-    filtering_min_geno_depth=5
-    filtering_max_geno_depth=30
+    filtering_max_missing=0.8
+    filtering_min_meanDP=5
+    filtering_max_meanDP=30
+    filtering_minDP=5
+    filtering_maxDP=30
+    filtering_minQ=30
     filtering_keep=''
 
     # Reference genome
@@ -99,7 +99,6 @@ mkmissingdir $output_dir
 
 if [ $trim_align = 'yes' ]; then
     mkmissingdir $trim_align_output_dir
-
     nextflow -log ./.nextflow/nextflow.log \
         run ./pipeline/nextflow/trim_and_align.nf \
         -c ./pipeline/config/trim_and_align.config \
@@ -136,13 +135,15 @@ if [ $filt_vcf = 'yes' ]; then
     chkprevious "Step: filt_vcf" $call_vcf_output_dir
     mkmissingdir $filt_vcf_output_dir
 
-    printf "miss %s\nq_site %s\nmin_depth %s\nmax_depth %s\nmin_geno_depth %s\nmax_geno_depth %s\nkeep %s\n" \
-        "$filtering_miss" \
-        "$filtering_q_site" \
-        "$filtering_min_depth" \
-        "$filtering_max_depth" \
-        "$filtering_min_geno_depth" \
-        "$filtering_max_geno_depth" \
+    printf "min-alleles\\t%s\\nmax-alleles\\t%s\\nmax-missing\\t%s\\nq_site\\t%s\\nmin_depth\\t%s\\nmax_depth\\t%s\\nmin_geno_depth\\t%s\\nmax_geno_depth\\t%s\\nkeep\\t%s\\n" \
+        "$filtering_min_alleles" \
+        "$filtering_max_alleles" \
+        "$filtering_max_missing" \
+        "$filtering_minQ" \
+        "$filtering_min_meanDP" \
+        "$filtering_max_meanDP" \
+        "$filtering_minDP" \
+        "$filtering_maxDP" \
         "$filtering_keep" \
         > $filt_vcf_output_dir/filt_params.txt
 
@@ -151,14 +152,14 @@ if [ $filt_vcf = 'yes' ]; then
         -c ./pipeline/config/filter_variants.config \
         --vcf_dir $call_vcf_output_dir/chroms \
         --filtering_label $filtering_label \
-        --min_alleles= $filtering_min_alleles \
-        --max_alleles= $filtering_max_alleles \
-        --miss $filtering_miss \
-        --q_site $filtering_q_site \
-        --min_depth $filtering_min_depth \
-        --max_depth $filtering_max_depth \
-        --min_geno_depth $filtering_min_geno_depth \
-        --max_geno_depth $filtering_max_geno_depth \
+        --min_alleles $filtering_min_alleles \
+        --max_alleles $filtering_max_alleles \
+        --max_missing $filtering_max_missing \
+        --min_meanDP $filtering_min_meanDP \
+        --max_meanDP $filtering_max_meanDP \
+        --minDP $filtering_minDP \
+        --maxDP $filtering_maxDP \
+        --minQ $filtering_minQ \
         --keep $filtering_keep \
         --publish_dir $filt_vcf_output_dir
 fi

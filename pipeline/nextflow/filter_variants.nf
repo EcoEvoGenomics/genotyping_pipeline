@@ -54,12 +54,12 @@ process filter_vcf {
     vcftools --gzvcf input.vcf.gz \
     --min-alleles ${params.min_alleles} \
     --max-alleles ${params.max_alleles} \
-    --max-missing ${params.miss} \
-    --minQ ${params.q_site} \
-    --min-meanDP ${params.min_depth} \
-    --max-meanDP ${params.max_depth} \
-    --minDP ${params.min_geno_depth} \
-    --maxDP ${params.max_geno_depth} \
+    --max-missing ${params.max_missing} \
+    --min-meanDP ${params.min_meanDP} \
+    --max-meanDP ${params.max_meanDP} \
+    --minDP ${params.minDP} \
+    --maxDP ${params.maxDP} \
+    --minQ ${params.minQ} \
     --keep ${params.keep} \
     --remove-filtered-all \
     --remove-indels \
@@ -72,12 +72,12 @@ process filter_vcf {
     vcftools --gzvcf input.vcf.gz \
     --min-alleles ${params.min_alleles} \
     --max-alleles ${params.max_alleles} \
-    --max-missing ${params.miss} \
-    --minQ ${params.q_site} \
-    --min-meanDP ${params.min_depth} \
-    --max-meanDP ${params.max_depth} \
-    --minDP ${params.min_geno_depth} \
-    --maxDP ${params.max_geno_depth} \
+    --max-missing ${params.max_missing} \
+    --min-meanDP ${params.min_meanDP} \
+    --max-meanDP ${params.max_meanDP} \
+    --minDP ${params.minDP} \
+    --maxDP ${params.maxDP} \
+    --minQ ${params.minQ} \
     --remove-filtered-all \
     --remove-indels \
     --recode-INFO-all \

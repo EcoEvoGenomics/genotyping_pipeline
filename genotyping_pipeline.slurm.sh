@@ -43,15 +43,15 @@
 
     # Filtering settings
     filtering_label='default'
-    vcf_filt_miss=0.8
-    vcf_filt_q_site_ps=30
-    vcf_filt_q_site_gs=30
-    vcf_filt_min_depth=5
-    vcf_filt_max_depth=30
-    vcf_filt_min_geno_depth=5
-    vcf_filt_max_geno_depth=30
-    vcf_filt_keep=''
-    stats_downsample_sites=10000
+    filtering_min_alleles=2
+    filtering_max_alleles=2
+    filtering_miss=0.8
+    filtering_q_site=30
+    filtering_min_depth=5
+    filtering_max_depth=30
+    filtering_min_geno_depth=5
+    filtering_max_geno_depth=30
+    filtering_keep=''
 
 ### --- End user input --- ###
 
@@ -131,38 +131,30 @@ if [ $filt_vcf = 'yes' ]; then
     chkprevious "Step: filt_vcf" $call_vcf_output_dir
     mkmissingdir $filt_vcf_output_dir
 
-    printf "miss %s\nq_site_ps %s\nq_site_gs %s\nmin_depth %s\nmax_depth %s\nmin_geno_depth %s\nmax_geno_depth %s\nkeep %s\n" \
-        "$vcf_filt_miss" \
-        "$vcf_filt_q_site_ps" \
-        "$vcf_filt_q_site_gs" \
-        "$vcf_filt_min_depth" \
-        "$vcf_filt_max_depth" \
-        "$vcf_filt_min_geno_depth" \
-        "$vcf_filt_max_geno_depth" \
-        "$vcf_filt_keep" \
+    printf "miss %s\nq_site %s\nmin_depth %s\nmax_depth %s\nmin_geno_depth %s\nmax_geno_depth %s\nkeep %s\n" \
+        "$filtering_miss" \
+        "$filtering_q_site" \
+        "$filtering_min_depth" \
+        "$filtering_max_depth" \
+        "$filtering_min_geno_depth" \
+        "$filtering_max_geno_depth" \
+        "$filtering_keep" \
         > $filt_vcf_output_dir/filt_params.txt
 
     nextflow -log ./.nextflow/nextflow.log \
         run ./pipeline/nextflow/filter_variants.nf \
         -c ./pipeline/config/filter_variants.config \
-        --vcf_dir $call_vcf_output_dir \
-        --miss $vcf_filt_miss \
-        --q_site_ps $vcf_filt_q_site_ps \
-        --q_site_gs $vcf_filt_q_site_gs \
-        --min_depth $vcf_filt_min_depth \
-        --max_depth $vcf_filt_max_depth \
-        --min_geno_depth $vcf_filt_min_geno_depth \
-        --max_geno_depth $vcf_filt_max_geno_depth \
-        --keep $vcf_filt_keep \
-        --publish_dir $filt_vcf_output_dir \
-        --stats_downsample_sites $stats_downsample_sites
-
-    nextflow -log ./.nextflow/nextflow.log \
-        run ./pipeline/nextflow/combine_vcf.nf \
-        -c ./pipeline/config/combine_vcf.config \
-        --input_dir $filt_vcf_output_dir/vcf_filtered \
-        --pop_structure_label '_ps' \
-        --genome_scan_label '_gs' \
+        --vcf_dir $call_vcf_output_dir/chroms \
+        --filtering_label $filtering_label \
+        --min_alleles= $filtering_min_alleles \
+        --max_alleles= $filtering_max_alleles \
+        --miss $filtering_miss \
+        --q_site $filtering_q_site \
+        --min_depth $filtering_min_depth \
+        --max_depth $filtering_max_depth \
+        --min_geno_depth $filtering_min_geno_depth \
+        --max_geno_depth $filtering_max_geno_depth \
+        --keep $filtering_keep \
         --publish_dir $filt_vcf_output_dir
 fi
 

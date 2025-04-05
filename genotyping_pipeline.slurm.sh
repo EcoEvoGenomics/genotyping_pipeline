@@ -21,7 +21,7 @@
     sample_csv=
 
     # Which steps to run?
-    # Note: combine_vcfs is optional, but steps must be run in order.
+    # Note: steps must be run in order, but you can repeat filt_vcf and multiqc with different settings
     trim_align=yes
     call_vcf=yes
     filt_vcf=yes

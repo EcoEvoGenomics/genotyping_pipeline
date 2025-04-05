@@ -16,33 +16,28 @@
 
 ### ----- User input ----- ###
 
-    # Path of repository directory
-    repository_path=
-
-    # Path to .CSV with each row as "ID, F_READ_PATH, R_READ_PATH"
+    # Path to .CSV of input samples
+    # Note: samples are rows and the columns "ID, F_READ_PATH, R_READ_PATH" without headers
     sample_csv=
 
-    # Which steps to run? Note: combine_vcfs is optional, but steps must be run in order.
+    # Which steps to run?
+    # Note: combine_vcfs is optional, but steps must be run in order.
     trim_align=yes
     call_vcf=yes
     filt_vcf=yes
     combine_vcfs=yes
     multiqc=yes
 
-    # Reference genome
-    ref_genome=/cluster/projects/nn10082k/ref/house_sparrow_genome_assembly-18-11-14_masked.fa
-    ref_index=/cluster/projects/nn10082k/ref/house_sparrow_genome_assembly-18-11-14_masked.fa.fai
-    ref_scaffold_name='scaffold'
-    ref_ploidy_file=./pipeline/defaults/default.ploidy
-
-    # Threshold depth of CRAMs?
+    # Settings for step trim_align
+    # Note: max_cram_depth only applies if downsample_large_crams=yes
     downsample_large_crams=no
     max_cram_depth=30
 
-    # Genotyping settings
+    # Settings for step call_vcf
     window_size=10000000
 
-    # Filtering settings
+    # Settings for step filt_vcf
+    # Note: change filtering_label and re-run filt_vcf to refilter output from call_vcf
     filtering_label='default'
     vcf_filt_miss=0.8
     vcf_filt_q_site_ps=30
@@ -53,6 +48,16 @@
     vcf_filt_max_geno_depth=30
     vcf_filt_keep=''
     stats_downsample_sites=10000
+
+    # Reference genome
+    ref_genome=/cluster/projects/nn10082k/ref/house_sparrow_genome_assembly-18-11-14_masked.fa
+    ref_index=/cluster/projects/nn10082k/ref/house_sparrow_genome_assembly-18-11-14_masked.fa.fai
+    ref_scaffold_name='scaffold'
+    ref_ploidy_file=./pipeline/defaults/default.ploidy
+    
+    # Paths to this repository and to a suitable conda environment
+    repository_path=
+    conda_environment_path=/cluster/projects/nn10082k/conda_users/eriksro/genotyping_pipeline_experimental
 
 ### --- End user input --- ###
 
@@ -66,7 +71,7 @@ module load Miniconda3/22.11.1-1
 
 # Activate conda environment
 source ${EBROOTMINICONDA3}/bin/activate
-conda activate /cluster/projects/nn10082k/conda_users/eriksro/genotyping_pipeline_experimental
+conda activate ${conda_environment_path}
 
 # Function to handle missing output directories
 mkmissingdir() {

@@ -8,13 +8,6 @@
 // Developed by Mark Ravinet
 // Co-developed and maintained by Erik Sandertun Røed
 
-// Default input parameters
-params.ref = file('/cluster/projects/nn10082k/ref/house_sparrow_genome_assembly-18-11-14_masked.fa')
-params.ref_scaffold_name = 'scaffold'
-params.downsample_crams = 'no'
-params.max_cram_depth = 30
-params.publish_dir = './output'
-
 // Workflow
 workflow {
     

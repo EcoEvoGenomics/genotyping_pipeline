@@ -8,23 +8,6 @@
 // Developed by Mark Ravinet
 // Co-developed and maintained by Erik Sandertun Røed
 
-// Default parameters
-params.publish_dir = './output'
-params.vcf_dir = "${params.publish_dir}/02-variants_unfiltered"
-
-// Default filtering parameters
-params.min_alleles=2
-params.max_alleles=2
-params.miss=0.8
-params.q_site=30
-params.q_site_gs=30
-params.min_depth=5
-params.max_depth=30
-params.min_geno_depth=5
-params.max_geno_depth=30
-params.keep=""
-params.stats_downsample_sites=10000
-
 // Include duplicate processes
 include { summarise_vcf; concatenate_all } from './call_variants.nf'
 

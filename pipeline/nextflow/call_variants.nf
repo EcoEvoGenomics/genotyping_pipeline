@@ -176,7 +176,7 @@ process concatenate_all {
     plot-vcfstats --merge staged_vchks/* > ${collection_name}.vchk
 
     # CHANGE CONCATENATED VCHK METADATA FOR MULTIQC
-    sed -i -e 's/This file was created with plot-vcfstats/This file was created with bcftools stats/g' \
-           -e 's/(.*)\\*r\\.vcf\\.gz/\\1${collection_name}.vcf.gz/g' ${collection_name}.vchk
+    sed -i -e 's/This file was produced by plot-vcfstats/This file was produced by bcftools stats/g' \
+           -e 's/\\(.*\\)\\*r[^.]*\\.vcf\\.gz/\\1${collection_name}\\.vcf\\.gz/g' ${collection_name}.vchk 
     """
 }

@@ -35,6 +35,9 @@ workflow{
         "VARIANTS_${params.filtering_label}"
     )
 
+  // Separately:
+  save_filters_to_file()
+
 }
 
 // Filter a VCF
@@ -92,5 +95,29 @@ process filter_vcf {
 
   # INDEX FILTERED VCF
   bcftools index --threads ${task.cpus} ${key}_${params.filtering_label}.vcf.gz
+  """
+}
+
+// Save the filters applied to a file
+process save_filters_to_file {
+
+  publishDir "${params.publish_dir}", saveAs: { filename -> "$filename" }, mode: 'copy'
+
+  output:
+  file("${params.filtering_label}_FILTERS.tsv")
+
+  script:
+  """
+  printf 'min-alleles\\t%s\\nmax-alleles\\t%s\\nmax-missing\\t%s\\nq_site\\t%s\\nmin_depth\\t%s\\nmax_depth\\t%s\\nmin_geno_depth\\t%s\\nmax_geno_depth\\t%s\\nkeep\\t%s\\n' \
+    '${params.min_alleles}' \
+    '${params.max_alleles}' \
+    '${params.max_missing}' \
+    '${params.minQ}' \
+    '${params.min_meanDP}' \
+    '${params.max_meanDP}' \
+    '${params.minDP}' \
+    '${params.maxDP}' \
+    '${params.keep}' \
+    > ${params.filtering_label}_FILTERS.tsv
   """
 }

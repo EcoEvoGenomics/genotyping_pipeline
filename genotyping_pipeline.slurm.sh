@@ -134,19 +134,6 @@ fi
 if [ $filt_vcf = 'yes' ]; then
     chkprevious "Step: filt_vcf" $call_vcf_output_dir
     mkmissingdir $filt_vcf_output_dir
-
-    printf "min-alleles\\t%s\\nmax-alleles\\t%s\\nmax-missing\\t%s\\nq_site\\t%s\\nmin_depth\\t%s\\nmax_depth\\t%s\\nmin_geno_depth\\t%s\\nmax_geno_depth\\t%s\\nkeep\\t%s\\n" \
-        "$filtering_min_alleles" \
-        "$filtering_max_alleles" \
-        "$filtering_max_missing" \
-        "$filtering_minQ" \
-        "$filtering_min_meanDP" \
-        "$filtering_max_meanDP" \
-        "$filtering_minDP" \
-        "$filtering_maxDP" \
-        "$filtering_keep" \
-        > $filt_vcf_output_dir/filt_params.txt
-
     nextflow -log ./.nextflow/nextflow.log \
         run ./pipeline/nextflow/filter_variants.nf \
         -c ./pipeline/config/filter_variants.config \

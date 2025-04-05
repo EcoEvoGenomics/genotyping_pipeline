@@ -14,6 +14,7 @@ include { summarise_vcf; concatenate_all } from './call_variants.nf'
 // Workflow
 workflow{
 
+  // Obtain chromosome-level unfiltered VCFs and filter
   def filtered_chromosome_vcfs = Channel
   .fromPath("${params.vcf_dir}/**.vcf.gz")
   .map { vcf -> 
@@ -23,9 +24,11 @@ workflow{
   } \
   | filter_vcf
 
+  // Obtain summary stats chromosome-level VCF
   def filtered_chromosome_vchks = filtered_chromosome_vcfs \
   | summarise_vcf
 
+  // Concatenate and output chromosome-level VCFs and VCHKs
   concatenate_all(
         (filtered_chromosome_vcfs.flatten().collect()),
         (filtered_chromosome_vchks.collect()),

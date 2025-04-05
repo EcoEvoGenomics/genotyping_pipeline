@@ -94,6 +94,7 @@ output_dir=./output
 trim_align_output_dir=${output_dir}/01-aligned_reads
 call_vcf_output_dir=${output_dir}/02-variants_unfiltered
 filt_vcf_output_dir=${output_dir}/03-variants_filtered/${filtering_label}
+multiqc_output_dir=${output_dir}/04-multiqc
 
 mkmissingdir $output_dir
 
@@ -158,7 +159,7 @@ if [ $multiqc = 'yes' ]; then
     conda deactivate
     module --quiet purge
     module load MultiQC/1.22.3-foss-2023b
-    multiqc --outdir $output_dir $output_dir
+    multiqc --outdir $multiqc_output_dir $output_dir
 fi
 
 # End work

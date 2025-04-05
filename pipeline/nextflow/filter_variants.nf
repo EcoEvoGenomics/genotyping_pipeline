@@ -60,32 +60,48 @@ process filter_vcf {
   tuple val(key), file('input.vcf.gz'), file('input.vcf.gz.csi') 
 
   output:
-  tuple file("${key}_${params.filtering_label}.vcf.gz"), file("${key}_${params.filtering_label}.vcf.gz.csi")
+  tuple \
+  file("${key}_${params.filtering_label}.vcf.gz"), \
+  file("${key}_${params.filtering_label}.vcf.gz.csi")
 
   script:
   """
   # FILTER WITH OR WITHOUT KEEP PARAMETER
   if [[ -f ${params.keep} ]]; then
-    vcftools --gzvcf input.vcf.gz --remove-indels --remove-filtered-all \
+    vcftools --gzvcf input.vcf.gz \
+    --min-alleles ${params.min_alleles} \
+    --max-alleles ${params.max_alleles} \
+    --max-missing ${params.miss} \
+    --minQ ${params.q_site} \
+    --min-meanDP ${params.min_depth} \
+    --max-meanDP ${params.max_depth} \
+    --minDP ${params.min_geno_depth} \
+    --maxDP ${params.max_geno_depth} \
     --keep ${params.keep} \
-    --min-alleles ${params.min_alleles} \
-    --max-alleles ${params.max_alleles} \
-    --max-missing ${params.miss} \
-    --minQ ${params.q_site} \
-    --min-meanDP ${params.min_depth} --max-meanDP ${params.max_depth} \
-    --minDP ${params.min_geno_depth} --maxDP ${params.max_geno_depth} \
-    --recode --recode-INFO-all --stdout \
-  | bcftools view --threads ${task.cpus} -e 'N_ALT>1' -O z -o ${key}_${params.filtering_label}.vcf.gz
+    --remove-filtered-all \
+    --remove-indels \
+    --recode-INFO-all \
+    --recode \
+    --stdout \
+  | bcftools view --threads ${task.cpus} -e 'N_ALT>1' -O z \
+    -o ${key}_${params.filtering_label}.vcf.gz
   else
-    vcftools --gzvcf input.vcf.gz --remove-indels --remove-filtered-all \
+    vcftools --gzvcf input.vcf.gz \
     --min-alleles ${params.min_alleles} \
     --max-alleles ${params.max_alleles} \
     --max-missing ${params.miss} \
     --minQ ${params.q_site} \
-    --min-meanDP ${params.min_depth} --max-meanDP ${params.max_depth} \
-    --minDP ${params.min_geno_depth} --maxDP ${params.max_geno_depth} \
-    --recode --recode-INFO-all --stdout \
-  | bcftools view --threads ${task.cpus} -e 'N_ALT>1' -O z -o ${key}_${params.filtering_label}.vcf.gz
+    --min-meanDP ${params.min_depth} \
+    --max-meanDP ${params.max_depth} \
+    --minDP ${params.min_geno_depth} \
+    --maxDP ${params.max_geno_depth} \
+    --remove-filtered-all \
+    --remove-indels \
+    --recode-INFO-all \
+    --recode \
+    --stdout \
+  | bcftools view --threads ${task.cpus} -e 'N_ALT>1' -O z \
+    -o ${key}_${params.filtering_label}.vcf.gz
   fi
 
   # INDEX FILTERED VCF

@@ -16,9 +16,13 @@ workflow{
     Channel.fromPath(params.ploidy_file).set{ploidy_file}
     Channel.fromPath(params.windows_dir).set{windows_dir}
     Channel.fromList(windows_list).set{windows}
-    Channel.from(file(params.crams)).set{crams}
 
-    def chromosome_vcfs = genotype_windows(crams, ploidy_file, windows_dir, windows) \
+    def input_crams = Channel
+    .fromPath("${params.cram_dir}/**.cram")
+    .collect() \
+    | prepare_cram_list
+
+    def chromosome_vcfs = genotype_windows(input_crams, ploidy_file, windows_dir, windows) \
     | map { file ->
         def key = file.baseName.toString().tokenize(':').get(0)
         return tuple(key, file)
@@ -37,6 +41,21 @@ workflow{
         'VARIANTS_UNFILTERED'
     )
 
+}
+
+// Step 0A - Write CRAM list
+process prepare_cram_list {
+
+    input:
+    val(crams)
+
+    output:
+    file('crams.list')
+
+    script:
+    """
+    echo ${crams} > crams.list
+    """
 }
 
 // Step 1 - Genotyping

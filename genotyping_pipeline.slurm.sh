@@ -119,14 +119,11 @@ if [ $call_vcf = 'yes' ]; then
     mkmissingdir $windows_dir
     bash ./pipeline/shell/create_genome_windows.sh $ref_index $window_size $ref_scaffold_name $windows_dir
 
-    cram_list=${call_vcf_output_dir}/genotyped_crams.list
-    find $PWD/$trim_align_output_dir -name '*.cram' > $cram_list
-
     nextflow -log ./.nextflow/nextflow.log \
         run ./pipeline/nextflow/call_variants.nf \
         -c ./pipeline/config/call_variants.config \
         --ref $ref_genome \
-        --crams $cram_list \
+        --cram_dir $trim_align_output_dir \
         --windows_dir $windows_dir \
         --ploidy_file $ref_ploidy_file \
         --publish_dir $call_vcf_output_dir

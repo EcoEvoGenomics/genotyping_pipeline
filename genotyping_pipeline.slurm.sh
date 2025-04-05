@@ -70,7 +70,7 @@ conda activate /cluster/projects/nn10082k/conda_users/eriksro/genotyping_pipelin
 # Function to handle missing output directories
 mkmissingdir() {
     if [ ! -e $1 ]; then
-        mkdir $1
+        mkdir -p $1
     fi
 }
 

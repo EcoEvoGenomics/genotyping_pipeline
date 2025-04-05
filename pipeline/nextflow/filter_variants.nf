@@ -34,7 +34,7 @@ workflow{
   def filtered_chromosome_vcfs = Channel
   .fromPath("${params.vcf_dir}/**.vcf.gz")
   .map { vcf -> 
-    def key = vcf.toString().replace('vcf.gz', '')
+    def key = vcf.simpleName
     def index = vcf.toString().replace('vcf.gz', 'vcf.gz.csi')
     tuple(key, file(vcf), file(index))
   } \
@@ -57,7 +57,7 @@ process filter_vcf {
   publishDir "${params.publish_dir}/chroms/${key}", saveAs: { filename -> "$filename" }, mode: 'copy'
   
   input:
-  tuple val(key), file('input.vcf.gz'), file('input.vcf.gz.csi') 
+  tuple val(key), path('input.vcf.gz'), path('input.vcf.gz.csi') 
 
   output:
   tuple \

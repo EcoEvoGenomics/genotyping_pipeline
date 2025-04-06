@@ -109,15 +109,15 @@ process save_filters_to_file {
   script:
   """
   printf '%s\\t%s\\n' \
-    'min_alleles' '${params.min_alleles}' \
-    'max_alleles' '${params.max_alleles}' \
-    'max_missing' '${params.max_missing}' \
-    'min_meanDP' '${params.min_meanDP}' \
-    'max_meanDP' '${params.max_meanDP}' \
+    'min-alleles' '${params.min_alleles}' \
+    'max-alleles' '${params.max_alleles}' \
+    'max-missing' '${params.max_missing}' \
+    'min-meanDP' '${params.min_meanDP}' \
+    'max-meanDP' '${params.max_meanDP}' \
     'minDP' '${params.minDP}' \
     'maxDP' '${params.maxDP}' \
     'minQ' '${params.minQ}' \
     'keep' '${params.keep}' \
-    > ${params.filtering_label}_FILTERS.tsv
+    >> ${params.filtering_label}_VCFTools_filters.tsv
   """
 }

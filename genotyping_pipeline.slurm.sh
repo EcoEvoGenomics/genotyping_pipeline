@@ -103,6 +103,7 @@ if [ $trim_align = 'yes' ]; then
     nextflow -log ./.nextflow/nextflow.log \
         run ./pipeline/nextflow/trim_and_align.nf \
         -c ./pipeline/config/trim_and_align.config \
+        -with-report $trim_align_output_dir/workflow_report.html \
         --samples $sample_csv \
         --ref $ref_genome \
         --ref_scaffold_name $ref_scaffold_name \
@@ -117,6 +118,7 @@ if [ $call_vcf = 'yes' ]; then
     nextflow -log ./.nextflow/nextflow.log \
         run ./pipeline/nextflow/call_variants.nf \
         -c ./pipeline/config/call_variants.config \
+        -with-report $call_vcf_output_dir/workflow_report.html \
         --cram_dir $trim_align_output_dir \
         --window_size $window_size \
         --ref $ref_genome \
@@ -132,6 +134,7 @@ if [ $filt_vcf = 'yes' ]; then
     nextflow -log ./.nextflow/nextflow.log \
         run ./pipeline/nextflow/filter_variants.nf \
         -c ./pipeline/config/filter_variants.config \
+        -with-report $filt_vcf_output_dir/workflow_report.html \
         --vcf_dir $call_vcf_output_dir/chroms \
         --filtering_label $filtering_label \
         --min_alleles $filtering_min_alleles \

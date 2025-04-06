@@ -103,9 +103,9 @@ if [ $trim_align = 'yes' ]; then
     nextflow -log ./.nextflow/nextflow.log \
         run ./pipeline/nextflow/trim_and_align.nf \
         -c ./pipeline/config/trim_and_align.config \
+        --samples $sample_csv \
         --ref $ref_genome \
         --ref_scaffold_name $ref_scaffold_name \
-        --samples $sample_csv \
         --downsample_crams $downsample_large_crams \
         --max_cram_depth $max_cram_depth \
         --publish_dir $trim_align_output_dir
@@ -114,21 +114,15 @@ fi
 if [ $call_vcf = 'yes' ]; then
     chkprevious "Step: call_vcf" $trim_align_output_dir
     mkmissingdir $call_vcf_output_dir
-
-    windows_dir=$call_vcf_output_dir/genome_windows
-    mkmissingdir $windows_dir
-    bash ./pipeline/shell/create_genome_windows.sh $ref_index $window_size $ref_scaffold_name $windows_dir
-
-    cram_list=${call_vcf_output_dir}/genotyped_crams.list
-    find $PWD/$trim_align_output_dir -name '*.cram' > $cram_list
-
     nextflow -log ./.nextflow/nextflow.log \
         run ./pipeline/nextflow/call_variants.nf \
         -c ./pipeline/config/call_variants.config \
+        --cram_dir $trim_align_output_dir \
+        --window_size $window_size \
         --ref $ref_genome \
-        --crams $cram_list \
-        --windows_dir $windows_dir \
-        --ploidy_file $ref_ploidy_file \
+        --ref_index $ref_index \
+        --ref_scaffold_name $ref_scaffold_name \
+        --ref_ploidy_file $ref_ploidy_file \
         --publish_dir $call_vcf_output_dir
 fi
 

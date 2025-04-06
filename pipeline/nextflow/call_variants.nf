@@ -10,27 +10,33 @@
 
 // Workflow
 workflow{    
+    
+    // Channel with a file listing input CRAM paths
+    def crams = Channel.fromPath("${params.cram_dir}/**.cram")
+    .map { cram -> "${cram.toString()}\n" }
+    .collectFile()
 
-    windows_list = file("${params.windows_dir}/genome_windows.list").readLines()
-        
-    Channel.fromPath(params.ploidy_file).set{ploidy_file}
-    Channel.fromPath(params.windows_dir).set{windows_dir}
-    Channel.fromList(windows_list).set{windows}
-    Channel.from(file(params.crams)).set{crams}
+    // Prepare Channels for the genome windows
+    define_windows(params.ref_index, params.window_size, params.ref_scaffold_name)
+    def windows_dir = define_windows.out.windows_dir
+    def window_list = define_windows.out.windows.map{path -> file(path.toString())}.readLines()
 
-    def chromosome_vcfs = genotype_windows(crams, ploidy_file, windows_dir, windows) \
+    // Genotype windows and concatenate into chromsome VCFs
+    def chromosome_vcfs = genotype_windows(crams, file(params.ref_ploidy_file), windows_dir, window_list) \
     | map { file ->
         def key = file.baseName.toString().tokenize(':').get(0)
         return tuple(key, file)
-      }
+    } \
     | groupTuple( by:0, sort:true ) \
     | concatenate_windows \
     | normalise_vcf \
     | reheader_vcf
 
+    // Run bcftools stats on each VCF 
     def chromosome_vchks = chromosome_vcfs \
     | summarise_vcf
 
+    // Concatenate and output VCFs and VCHKs
     concatenate_all(
         (chromosome_vcfs.flatten().collect()),
         (chromosome_vchks.collect()),
@@ -39,13 +45,74 @@ workflow{
 
 }
 
+// Step 0 - Write genotyping genome windows
+process define_windows {
+
+    input:
+    val(ref_index)
+    val(window_size)
+    val(ref_scaffold_name)
+
+    output:
+    path('genome_windows/*'), emit: windows_dir
+    path('genome_windows/genome_windows.list'), emit: windows
+
+    script:
+    """
+    # DIRECTORY OF GENOME WINDOW FILES
+    mkdir genome_windows
+    cd genome_windows
+
+    # MAKE FILE OF CHROMOSOME AND SCAFFOLD SIZES
+    cut -f 1-2 ${ref_index} > genome_size.txt
+
+    # MAKE CHROMOSOME WINDOWS
+    bedtools makewindows -g genome_size.txt -w ${window_size} \
+    | grep -v ${ref_scaffold_name} \
+    | awk '{print \$1":"\$2"-"\$3}' \
+    > genome_windows.list
+
+    # MAKE SCAFFOLD WINDOWS
+    bedtools makewindows -g genome_size.txt -w ${window_size} \
+    | grep ${ref_scaffold_name} \
+    | awk '{print \$1":"\$2"-"\$3}' \
+    > scaffolds.list
+
+    # FIRST POSITION MUST BE 1, NOT 0
+    sed -i 's/:0-/:1-/g' genome_windows.list
+    sed -i 's/:0-/:1-/g' scaffolds.list
+
+    # FOR SCAFFOLDS, MAKE TAB-DELIMITED TEMPORARY FILE
+    cat scaffolds.list \
+    | tr ":" "-" \
+    | awk -F "-" '{print \$1"\\t",\$2"\\t",\$3}' \
+    > scaffolds.tmp
+    mv scaffolds.tmp scaffolds.list
+
+    # DETERMINE HOW TO SPLIT SCAFFOLDS ACROSS MULTIPLE FILES
+    total_lines=\$(wc -l <scaffolds.list)
+    num_files=10
+    ((lines_per_file = (total_lines + num_files - 1) / num_files))
+
+    # SPLIT SCAFFOLDS ACROSS MULTIPLE FILES
+    split -d --lines=\${lines_per_file} scaffolds.list scaffolds_
+
+    # ADD SCAFFOLDS TO WINDOW LIST ONLY IF ANY EXIST
+    n_scaffolds=\$(ls scaffolds_* | wc -l)
+    if [ \${n_scaffolds} -gt 0 ]
+    then
+        for i in scaffolds_*; do echo \$i; done >> genome_windows.list
+    fi
+    """
+}
+
 // Step 1 - Genotyping
 process genotype_windows {
 
     input:
     path crams
     path ploidy_file
-    path windows_dir
+    path windows_dir, stageAs:'./genome_windows/'
     each window
 
     output:
@@ -54,7 +121,7 @@ process genotype_windows {
     script:
     """
     if [[ "${window}" == "scaffold"* ]]; then
-        bcftools mpileup -d 8000 --ignore-RG -R ${windows_dir}/${window} -a AD,DP,SP -Ou -f ${params.ref} -b ${crams} \
+        bcftools mpileup -d 8000 --ignore-RG -R ./genome_windows/${window} -a AD,DP,SP -Ou -f ${params.ref} -b ${crams} \
         | bcftools call --threads ${task.cpus} --ploidy-file ${ploidy_file} -f GQ,GP -mO z -o ${window}.vcf.gz
     else
         bcftools mpileup -d 8000 --ignore-RG -r ${window} -a AD,DP,SP -Ou -f ${params.ref} -b ${crams} \

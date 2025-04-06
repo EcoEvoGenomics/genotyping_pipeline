@@ -1,0 +1,5 @@
+module_order:
+  - 'fastp'
+  - 'picard'
+  - 'samtools'
+  - 'bcftools'

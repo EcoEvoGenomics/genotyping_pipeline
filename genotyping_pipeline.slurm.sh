@@ -156,7 +156,7 @@ if [ $multiqc = 'yes' ]; then
     conda deactivate
     module --quiet purge
     module load MultiQC/1.22.3-foss-2023b
-    multiqc --outdir $multiqc_output_dir $output_dir
+    multiqc --outdir $multiqc_output_dir --config .pipeline/config/multiqc_config.yaml $output_dir
 fi
 
 # End work

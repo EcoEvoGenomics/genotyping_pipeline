@@ -157,7 +157,7 @@ if [ $multiqc = 'yes' ]; then
     module --quiet purge
     module load MultiQC/1.22.3-foss-2023b
     multiqc --outdir $multiqc_output_dir \
-        --config .pipeline/config/multiqc_config.yaml \
+        --config ./pipeline/config/multiqc_config.yaml \
         --force \
         $output_dir
 fi

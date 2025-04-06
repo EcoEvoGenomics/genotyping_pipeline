@@ -104,7 +104,7 @@ process save_filters_to_file {
   publishDir "${params.publish_dir}", saveAs: { filename -> "$filename" }, mode: 'copy'
 
   output:
-  file("${params.filtering_label}_FILTERS.tsv")
+  file("${params.filtering_label}_vcftools_filters.tsv")
 
   script:
   """
@@ -118,6 +118,6 @@ process save_filters_to_file {
     'maxDP' '${params.maxDP}' \
     'minQ' '${params.minQ}' \
     'keep' '${params.keep}' \
-    >> ${params.filtering_label}_VCFTools_filters.tsv
+    > ${params.filtering_label}_vcftools_filters.tsv
   """
 }

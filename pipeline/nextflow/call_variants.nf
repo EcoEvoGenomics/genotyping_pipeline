@@ -11,26 +11,18 @@
 // Workflow
 workflow{    
 
+    windows_list = file("${params.windows_dir}/genome_windows.list").readLines()
+        
+    Channel.fromPath(params.ploidy_file).set{ploidy_file}
+    Channel.fromPath(params.windows_dir).set{windows_dir}
+    Channel.fromList(windows_list).set{windows}
+
     def input_crams = Channel
     .fromPath("${params.cram_dir}/**.cram")
     .collect() \
     | prepare_cram_list
 
-    def dir_of_genome_windows = prepare_genome_windows(
-        params.ref_index,
-        params.window_size,
-        params.ref_scaffold_name
-    )
-
-    def windows_dir = Channel
-    .fromPath(dir_of_genome_windows)
-
-    def windows = Channel
-    .fromPath("$dir_of_genome_windows/genome_windows.list")
-    .readLines()
-    .fromList()
-
-    def chromosome_vcfs = genotype_windows(input_crams, file(params.ref_ploidy_file), windows_dir, windows) \
+    def chromosome_vcfs = genotype_windows(input_crams, ploidy_file, windows_dir, windows) \
     | map { file ->
         def key = file.baseName.toString().tokenize(':').get(0)
         return tuple(key, file)
@@ -66,36 +58,13 @@ process prepare_cram_list {
     """
 }
 
-// Step 0B - Write genotyping genome windows
-process prepare_genome_windows {
-
-    publishDir "${params.publish_dir}", saveAs: { filename -> "$filename" }, mode: 'copy'
-
-    input:
-    val(ref_index)
-    val(window_size)
-    val(ref_scaffold_name)
-
-    output:
-    file('/genome_windows')
-
-    script:
-    """
-    bash ./pipeline/shell/create_genome_windows.sh \
-        '$ref_index' \
-        '$window_size' \
-        '$ref_scaffold_name' \
-        '/genome_windows'
-    """
-}
-
 // Step 1 - Genotyping
 process genotype_windows {
 
     input:
     path crams
     path ploidy_file
-    path windows_dir, stageAs:'./genome_windows/'
+    path windows_dir
     each window
 
     output:
@@ -104,7 +73,7 @@ process genotype_windows {
     script:
     """
     if [[ "${window}" == "scaffold"* ]]; then
-        bcftools mpileup -d 8000 --ignore-RG -R ./genome_windows/${window} -a AD,DP,SP -Ou -f ${params.ref} -b ${crams} \
+        bcftools mpileup -d 8000 --ignore-RG -R ${windows_dir}/${window} -a AD,DP,SP -Ou -f ${params.ref} -b ${crams} \
         | bcftools call --threads ${task.cpus} --ploidy-file ${ploidy_file} -f GQ,GP -mO z -o ${window}.vcf.gz
     else
         bcftools mpileup -d 8000 --ignore-RG -r ${window} -a AD,DP,SP -Ou -f ${params.ref} -b ${crams} \

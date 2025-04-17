@@ -37,7 +37,7 @@
 
     # Settings for step filt_vcf
     # Note: change filtering_label and re-run filt_vcf to refilter output from call_vcf
-    filtering_label='DEFAULT_POP_STRUCTURE'
+    filtering_label='default_filters'
     filtering_min_alleles=2
     filtering_max_alleles=2
     filtering_max_missing=0.8

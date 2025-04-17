@@ -21,15 +21,17 @@ workflow {
 
     def crams = align_gpu(params.ref, params.ref_index, trimmed_reads)
 
-    if (params.downsample_crams == 'yes') {
-        crams = crams | cram_downsample
-    }
+    // if (params.downsample_crams == 'yes') {
+    //     crams = crams | cram_downsample
+    // }
 
-    crams | calc_stats
+    // crams | calc_stats
 }
 
 // Step 1 - Align to reference genome using GPU
 process align_gpu {
+    
+    publishDir "${params.publish_dir}/${sample}/", saveAs: { filename -> "$filename" }, mode: 'copy'
 
     input:
     path('ref_genome.fa')

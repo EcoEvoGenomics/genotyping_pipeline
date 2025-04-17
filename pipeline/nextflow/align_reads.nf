@@ -45,7 +45,6 @@ process align_gpu {
     val(sample)
     path("${sample}.cram")
     path("${sample}.cram.crai")
-    path("${sample}.dedup")
     path('qc-metrics/*')
 
     script:

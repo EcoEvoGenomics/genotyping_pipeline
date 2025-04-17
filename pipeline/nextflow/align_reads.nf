@@ -19,81 +19,20 @@ workflow {
     }
     .set { trimmed_reads }
 
-    def crams = align(trimmed_reads) \
-    | mark_dup \
-    | cram_convert
+    align_gpu(trimmed_reads) \
 
-    if (params.downsample_crams == 'yes') {
-        crams = crams | cram_downsample
-    }
-
-    crams | calc_stats
 }
 
-// Step 1 - Align to reference genome
-process align {
+// Step 1 - Align to reference genome using GPU
+process align_gpu {
+
+    publishDir "${params.publish_dir}/${sample}/", saveAs: { filename -> "$filename" }, mode: 'copy'
 
     input:
     tuple \
     val(sample),
-    file("${sample}_R1_TRIM.fastq.gz"),
-    file("${sample}_R2_TRIM.fastq.gz")
-
-    output:
-    val(sample)
-    file("${sample}.bam")
-
-    script:
-    """
-    ### CREATE READ GROUP: https://gatk.broadinstitute.org/hc/en-us/articles/360035890671-Read-groups
-    FILE_INFO_STRING=\$(zcat ${sample}_R1_TRIM.fastq.gz | head -1)
-    INSTRUMENT=\$(echo \${FILE_INFO_STRING} | awk 'BEGIN {FS = ":"}; { print \$1}' | awk '{sub(/@/,""); print}')
-    FLOWCELL=\$(echo \${FILE_INFO_STRING} | awk 'BEGIN {FS = ":"}; {print \$3}')
-    FLOWCELL_LANE=\$(echo \${FILE_INFO_STRING} | awk 'BEGIN {FS = ":"}; {print \$4}')
-    INDEX=\$(echo \${FILE_INFO_STRING} | awk 'BEGIN {FS = ":"}; {print \$10}')
-    PLATFORM=Illumina
-
-    FLOWCELL_ID=\${FLOWCELL}.\${FLOWCELL_LANE}
-    PLATFORM_UNIT=\${FLOWCELL}.\${FLOWCELL_LANE}.\${INDEX}
-    LIBRARY=${sample}.\${INDEX}
-
-    READGROUP="@RG\\tID:\${FLOWCELL_ID}\\tPL:\${PLATFORM}\\tLB:\${LIBRARY}\\tSM:${sample}\\tPU:\${PLATFORM_UNIT}"
-
-    bwa mem -M -t ${task.cpus} -R "\${READGROUP}" ${params.ref} ${sample}_R1_TRIM.fastq.gz ${sample}_R2_TRIM.fastq.gz \
-    | samtools view -@ ${task.cpus} -b \
-    | samtools sort -@ ${task.cpus} -T ${sample} \
-    > ${sample}.bam
-    """
-}
-
-// Step 2 - Mark duplicates in BAM file
-process mark_dup {
-
-    input:
-    val(sample)
-    file("${sample}.bam")
-
-    output:
-    val(sample)
-    file("${sample}_dedup.bam")
-    file("${sample}_dedup.bai")
-    file("${sample}.dedup")
-
-    script:
-    """
-    picard -Xmx16G MarkDuplicates -I ${sample}.bam -O ${sample}_dedup.bam -M ${sample}.dedup --TMP_DIR ./run_tmp
-    picard BuildBamIndex -I ${sample}_dedup.bam --TMP_DIR ./run_tmp
-    """
-}
-
-// Step 3 - Convert BAM file to CRAM file
-process cram_convert {
-
-    input:
-    val(sample)
-    file("${sample}_dedup.bam")
-    file("${sample}_dedup.bai")
-    file("${sample}.dedup")
+    file('R1.fastq.gz'),
+    file('R2.fastq.gz')
 
     output:
     val(sample)
@@ -103,12 +42,15 @@ process cram_convert {
 
     script:
     """
-    samtools view -@ ${task.cpus} -T ${params.ref} -C -o ${sample}.cram ${sample}_dedup.bam
-    samtools index -@ ${task.cpus} ${sample}.cram 
+    pbrun fq2bam \
+    --ref ${params.ref} \
+    --in-fq R1.fastq.gz R2.fastq.gz  \
+    --out-bam ${sample}.cram \
+    --out-duplicate-metrics ${sample}.dedup
     """
 }
 
-// Step 4 (Optional) - Downsample CRAM
+// Step 2 (Optional) - Downsample CRAM
 process cram_downsample {
     
     input:
@@ -138,7 +80,7 @@ process cram_downsample {
     """
 }
 
-// Step 5 - Calculate alignment statistics
+// Step 3 - Calculate alignment statistics
 process calc_stats {
 
     publishDir "${params.publish_dir}/${sample}/", saveAs: { filename -> "$filename" }, mode: 'copy'

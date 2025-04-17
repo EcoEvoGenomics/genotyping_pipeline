@@ -95,13 +95,13 @@ process define_windows {
     ((lines_per_file = (total_lines + num_files - 1) / num_files))
 
     # SPLIT SCAFFOLDS ACROSS MULTIPLE FILES
-    split -d --lines=\${lines_per_file} scaffolds.list scaffolds_
+    split -d --lines=\${lines_per_file} scaffolds.list scaffolds:
 
     # ADD SCAFFOLDS TO WINDOW LIST ONLY IF ANY EXIST
-    n_scaffolds=\$(ls scaffolds_* | wc -l)
+    n_scaffolds=\$(ls scaffolds:* | wc -l)
     if [ \${n_scaffolds} -gt 0 ]
     then
-        for i in scaffolds_*; do echo \$i; done >> genome_windows.list
+        for i in scaffolds:*; do echo \$i; done >> genome_windows.list
     fi
     """
 }

@@ -12,27 +12,27 @@ workflow {
     
     Channel.fromPath("${params.reads_dir}/*", type: 'dir')
     .map { dir -> 
-        def sample_id = dir.getName()
-        def r1_file = file("${dir}/${sample_id}_R1_TRIM.fastq.gz")
-        def r2_file = file("${dir}/${sample_id}_R2_TRIM.fastq.gz")
-        return tuple(sample_id, r1_file, r2_file)
+        def sample = dir.getName()
+        def r1_file = file("${dir}/${sample}_R1_TRIM.fastq.gz")
+        def r2_file = file("${dir}/${sample}_R2_TRIM.fastq.gz")
+        return tuple(sample, r1_file, r2_file)
     }
     .set { trimmed_reads }
 
-    align_gpu(trimmed_reads) \
+    align_gpu(params.ref, params.ref_index, trimmed_reads)
 
 }
 
 // Step 1 - Align to reference genome using GPU
 process align_gpu {
 
-    publishDir "${params.publish_dir}/${sample}/", saveAs: { filename -> "$filename" }, mode: 'copy'
-
     input:
+    path('ref_genome.fa')
+    path('ref_genome.fa.fai')
     tuple \
-    val(sample),
-    file('R1.fastq.gz'),
-    file('R2.fastq.gz')
+    val(sample), \
+    path(fwd, stageAs: "R1.fastq.gz"), \
+    path(rev, stageAs: "R2.fastq.gz")
 
     output:
     val(sample)
@@ -43,10 +43,11 @@ process align_gpu {
     script:
     """
     pbrun fq2bam \
-    --ref ${params.ref} \
-    --in-fq R1.fastq.gz R2.fastq.gz  \
+    --ref ref_genome.fa \
+    --in-fq R1.fastq.gz R2.fastq.gz \
     --out-bam ${sample}.cram \
-    --out-duplicate-metrics ${sample}.dedup
+    --out-duplicate-metrics ${sample}.dedup \
+    --tmp .
     """
 }
 

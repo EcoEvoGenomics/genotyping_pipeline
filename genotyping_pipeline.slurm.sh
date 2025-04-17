@@ -102,7 +102,7 @@ multiqc_output_dir=${output_dir}/05-multiqc
 mkmissingdir $output_dir
 
 if [ $trim_reads = 'yes' ]; then
-    mkmissingdir $align_reads_output_dir
+    mkmissingdir $trim_reads_output_dir
     nextflow -log ./.nextflow/nextflow.log \
         run ./pipeline/nextflow/trim_reads.nf \
         -c ./pipeline/config/trim_reads.config \

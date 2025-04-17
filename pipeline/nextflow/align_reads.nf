@@ -41,9 +41,10 @@ process align_gpu {
 
     output:
     val(sample)
-    file("${sample}.cram")
-    file("${sample}.cram.crai")
-    file("${sample}.dedup")
+    path("${sample}.cram")
+    path("${sample}.cram.crai")
+    path("${sample}.dedup")
+    path('qc-metrics/*')
 
     script:
     """
@@ -52,6 +53,7 @@ process align_gpu {
     --in-fq R1.fastq.gz R2.fastq.gz \
     --out-bam ${sample}.cram \
     --out-duplicate-metrics ${sample}.dedup \
+    --out-qc-metrics-dir qc-metrics \
     --tmp .
     """
 }

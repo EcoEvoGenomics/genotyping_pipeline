@@ -31,7 +31,7 @@ workflow{
   // Concatenate and output chromosome-level VCFs and VCHKs
   concatenate_vchks(filtered_chromosome_vchks.collect(), "variants_${params.filtering_label}")
   concatenate_vcfs(filtered_chromosome_vcfs.flatten().collect(), "variants_${params.filtering_label}")
-  
+
   // Separately:
   save_filters_to_file()
 
@@ -101,7 +101,7 @@ process save_filters_to_file {
   publishDir "${params.publish_dir}", saveAs: { filename -> "$filename" }, mode: 'copy'
 
   output:
-  file("${params.filtering_label}_vcftools_filters.tsv")
+  file("vcftools_${params.filtering_label}.tsv")
 
   script:
   """
@@ -115,6 +115,6 @@ process save_filters_to_file {
     'maxDP' '${params.maxDP}' \
     'minQ' '${params.minQ}' \
     'keep' '${params.keep}' \
-    > ${params.filtering_label}_vcftools_filters.tsv
+    > vcftools_${params.filtering_label}.tsv
   """
 }

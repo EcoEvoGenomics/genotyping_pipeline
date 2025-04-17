@@ -118,7 +118,7 @@ if [ $align_reads = 'yes' ]; then
         run ./pipeline/nextflow/align_reads.nf \
         -c ./pipeline/config/align_reads.config \
         -with-report $align_reads_output_dir/workflow_report.html \
-        --trim_dir $trim_reads_output_dir \
+        --reads_dir $trim_reads_output_dir \
         --ref $ref_genome \
         --ref_scaffold_name $ref_scaffold_name \
         --downsample_crams $downsample_large_crams \

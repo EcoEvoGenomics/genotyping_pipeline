@@ -5,7 +5,7 @@
 //
 // Workflow: Call VCF
 //
-// Developed by Mark Ravinet
+// Originally developed by Mark Ravinet
 // Co-developed and maintained by Erik Sandertun Røed
 
 // Workflow

@@ -10,8 +10,7 @@
 
 workflow {
     
-    Channel.fromPath("${params.reads_dir}/*")
-    .filter { file -> file.isDirectory() }
+    Channel.fromPath("${params.reads_dir}/*", type: 'dir')
     .map { dir -> 
         def sample_id = dir.getName()
         def r1_file = file("${dir}/${sample_id}_R1_TRIM.fastq.gz")

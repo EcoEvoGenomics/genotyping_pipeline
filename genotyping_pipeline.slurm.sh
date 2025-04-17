@@ -106,7 +106,7 @@ if [ $trim_reads = 'yes' ]; then
     nextflow -log ./.nextflow/nextflow.log \
         run ./pipeline/nextflow/trim_reads.nf \
         -c ./pipeline/config/trim_reads.config \
-        -with-report $align_reads_output_dir/workflow_report.html \
+        -with-report $trim_reads_output_dir/workflow_report.html \
         --samples $sample_csv \
         --publish_dir $trim_reads_output_dir
 fi

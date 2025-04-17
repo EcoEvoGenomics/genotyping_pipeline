@@ -9,7 +9,7 @@
 // Co-developed and maintained by Erik Sandertun Røed
 
 // Include duplicate processes
-include { summarise_vcf; concatenate_all } from './call_variants.nf'
+include { summarise_vcf; concatenate_vchks; concatenate_vcfs } from './call_variants.nf'
 
 // Workflow
 workflow{
@@ -29,12 +29,9 @@ workflow{
   | summarise_vcf
 
   // Concatenate and output chromosome-level VCFs and VCHKs
-  concatenate_all(
-        (filtered_chromosome_vcfs.flatten().collect()),
-        (filtered_chromosome_vchks.collect()),
-        "VARIANTS_${params.filtering_label}"
-    )
-
+  concatenate_vchks(filtered_chromosome_vchks.collect(), "variants_${params.filtering_label}")
+  concatenate_vcfs(filtered_chromosome_vcfs.flatten().collect(), "variants_${params.filtering_label}")
+  
   // Separately:
   save_filters_to_file()
 

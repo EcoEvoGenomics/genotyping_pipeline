@@ -36,13 +36,13 @@ workflow{
     def chromosome_vchks = chromosome_vcfs \
     | summarise_vcf
 
-    // Concatenate and output VCFs and VCHKs
-    concatenate_all(
-        (chromosome_vcfs.flatten().collect()),
-        (chromosome_vchks.collect()),
-        'VARIANTS_UNFILTERED'
-    )
+    // Concatenate and output VCHKs
+    concatenate_vchks(chromosome_vchks.collect(), 'variants_unfiltered')
 
+    // If concatenated VCF wanted, output
+    if (params.concatenate_vcf == 'yes') {
+        concatenate_vcfs(chromosome_vcfs.flatten().collect(), 'variants_unfiltered')
+    }
 }
 
 // Step 0 - Write genotyping genome windows
@@ -212,32 +212,46 @@ process summarise_vcf {
     """
 }
 
-// Step 6 - Concatenate and output all per-chromosome and per-scaffold VCFs and VCHKs
-process concatenate_all {
+// Step 6A - Collect VCHKs and output combined file for MultiQC
+process concatenate_vchks {
     
     publishDir "${params.publish_dir}", saveAs: { filename -> "$filename" }, mode: 'copy'
 
     input:
-    path(collected_vcfs), stageAs: "staged_vcfs/*"
     path(collected_vchks), stageAs: "staged_vchks/*"
     val(collection_name)
 
     output:
-    file("${collection_name}.vcf.gz")
-    file("${collection_name}.vcf.gz.csi")
     file("${collection_name}.vchk")
 
     script:
     """
-    # CONCATENATE VCFs (CHECK IF AN ADDITIONAL NORM STEP IS NECESSARY)
-    bcftools concat --threads ${task.cpus} -n -O z -o ${collection_name}.vcf.gz staged_vcfs/*.vcf.gz
-    bcftools index --threads ${task.cpus} ${collection_name}.vcf.gz
-
     # CONCATENATE VCHKs
     plot-vcfstats --merge staged_vchks/* > ${collection_name}.vchk
 
     # CHANGE CONCATENATED VCHK METADATA FOR MULTIQC
     sed -i -e 's/This file was produced by plot-vcfstats/This file was produced by bcftools stats/g' \
            -e 's/\\(.*\\)\\*r[^.]*\\.vcf\\.gz/\\1${collection_name}\\.vcf\\.gz/g' ${collection_name}.vchk 
+    """
+}
+
+// Step 6B (Optional) - Collect VCFs and output combined file
+process concatenate_vcfs {
+    
+    publishDir "${params.publish_dir}", saveAs: { filename -> "$filename" }, mode: 'copy'
+
+    input:
+    path(collected_vcfs), stageAs: "staged_vcfs/*"
+    val(collection_name)
+
+    output:
+    file("${collection_name}.vcf.gz")
+    file("${collection_name}.vcf.gz.csi")
+
+    script:
+    """
+    # CONCATENATE VCFs (CHECK IF AN ADDITIONAL NORM STEP IS NECESSARY)
+    bcftools concat --threads ${task.cpus} -n -O z -o ${collection_name}.vcf.gz staged_vcfs/*.vcf.gz
+    bcftools index --threads ${task.cpus} ${collection_name}.vcf.gz
     """
 }

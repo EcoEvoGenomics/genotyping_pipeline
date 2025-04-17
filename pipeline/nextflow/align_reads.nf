@@ -50,13 +50,22 @@ process align_gpu {
 
     script:
     """
+    # Prepare QC directory
+    mkdir qc-metrics
+
+    # Align with Parabricks FQ2BAM
     pbrun fq2bam \
     --ref ref_genome.fa \
     --in-fq R1.fastq.gz R2.fastq.gz \
     --out-bam ${sample}.cram \
-    --out-duplicate-metrics ${sample}.dedup \
+    --out-duplicate-metrics qc-metrics/picard.dedup \
     --out-qc-metrics-dir qc-metrics \
     --tmp .
+
+    # Parse QC files
+    rm qc-metrics/*.pdf
+    rm qc-metrics/*.png
+    ls | xargs -I {} mv qc-metrics/{} qc-metrics/${sample}.{}
     """
 }
 

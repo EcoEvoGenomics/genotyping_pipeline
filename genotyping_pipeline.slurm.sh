@@ -34,6 +34,7 @@
 
     # Settings for step call_vcf
     window_size=10000000
+    concatenate_unfiltered_vcfs=no
 
     # Settings for step filt_vcf
     # Note: change filtering_label and re-run filt_vcf to refilter output from call_vcf
@@ -125,6 +126,7 @@ if [ $call_vcf = 'yes' ]; then
         --ref_index $ref_index \
         --ref_scaffold_name $ref_scaffold_name \
         --ref_ploidy_file $ref_ploidy_file \
+        --concatenate_vcf $concatenate_unfiltered_vcfs \
         --publish_dir $call_vcf_output_dir
 fi
 

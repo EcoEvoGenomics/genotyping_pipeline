@@ -19,8 +19,13 @@ workflow {
     }
     .set { trimmed_reads }
 
-    align_gpu(params.ref, params.ref_index, trimmed_reads)
+    def crams = align_gpu(params.ref, params.ref_index, trimmed_reads)
 
+    if (params.downsample_crams == 'yes') {
+        crams = crams | cram_downsample
+    }
+
+    crams | calc_stats
 }
 
 // Step 1 - Align to reference genome using GPU

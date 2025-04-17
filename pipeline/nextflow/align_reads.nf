@@ -65,7 +65,7 @@ process align_gpu {
     # Parse QC files
     rm qc-metrics/*.pdf
     rm qc-metrics/*.png
-    ls | xargs -I {} mv qc-metrics/{} qc-metrics/${sample}.{}
+    ls gc-metrics | xargs -I {} mv qc-metrics/{} qc-metrics/${sample}.{}
     """
 }
 

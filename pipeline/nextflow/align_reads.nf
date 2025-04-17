@@ -3,23 +3,24 @@
 // CEES Ecological and evolutionary genomics group - genotyping pipeline
 // https://github.com/EcoEvoGenomics/genotyping_pipeline
 //
-// Workflow: Trim and align
+// Workflow: Align reads
 //
-// Developed by Mark Ravinet
+// Originally developed by Mark Ravinet
 // Co-developed and maintained by Erik Sandertun Røed
 
-// Workflow
 workflow {
     
-    // Input 'samples' is .CSV with columns for ID, F_READ_PATH, R_READ_PATH
-    Channel.fromPath(params.samples)
-        .splitCsv()
-        .multiMap { cols -> sample: [cols[0], cols[1], cols[2]] }
-        .set { samples }
+    Channel.fromPath("${params.reads_dir}/*")
+    .filter { file -> file.isDirectory() }
+    .map { dir -> 
+        def sample_id = dir.getName()
+        def r1_file = file("${dir}/${sample_id}_R1_TRIM.fastq.gz")
+        def r2_file = file("${dir}/${sample_id}_R2_TRIM.fastq.gz")
+        return tuple(sample_id, r1_file, r2_file)
+    }
+    .set { trimmed_reads }
 
-    def crams = parse_sample(samples.sample) \
-    | trim \
-    | align \
+    def crams = align(trimmed_reads) \
     | mark_dup \
     | cram_convert
 
@@ -30,62 +31,14 @@ workflow {
     crams | calc_stats
 }
 
-// Step 0 - Parse sample
-process parse_sample {
-
-    input:
-    tuple val(sample), path(f_read), path(r_read)
-
-    output:
-    val(sample)
-    path(f_read)
-    path(r_read)
-
-    script:
-    """
-    echo "Initiating pipeline for ${sample} ..."
-    """
-}
-
-// Step 1 - Read trim
-process trim {
-
-    publishDir "${params.publish_dir}/${sample}/", saveAs: { filename -> "$filename" }, mode: 'copy'
-
-    input: 
-    val(sample)
-    file("${sample}_R1.fastq.gz")
-    file("${sample}_R2.fastq.gz")
-
-    output:
-    val(sample)
-    file("${sample}_R1_TRIM.fastq.gz")
-    file("${sample}_R2_TRIM.fastq.gz")
-    file("${sample}.html")
-    file("${sample}.json")
-
-    script:
-    """
-    fastp \
-    --in1 ${sample}_R1.fastq.gz \
-    --in2 ${sample}_R2.fastq.gz \
-    --out1 ${sample}_R1_TRIM.fastq.gz \
-    --out2 ${sample}_R2_TRIM.fastq.gz \
-    --report_title "${sample}" \
-    --html ${sample}.html \
-    --json ${sample}.json
-    """
-}
-
-// Step 2 - Align to reference genome
+// Step 1 - Align to reference genome
 process align {
 
     input:
-    val(sample)
-    file("${sample}_R1_TRIM.fastq.gz")
+    tuple \
+    val(sample),
+    file("${sample}_R1_TRIM.fastq.gz"),
     file("${sample}_R2_TRIM.fastq.gz")
-    file("${sample}_fastp.html")
-    file("${sample}.json")
 
     output:
     val(sample)
@@ -114,7 +67,7 @@ process align {
     """
 }
 
-// Step 4 - Mark duplicates in BAM file
+// Step 2 - Mark duplicates in BAM file
 process mark_dup {
 
     input:
@@ -134,7 +87,7 @@ process mark_dup {
     """
 }
 
-// Step 5 - Convert BAM file to CRAM file
+// Step 3 - Convert BAM file to CRAM file
 process cram_convert {
 
     input:
@@ -156,7 +109,7 @@ process cram_convert {
     """
 }
 
-// Step 6 (Optional) - Downsample CRAM
+// Step 4 (Optional) - Downsample CRAM
 process cram_downsample {
     
     input:
@@ -186,7 +139,7 @@ process cram_downsample {
     """
 }
 
-// Step 7 - Calculate alignment statistics
+// Step 5 - Calculate alignment statistics
 process calc_stats {
 
     publishDir "${params.publish_dir}/${sample}/", saveAs: { filename -> "$filename" }, mode: 'copy'

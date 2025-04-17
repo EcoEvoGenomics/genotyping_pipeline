@@ -22,12 +22,13 @@
 
     # Which steps to run?
     # Note: steps must be run in order, but you can repeat filt_vcf and multiqc with different settings
-    trim_align=yes
+    trim_reads=yes
+    align_reads=yes
     call_vcf=yes
     filt_vcf=yes
     multiqc=yes
 
-    # Settings for step trim_align
+    # Settings for step align_reads
     # Note: max_cram_depth only applies if downsample_large_crams=yes
     downsample_large_crams=no
     max_cram_depth=30
@@ -92,35 +93,47 @@ chkprevious() {
 cd $repository_path
 
 output_dir=./output
-trim_align_output_dir=${output_dir}/01-aligned_reads
-call_vcf_output_dir=${output_dir}/02-variants_unfiltered
-filt_vcf_output_dir=${output_dir}/03-variants_filtered/${filtering_label}
-multiqc_output_dir=${output_dir}/04-multiqc
+trim_reads_output_dir=${output_dir}/01-trimmed_reads
+align_reads_output_dir=${output_dir}/02-aligned_reads
+call_vcf_output_dir=${output_dir}/03-variants_unfiltered
+filt_vcf_output_dir=${output_dir}/04-variants_filtered/${filtering_label}
+multiqc_output_dir=${output_dir}/05-multiqc
 
 mkmissingdir $output_dir
 
-if [ $trim_align = 'yes' ]; then
-    mkmissingdir $trim_align_output_dir
+if [ $trim_reads = 'yes' ]; then
+    mkmissingdir $align_reads_output_dir
     nextflow -log ./.nextflow/nextflow.log \
-        run ./pipeline/nextflow/trim_and_align.nf \
-        -c ./pipeline/config/trim_and_align.config \
-        -with-report $trim_align_output_dir/workflow_report.html \
+        run ./pipeline/nextflow/trim_reads.nf \
+        -c ./pipeline/config/trim_reads.config \
+        -with-report $align_reads_output_dir/workflow_report.html \
         --samples $sample_csv \
+        --publish_dir $trim_reads_output_dir
+fi
+
+if [ $align_reads = 'yes' ]; then
+    chkprevious "Step: align_reads" $trim_reads_output_dir
+    mkmissingdir $align_reads_output_dir
+    nextflow -log ./.nextflow/nextflow.log \
+        run ./pipeline/nextflow/align_reads.nf \
+        -c ./pipeline/config/align_reads.config \
+        -with-report $align_reads_output_dir/workflow_report.html \
+        --trim_dir $trim_reads_output_dir \
         --ref $ref_genome \
         --ref_scaffold_name $ref_scaffold_name \
         --downsample_crams $downsample_large_crams \
         --max_cram_depth $max_cram_depth \
-        --publish_dir $trim_align_output_dir
+        --publish_dir $align_reads_output_dir
 fi
 
 if [ $call_vcf = 'yes' ]; then
-    chkprevious "Step: call_vcf" $trim_align_output_dir
+    chkprevious "Step: call_vcf" $align_reads_output_dir
     mkmissingdir $call_vcf_output_dir
     nextflow -log ./.nextflow/nextflow.log \
         run ./pipeline/nextflow/call_variants.nf \
         -c ./pipeline/config/call_variants.config \
         -with-report $call_vcf_output_dir/workflow_report.html \
-        --cram_dir $trim_align_output_dir \
+        --cram_dir $align_reads_output_dir \
         --window_size $window_size \
         --ref $ref_genome \
         --ref_index $ref_index \

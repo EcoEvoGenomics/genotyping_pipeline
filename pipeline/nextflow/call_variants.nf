@@ -121,10 +121,10 @@ process genotype_windows {
     script:
     """
     if [[ "${window}" == "scaffold"* ]]; then
-        bcftools mpileup -d 8000 --ignore-RG -R ./genome_windows/${window} -a AD,DP,SP -Ou -f ${params.ref} -b ${crams} \
+        bcftools mpileup -d 8000 --ignore-RG -R ./genome_windows/${window} -a AD,DP,SP -Ou -f ${params.ref_genome} -b ${crams} \
         | bcftools call --threads ${task.cpus} --ploidy-file ${ploidy_file} -f GQ,GP -mO z -o ${window}.vcf.gz
     else
-        bcftools mpileup -d 8000 --ignore-RG -r ${window} -a AD,DP,SP -Ou -f ${params.ref} -b ${crams} \
+        bcftools mpileup -d 8000 --ignore-RG -r ${window} -a AD,DP,SP -Ou -f ${params.ref_genome} -b ${crams} \
         | bcftools call --threads ${task.cpus} --ploidy-file ${ploidy_file} -f GQ,GP -mO z -o ${window}.vcf.gz
     fi
     """
@@ -165,7 +165,7 @@ process normalise_vcf {
     script:
     """
     # BASIC NORMALISATION
-    bcftools norm --threads ${task.cpus} --fasta-ref ${params.ref} -O z -o ${key}_tmp.vcf.gz input.vcf.gz
+    bcftools norm --threads ${task.cpus} --fasta-ref ${params.ref_genome} -O z -o ${key}_tmp.vcf.gz input.vcf.gz
     bcftools index --threads ${task.cpus} ${key}_tmp.vcf.gz
 
     # REMOVE SPANNING INDELS AND RE-NORMALISE

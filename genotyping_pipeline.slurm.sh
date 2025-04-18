@@ -114,7 +114,7 @@ if [ $align_reads = 'yes' ]; then
         -c ./pipeline/config/align_reads.config \
         -with-report $align_reads_output_dir/workflow_report.html \
         --reads_dir $trim_reads_output_dir \
-        --ref $ref_genome \
+        --ref_genome $ref_genome \
         --ref_index $ref_index \
         --ref_scaffold_name $ref_scaffold_name \
         --publish_dir $align_reads_output_dir
@@ -129,7 +129,7 @@ if [ $call_vcf = 'yes' ]; then
         -with-report $call_vcf_output_dir/workflow_report.html \
         --cram_dir $align_reads_output_dir \
         --window_size $window_size \
-        --ref $ref_genome \
+        --ref_genome $ref_genome \
         --ref_index $ref_index \
         --ref_scaffold_name $ref_scaffold_name \
         --ref_ploidy_file $ref_ploidy_file \

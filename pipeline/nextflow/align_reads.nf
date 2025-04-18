@@ -19,7 +19,7 @@ workflow {
     }
     .set { trimmed_reads }
 
-    align_gpu(trimmed_reads, params.ref, params.ref_index) \
+    align_gpu(trimmed_reads, params.ref_genome, params.ref_index) \
     | calc_stats
 }
 

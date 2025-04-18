@@ -16,7 +16,7 @@ workflow {
         .multiMap { cols -> sample: [cols[0], cols[1], cols[2]] }
         .set { samples }
 
-    parse_sample(samples.sample) | trim
+    parse_sample(samples.sample) | trim_reads
 
 }
 
@@ -37,8 +37,8 @@ process parse_sample {
     """
 }
 
-// Step 1 - Read trim
-process trim {
+// Step 1 - Read trim_reads
+process trim_reads {
 
     publishDir "${params.publish_dir}/${sample}/", saveAs: { filename -> "$filename" }, mode: 'copy'
 

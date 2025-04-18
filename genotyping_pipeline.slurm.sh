@@ -22,7 +22,7 @@
 
     # Which steps to run?
     # Note: steps must be run in order, but you can repeat filter_variants and multiqc with different settings
-    trim_reads=yes
+    preprocess_reads=yes
     align_reads=yes
     call_variants=yes
     filter_variants=yes
@@ -88,7 +88,7 @@ chkprevious() {
 cd $repository_path
 
 output_dir=./output
-trim_reads_output_dir=${output_dir}/01-trimmed_reads
+preprocess_reads_output_dir=${output_dir}/01-preprocessed_reads
 align_reads_output_dir=${output_dir}/02-aligned_reads
 call_variants_output_dir=${output_dir}/03-variants_unfiltered
 filter_variants_output_dir=${output_dir}/04-variants_filtered/${filtering_label}
@@ -96,24 +96,24 @@ multiqc_output_dir=${output_dir}/05-multiqc
 
 mkmissingdir $output_dir
 
-if [ $trim_reads = 'yes' ]; then
-    mkmissingdir $trim_reads_output_dir
+if [ $preprocess_reads = 'yes' ]; then
+    mkmissingdir $preprocess_reads_output_dir
     nextflow -log ./.nextflow/nextflow.log \
-        run ./pipeline/nextflow/trim_reads.nf \
-        -c ./pipeline/config/trim_reads.config \
-        -with-report $trim_reads_output_dir/workflow_report.html \
+        run ./pipeline/nextflow/preprocess_reads.nf \
+        -c ./pipeline/config/preprocess_reads.config \
+        -with-report $preprocess_reads_output_dir/workflow_report.html \
         --samples $sample_csv \
-        --publish_dir $trim_reads_output_dir
+        --publish_dir $preprocess_reads_output_dir
 fi
 
 if [ $align_reads = 'yes' ]; then
-    chkprevious "Step: align_reads" $trim_reads_output_dir
+    chkprevious "Step: align_reads" $preprocess_reads_output_dir
     mkmissingdir $align_reads_output_dir
     nextflow -log ./.nextflow/nextflow.log \
         run ./pipeline/nextflow/align_reads.nf \
         -c ./pipeline/config/align_reads.config \
         -with-report $align_reads_output_dir/workflow_report.html \
-        --reads_dir $trim_reads_output_dir \
+        --reads_dir $preprocess_reads_output_dir \
         --ref_genome $ref_genome \
         --ref_index $ref_index \
         --ref_scaffold_name $ref_scaffold_name \

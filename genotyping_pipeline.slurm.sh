@@ -14,11 +14,16 @@
 #SBATCH --mem-per-cpu=2G
 #SBATCH --time=99:00:00
 
-### ----- User input ----- ###
+### SETTINGS (1 / 2)
+###
+### ----------------- User input ----------------- ###
 
     # Path to .CSV of input samples
     # Note: samples are rows and the columns "ID, F_READ_PATH, R_READ_PATH" without headers
     sample_csv=
+    
+    # Path to this repository
+    repository_path=
 
     # Which steps to run?
     # Note: steps must be run in order, but you can repeat filter_variants and multiqc with different settings
@@ -57,23 +62,30 @@
     ref_scaffold_name='scaffold'
     ref_ploidy_file=./pipeline/defaults/default.ploidy
     
-    # Paths to this repository and to a suitable conda environment
-    repository_path=
-    conda_environment_path=/cluster/projects/nn10082k/conda_group/nextflow
+    # Path to a conda environment with Nextflow
+    nextflow_envir_path=/cluster/projects/nn10082k/conda_group/nextflow
 
-### --- End user input --- ###
+### --------------- End user input --------------- ###
+
+### SETTINGS (2 / 2)
+###
+### ------------ Set up environment -------------- ###
+
+    # This script must be run from an environment with:
+    # - Conda
+    # - Singularity (default on Saga)
+    # - Slurm (default on Saga)
+
+    module purge --quiet
+    module load Miniconda3/22.11.1-1
+    source ${EBROOTMINICONDA3}/bin/activate
+
+### ------------ End set up environment ---------- ###
 
 # Prepare environment
 set -o errexit
 set -o nounset
-module --quiet purge
-
-# Load modules
-module load Miniconda3/22.11.1-1
-
-# Activate conda environment
-source ${EBROOTMINICONDA3}/bin/activate
-conda activate ${conda_environment_path}
+conda activate ${nextflow_envir_path}
 
 # Function to handle missing output directories
 mkmissingdir() {

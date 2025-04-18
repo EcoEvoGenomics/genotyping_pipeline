@@ -22,6 +22,10 @@ workflow {
         parsed_samples = parsed_samples | deduplicate_reads
     }
 
+    if (params.downsample_reads == 'yes') {
+        parsed_samples = parsed_samples | downsample_reads
+    }
+
     parsed_samples | trim_reads
 
 }
@@ -68,12 +72,31 @@ process deduplicate_reads {
     """
 }
 
+// Step 2 (Optional) - Downsample reads
+process downsample_reads {
+    
+    input: 
+    val(sample)
+    file(r1_reads)
+    file(r2_reads)
+    file('qc_metrics/*')
+    
+    output:
+    val(sample)
+    file("${r1_reads.simpleName}_sample.fastq.gz")
+    file("${r2_reads.simpleName}_sample.fastq.gz")
+    file("qc-metrics/*")
+
     script:
     """
+    seqkit stats -j ${task.cpus} -To qc_metrics/before_downsample.tsv *.fastq.gz
+    seqkit sample --two-pass -n ${params.read_target} -o ${r1_reads.simpleName}_sample.fastq.gz ${r1_reads}
+    seqkit sample --two-pass -n ${params.read_target} -o ${r2_reads.simpleName}_sample.fastq.gz ${r2_reads}
+    seqkit stats -j ${task.cpus} -To qc_metrics/after_downsample.tsv *sample.fastq.gz
     """
 }
 
-// Step 1 - Read trim_reads
+// Step 3 - Read trim_reads
 process trim_reads {
 
     publishDir "${params.publish_dir}/${sample}/", saveAs: { filename -> "$filename" }, mode: 'copy'

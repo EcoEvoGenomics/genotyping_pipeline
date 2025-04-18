@@ -29,7 +29,11 @@
     multiqc=yes
 
     # Settings for step preprocess_reads
+    # Note: read_target only applies if downsample_reads=yes
     deduplicate_reads=no
+    downsample_reads=no
+    read_target=1000000
+
     # Settings for step call_variants
     window_size=10000000
     concatenate_unfiltered_vcfs=no
@@ -106,6 +110,8 @@ if [ $preprocess_reads = 'yes' ]; then
         -with-report $preprocess_reads_output_dir/workflow_report.html \
         --samples $sample_csv \
         --deduplicate $deduplicate_reads \
+        --downsample $downsample_reads \
+        --read_target $read_target \
         --publish_dir $preprocess_reads_output_dir
 fi
 

@@ -24,16 +24,16 @@
     # Note: steps must be run in order, but you can repeat filt_vcf and multiqc with different settings
     trim_reads=yes
     align_reads=yes
-    call_vcf=yes
+    call_variants=yes
     filt_vcf=yes
     multiqc=yes
 
-    # Settings for step call_vcf
+    # Settings for step call_variants
     window_size=10000000
     concatenate_unfiltered_vcfs=no
 
     # Settings for step filt_vcf
-    # Note: change filtering_label and re-run filt_vcf to refilter output from call_vcf
+    # Note: change filtering_label and re-run filt_vcf to refilter output from call_variants
     filtering_label='default_filters'
     filtering_min_alleles=2
     filtering_max_alleles=2
@@ -90,7 +90,7 @@ cd $repository_path
 output_dir=./output
 trim_reads_output_dir=${output_dir}/01-trimmed_reads
 align_reads_output_dir=${output_dir}/02-aligned_reads
-call_vcf_output_dir=${output_dir}/03-variants_unfiltered
+call_variants_output_dir=${output_dir}/03-variants_unfiltered
 filt_vcf_output_dir=${output_dir}/04-variants_filtered/${filtering_label}
 multiqc_output_dir=${output_dir}/05-multiqc
 
@@ -120,13 +120,13 @@ if [ $align_reads = 'yes' ]; then
         --publish_dir $align_reads_output_dir
 fi
 
-if [ $call_vcf = 'yes' ]; then
-    chkprevious "Step: call_vcf" $align_reads_output_dir
-    mkmissingdir $call_vcf_output_dir
+if [ $call_variants = 'yes' ]; then
+    chkprevious "Step: call_variants" $align_reads_output_dir
+    mkmissingdir $call_variants_output_dir
     nextflow -log ./.nextflow/nextflow.log \
         run ./pipeline/nextflow/call_variants.nf \
         -c ./pipeline/config/call_variants.config \
-        -with-report $call_vcf_output_dir/workflow_report.html \
+        -with-report $call_variants_output_dir/workflow_report.html \
         --cram_dir $align_reads_output_dir \
         --window_size $window_size \
         --ref_genome $ref_genome \
@@ -134,17 +134,17 @@ if [ $call_vcf = 'yes' ]; then
         --ref_scaffold_name $ref_scaffold_name \
         --ref_ploidy_file $ref_ploidy_file \
         --concatenate_vcf $concatenate_unfiltered_vcfs \
-        --publish_dir $call_vcf_output_dir
+        --publish_dir $call_variants_output_dir
 fi
 
 if [ $filt_vcf = 'yes' ]; then
-    chkprevious "Step: filt_vcf" $call_vcf_output_dir
+    chkprevious "Step: filt_vcf" $call_variants_output_dir
     mkmissingdir $filt_vcf_output_dir
     nextflow -log ./.nextflow/nextflow.log \
         run ./pipeline/nextflow/filter_variants.nf \
         -c ./pipeline/config/filter_variants.config \
         -with-report $filt_vcf_output_dir/workflow_report.html \
-        --vcf_dir $call_vcf_output_dir/chroms \
+        --vcf_dir $call_variants_output_dir/chroms \
         --filtering_label $filtering_label \
         --min_alleles $filtering_min_alleles \
         --max_alleles $filtering_max_alleles \

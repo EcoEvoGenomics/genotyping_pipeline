@@ -20,7 +20,7 @@ workflow {
     .set { trimmed_reads }
 
     align_gpu(trimmed_reads, params.ref_genome, params.ref_index) \
-    | calc_stats
+    | calc_coverage
 }
 
 // Step 1 - Align to reference genome using GPU
@@ -63,7 +63,7 @@ process align_gpu {
 }
 
 // Step 2 - Additional alignment statistics
-process calc_stats {
+process calc_coverage {
 
     publishDir "${params.publish_dir}/${sample}/qc-metrics", saveAs: { filename -> "$filename" }, mode: 'copy'
 

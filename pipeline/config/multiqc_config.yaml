@@ -3,3 +3,6 @@ module_order:
   - 'picard'
   - 'samtools'
   - 'bcftools'
+
+picard_config:
+  s_name_filenames: true

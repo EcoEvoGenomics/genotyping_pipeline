@@ -18,11 +18,11 @@ workflow {
 
     def parsed_samples = parse_sample(samples.sample)
 
-    if (params.deduplicate_reads == 'yes') {
+    if (params.deduplicate == 'yes') {
         parsed_samples = parsed_samples | deduplicate_reads
     }
 
-    if (params.downsample_reads == 'yes') {
+    if (params.downsample == 'yes') {
         parsed_samples = parsed_samples | downsample_reads
     }
 

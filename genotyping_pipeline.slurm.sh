@@ -53,7 +53,7 @@
     
     # Paths to this repository and to a suitable conda environment
     repository_path=
-    conda_environment_path=/cluster/projects/nn10082k/conda_users/eriksro/genotyping_pipeline_experimental
+    conda_environment_path=/cluster/projects/nn10082k/conda_group/nextflow
 
 ### --- End user input --- ###
 

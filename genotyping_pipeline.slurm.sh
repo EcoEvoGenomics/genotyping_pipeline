@@ -28,11 +28,6 @@
     filt_vcf=yes
     multiqc=yes
 
-    # Settings for step align_reads
-    # Note: max_cram_depth only applies if downsample_large_crams=yes
-    downsample_large_crams=no
-    max_cram_depth=30
-
     # Settings for step call_vcf
     window_size=10000000
     concatenate_unfiltered_vcfs=no
@@ -122,8 +117,6 @@ if [ $align_reads = 'yes' ]; then
         --ref $ref_genome \
         --ref_index $ref_index \
         --ref_scaffold_name $ref_scaffold_name \
-        --downsample_crams $downsample_large_crams \
-        --max_cram_depth $max_cram_depth \
         --publish_dir $align_reads_output_dir
 fi
 

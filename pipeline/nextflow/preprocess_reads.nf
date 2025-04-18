@@ -45,6 +45,9 @@ process parse_sample {
     script:
     """
     mkdir qc-metrics
+    cat "sample: ${sample}" > qc-metrics/${sample}.txt
+    cat "deduplicate: ${params.deduplicate}" >> qc-metrics/${sample}.txt
+    cat "downsample: ${params.downsample}" >> qc-metrics/${sample}.txt
     """
 }
 
@@ -55,7 +58,7 @@ process deduplicate_reads {
     val(sample)
     file(r1_reads)
     file(r2_reads)
-    file('qc_metrics/*')
+    file('qc-metrics/*')
 
     output:
     val(sample)
@@ -65,10 +68,10 @@ process deduplicate_reads {
 
     script:
     """
-    seqkit stats -j ${task.cpus} -To qc_metrics/before_dedup.tsv *.fastq.gz
+    seqkit stats -j ${task.cpus} -To qc-metrics/before_dedup.tsv *.fastq.gz
     seqkit rmdup -j ${task.cpus} --by-name -o ${r1_reads.simpleName}_rmdup.fastq.gz ${r1_reads}
     seqkit rmdup -j ${task.cpus} --by-name -o ${r2_reads.simpleName}_rmdup.fastq.gz ${r2_reads}
-    seqkit stats -j ${task.cpus} -To qc_metrics/after_dedup.tsv *rmdup.fastq.gz
+    seqkit stats -j ${task.cpus} -To qc-metrics/after_dedup.tsv *rmdup.fastq.gz
     """
 }
 
@@ -79,7 +82,7 @@ process downsample_reads {
     val(sample)
     file(r1_reads)
     file(r2_reads)
-    file('qc_metrics/*')
+    file('qc-metrics/*')
     
     output:
     val(sample)
@@ -89,10 +92,10 @@ process downsample_reads {
 
     script:
     """
-    seqkit stats -j ${task.cpus} -To qc_metrics/before_downsample.tsv *.fastq.gz
+    seqkit stats -j ${task.cpus} -To qc-metrics/before_downsample.tsv *.fastq.gz
     seqkit sample --two-pass -n ${params.read_target} -o ${r1_reads.simpleName}_sample.fastq.gz ${r1_reads}
     seqkit sample --two-pass -n ${params.read_target} -o ${r2_reads.simpleName}_sample.fastq.gz ${r2_reads}
-    seqkit stats -j ${task.cpus} -To qc_metrics/after_downsample.tsv *sample.fastq.gz
+    seqkit stats -j ${task.cpus} -To qc-metrics/after_downsample.tsv *sample.fastq.gz
     """
 }
 
@@ -105,7 +108,7 @@ process trim_reads {
     val(sample)
     file(r1_reads)
     file(r2_reads)
-    file('qc_metrics/*')
+    file('qc-metrics/*')
 
     output:
     val(sample)

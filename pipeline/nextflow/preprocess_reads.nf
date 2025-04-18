@@ -60,13 +60,13 @@ process deduplicate_reads {
     val(sample)
     file(r1_reads)
     file(r2_reads)
-    file('qc-metrics/*')
+    path('qc-metrics/*')
 
     output:
     val(sample)
-    file("${r1_reads.simpleName}_rmdup.fastq.gz")
-    file("${r2_reads.simpleName}_rmdup.fastq.gz")
-    file("qc-metrics/*")
+    file("${r1_reads.simpleName}_deduplicated.fastq.gz")
+    file("${r2_reads.simpleName}_deduplicated.fastq.gz")
+    path("qc-metrics/*")
 
     script:
     """
@@ -83,13 +83,13 @@ process downsample_reads {
     val(sample)
     file(r1_reads)
     file(r2_reads)
-    file('qc-metrics/*')
+    path('qc-metrics/*')
     
     output:
     val(sample)
-    file("${r1_reads.simpleName}_sample.fastq.gz")
-    file("${r2_reads.simpleName}_sample.fastq.gz")
-    file("qc-metrics/*")
+    file("${r1_reads.simpleName}_downsampled.fastq.gz")
+    file("${r2_reads.simpleName}_downsampled.fastq.gz")
+    path("qc-metrics/*")
 
     script:
     """
@@ -108,13 +108,13 @@ process trim_reads {
     val(sample)
     file(r1_reads)
     file(r2_reads)
-    file('qc-metrics/*')
+    path('qc-metrics/*')
 
     output:
     val(sample)
     file("${sample}_R1.fastq.gz")
     file("${sample}_R2.fastq.gz")
-    file("qc-metrics/*")
+    path("qc-metrics/*")
 
     script:
     """

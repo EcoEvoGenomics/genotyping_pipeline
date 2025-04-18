@@ -45,9 +45,11 @@ process parse_sample {
     script:
     """
     mkdir qc-metrics
-    cat "sample: ${sample}" > qc-metrics/${sample}.txt
-    cat "deduplicate: ${params.deduplicate}" >> qc-metrics/${sample}.txt
-    cat "downsample: ${params.downsample}" >> qc-metrics/${sample}.txt
+    printf '%s\\t%s\\n' \
+        'sample' '${sample}' \
+        'deduplicate' '${params.deduplicate}' \
+        'downsample' '${params.downsample}' \
+        > qc-metrics/settings.tsv
     """
 }
 

@@ -76,7 +76,7 @@
     # - Singularity (default on Saga)
     # - Slurm (default on Saga)
 
-    module purge --quiet
+    module --quiet purge
     module load Miniconda3/22.11.1-1
     source ${EBROOTMINICONDA3}/bin/activate
 

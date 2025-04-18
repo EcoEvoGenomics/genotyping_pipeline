@@ -28,6 +28,8 @@
     filter_variants=yes
     multiqc=yes
 
+    # Settings for step preprocess_reads
+    deduplicate_reads=no
     # Settings for step call_variants
     window_size=10000000
     concatenate_unfiltered_vcfs=no
@@ -103,6 +105,7 @@ if [ $preprocess_reads = 'yes' ]; then
         -c ./pipeline/config/preprocess_reads.config \
         -with-report $preprocess_reads_output_dir/workflow_report.html \
         --samples $sample_csv \
+        --deduplicate $deduplicate_reads \
         --publish_dir $preprocess_reads_output_dir
 fi
 

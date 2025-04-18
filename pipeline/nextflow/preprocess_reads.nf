@@ -17,6 +17,11 @@ workflow {
         .set { samples }
 
     def parsed_samples = parse_sample(samples.sample)
+
+    if (params.deduplicate_reads == 'yes') {
+        parsed_samples = parsed_samples | deduplicate_reads
+    }
+
     parsed_samples | trim_reads
 
 }
@@ -36,6 +41,30 @@ process parse_sample {
     script:
     """
     mkdir qc-metrics
+    """
+}
+
+// Step 1 (Optional) - Deduplicate reads
+process deduplicate_reads {
+    
+    input: 
+    val(sample)
+    file(r1_reads)
+    file(r2_reads)
+    file('qc_metrics/*')
+
+    output:
+    val(sample)
+    file("${r1_reads.simpleName}_rmdup.fastq.gz")
+    file("${r2_reads.simpleName}_rmdup.fastq.gz")
+    file("qc-metrics/*")
+
+    script:
+    """
+    seqkit stats -j ${task.cpus} -To qc_metrics/before_dedup.tsv *.fastq.gz
+    seqkit rmdup -j ${task.cpus} --by-name -o ${r1_reads.simpleName}_rmdup.fastq.gz ${r1_reads}
+    seqkit rmdup -j ${task.cpus} --by-name -o ${r2_reads.simpleName}_rmdup.fastq.gz ${r2_reads}
+    seqkit stats -j ${task.cpus} -To qc_metrics/after_dedup.tsv *rmdup.fastq.gz
     """
 }
 

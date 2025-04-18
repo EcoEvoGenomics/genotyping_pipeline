@@ -19,12 +19,12 @@ workflow {
     }
     .set { trimmed_reads }
 
-    align_gpu(trimmed_reads, params.ref_genome, params.ref_index) \
+    align_reads(trimmed_reads, params.ref_genome, params.ref_index) \
     | calc_coverage
 }
 
 // Step 1 - Align to reference genome using GPU
-process align_gpu {
+process align_reads {
     
     publishDir "${params.publish_dir}/${sample}/", saveAs: { filename -> "$filename" }, mode: 'copy'
 

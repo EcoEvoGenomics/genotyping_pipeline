@@ -19,7 +19,7 @@ workflow {
     }
     .set { trimmed_reads }
 
-    align_gpu(params.ref, params.ref_index, trimmed_reads)
+    align_gpu(trimmed_reads, params.ref, params.ref_index) \
     | calc_stats
 }
 
@@ -29,12 +29,9 @@ process align_gpu {
     publishDir "${params.publish_dir}/${sample}/", saveAs: { filename -> "$filename" }, mode: 'copy'
 
     input:
+    tuple val(sample), path(r1_file), path(r2_file)
     path('ref_genome.fa')
     path('ref_genome.fa.fai')
-    tuple \
-    val(sample), \
-    path(fwd, stageAs: "R1.fastq.gz"), \
-    path(rev, stageAs: "R2.fastq.gz")
 
     output:
     val(sample)
@@ -50,36 +47,33 @@ process align_gpu {
     # Align with Parabricks FQ2BAM
     pbrun fq2bam \
     --ref ref_genome.fa \
-    --in-fq R1.fastq.gz R2.fastq.gz \
+    --in-fq ${r1_file} ${r2_file} \
     --out-bam ${sample}.cram \
-    --out-duplicate-metrics qc-metrics/picard.dedup \
+    --out-duplicate-metrics qc-metrics/dedup.txt \
     --out-qc-metrics-dir qc-metrics \
     --tmp .
 
     # Parse QC files
     rm qc-metrics/*.pdf
     rm qc-metrics/*.png
-    ls qc-metrics | xargs -I {} mv qc-metrics/{} qc-metrics/${sample}.{}
-    """
-}
+    for file in qc-metrics/*.txt; do
+        mv \$file qc-metrics/${sample}.\$(basename \$file .txt)
+    done
     """
 }
 
 // Step 2 - Additional alignment statistics
 process calc_stats {
 
-    publishDir "${params.publish_dir}/${sample}/", saveAs: { filename -> "$filename" }, mode: 'copy'
+    publishDir "${params.publish_dir}/${sample}/qc-metrics", saveAs: { filename -> "$filename" }, mode: 'copy'
 
     input:
     val(sample)
     file(cram)
     file(index)
-    file(dedupstats)
+    file(qcmetrics)
 
     output:
-    file("${sample}.dedup")
-    file("${sample}.cram")
-    file("${sample}.cram.crai")
     file("${sample}.tsv")
     file("${sample}.flagstat")
 

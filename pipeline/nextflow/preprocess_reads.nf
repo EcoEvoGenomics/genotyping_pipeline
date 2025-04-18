@@ -16,7 +16,8 @@ workflow {
         .multiMap { cols -> sample: [cols[0], cols[1], cols[2]] }
         .set { samples }
 
-    parse_sample(samples.sample) | trim_reads
+    def parsed_samples = parse_sample(samples.sample)
+    parsed_samples | trim_reads
 
 }
 
@@ -30,10 +31,16 @@ process parse_sample {
     val(sample)
     path(f_read)
     path(r_read)
+    path('qc-metrics/*')
 
     script:
     """
-    echo "Initiating pipeline for ${sample} ..."
+    mkdir qc-metrics
+    """
+}
+
+    script:
+    """
     """
 }
 
@@ -44,25 +51,25 @@ process trim_reads {
 
     input: 
     val(sample)
-    file("${sample}_R1.fastq.gz")
-    file("${sample}_R2.fastq.gz")
+    file(r1_reads)
+    file(r2_reads)
+    file('qc_metrics/*')
 
     output:
     val(sample)
-    file("${sample}_R1_TRIM.fastq.gz")
-    file("${sample}_R2_TRIM.fastq.gz")
-    file("${sample}.html")
-    file("${sample}.json")
+    file("${sample}_R1.fastq.gz")
+    file("${sample}_R2.fastq.gz")
+    file("qc-metrics/*")
 
     script:
     """
     fastp \
-    --in1 ${sample}_R1.fastq.gz \
-    --in2 ${sample}_R2.fastq.gz \
-    --out1 ${sample}_R1_TRIM.fastq.gz \
-    --out2 ${sample}_R2_TRIM.fastq.gz \
+    --in1 ${r1_reads} \
+    --in2 ${r2_reads} \
+    --out1 ${sample}_R1.fastq.gz \
+    --out2 ${sample}_R2.fastq.gz \
     --report_title "${sample}" \
-    --html ${sample}.html \
-    --json ${sample}.json
+    --html qc-metrics/${sample}.html \
+    --json qc-metrics/${sample}.json
     """
 }

@@ -159,16 +159,13 @@ if [ $filter_variants = 'yes' ]; then
 fi
 
 if [ $multiqc = 'yes' ]; then
-    # NB: Temporary solution only!
-    # Deactivate pipeline environment, then conda. Purge and use Saga MultiQC module to get later version.
-    conda deactivate
-    conda deactivate
-    module --quiet purge
-    module load MultiQC/1.22.3-foss-2023b
-    multiqc --outdir $multiqc_output_dir \
-        --config ./pipeline/config/multiqc_config.yaml \
-        --force \
-        $output_dir
+    mkmissingdir $multiqc_output_dir
+    nextflow -log ./.nextflow/nextflow.log \
+        run ./pipeline/nextflow/run_multiqc.nf \
+        -c ./pipeline/config/multiqc.config \
+        --multiqc_config ./pipeline/config/multiqc_config.yaml \
+        --results_dir $output_dir \
+        --publish_dir $multiqc_output_dir
 fi
 
 # End work

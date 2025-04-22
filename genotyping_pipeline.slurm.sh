@@ -183,7 +183,7 @@ if [ $multiqc = 'yes' ]; then
     mkmissingdir $multiqc_output_dir
     nextflow -log ./.nextflow/nextflow.log \
         run ./pipeline/nextflow/run_multiqc.nf \
-        -c ./pipeline/config/multiqc.config \
+        -c ./pipeline/config/run_multiqc.config \
         --multiqc_config ./pipeline/config/multiqc_config.yaml \
         --results_dir $output_dir \
         --publish_dir $multiqc_output_dir

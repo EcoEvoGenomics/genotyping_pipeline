@@ -61,7 +61,7 @@ process deduplicate_reads {
     val(sample)
     file(r1_reads)
     file(r2_reads)
-    path('qc-metrics/*')
+    path('qc-metrics/*'), stageAs: './qc-metrics/'
 
     output:
     val(sample)
@@ -84,7 +84,7 @@ process downsample_reads {
     val(sample)
     file(r1_reads)
     file(r2_reads)
-    path('qc-metrics/*')
+    path('qc-metrics/*'), stageAs: './qc-metrics/'
     
     output:
     val(sample)
@@ -109,7 +109,7 @@ process trim_reads {
     val(sample)
     file(r1_reads)
     file(r2_reads)
-    path('qc-metrics/*')
+    path('qc-metrics/*'), stageAs: './qc-metrics/'
 
     output:
     val(sample)

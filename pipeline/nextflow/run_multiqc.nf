@@ -10,7 +10,8 @@
 
 workflow {
 
-    run_multiqc(params.results_dir, params.multiqc_config)
+    def config = file(params.multiqc_config)
+    run_multiqc(params.results_dir, config)
 
 }
 
@@ -20,7 +21,7 @@ process run_multiqc {
     
     input:
     path(results_dir)
-    file(multiqc_config)
+    path(multiqc_config)
 
     output:
     file('multiqc_report.html')

@@ -65,15 +65,17 @@ process deduplicate_reads {
 
     output:
     val(sample)
-    file("${r1_reads.simpleName}_deduplicated.fastq.gz")
-    file("${r2_reads.simpleName}_deduplicated.fastq.gz")
+    file("${r1_reads.simpleName}.fastq.gz")
+    file("${r2_reads.simpleName}.fastq.gz")
     path("qc-metrics/*")
 
     script:
     """
     seqkit rmdup -j ${task.cpus} --by-name -o ${r1_reads.simpleName}_deduplicated.fastq.gz ${r1_reads}
     seqkit rmdup -j ${task.cpus} --by-name -o ${r2_reads.simpleName}_deduplicated.fastq.gz ${r2_reads}
-    seqkit stats -j ${task.cpus} -To qc-metrics/deduplication.tsv *deduplicated.fastq.gz
+    mv ${r1_reads.simpleName}_deduplicated.fastq.gz ${r1_reads.simpleName}.fastq.gz
+    mv ${r2_reads.simpleName}_deduplicated.fastq.gz ${r2_reads.simpleName}.fastq.gz
+    seqkit stats -j ${task.cpus} -To qc-metrics/deduplication.tsv *.fastq.gz
     """
 }
 
@@ -88,15 +90,17 @@ process downsample_reads {
     
     output:
     val(sample)
-    file("${r1_reads.simpleName}_downsampled.fastq.gz")
-    file("${r2_reads.simpleName}_downsampled.fastq.gz")
+    file("${r1_reads.simpleName}.fastq.gz")
+    file("${r2_reads.simpleName}.fastq.gz")
     path("qc-metrics/*")
 
     script:
     """
     seqkit sample --two-pass -n ${params.read_target} -o ${r1_reads.simpleName}_downsampled.fastq.gz ${r1_reads}
     seqkit sample --two-pass -n ${params.read_target} -o ${r2_reads.simpleName}_downsampled.fastq.gz ${r2_reads}
-    seqkit stats -j ${task.cpus} -To qc-metrics/downsampling.tsv *downsampled.fastq.gz
+    mv ${r1_reads.simpleName}_downsampled.fastq.gz ${r1_reads.simpleName}.fastq.gz
+    mv ${r2_reads.simpleName}_downsampled.fastq.gz ${r2_reads.simpleName}.fastq.gz
+    seqkit stats -j ${task.cpus} -To qc-metrics/downsampling.tsv *.fastq.gz
     """
 }
 

@@ -19,8 +19,8 @@ workflow {
     }
     .set { trimmed_reads }
 
-    align_reads(trimmed_reads, params.ref_genome, params.ref_index) \
-    | calc_coverage
+    def aligned = align_reads(trimmed_reads, params.ref_genome, params.ref_index)
+    calc_coverage(aligned, params.ref_genome, params.ref_index)
 }
 
 // Step 1 - Align to reference genome using GPU
@@ -34,9 +34,10 @@ process align_reads {
     path('ref_genome.fa.fai')
 
     output:
-    val(sample)
-    path("${sample}.cram")
-    path("${sample}.cram.crai")
+    tuple \
+    val(sample), \
+    path("${sample}.cram"), \
+    path("${sample}.cram.crai"), \
     path('qc-metrics/*')
 
     script:
@@ -68,10 +69,13 @@ process calc_coverage {
     publishDir "${params.publish_dir}/${sample}/qc-metrics", saveAs: { filename -> "$filename" }, mode: 'copy'
 
     input:
-    val(sample)
-    file(cram)
-    file(index)
+    tuple \
+    val(sample), \
+    file(cram), \
+    file(index), \
     file(qcmetrics)
+    path(ref_genome)
+    path(ref_index)
 
     output:
     file("${sample}.tsv")
@@ -79,7 +83,7 @@ process calc_coverage {
 
     script:
     """
-    samtools coverage ${cram} | grep -v ${params.ref_scaffold_name} > ${sample}.tsv
+    samtools coverage --reference ${ref_genome} ${cram} | grep -v ${params.ref_scaffold_name} > ${sample}.tsv
     samtools flagstat ${cram} > ${sample}.flagstat
     """
 }

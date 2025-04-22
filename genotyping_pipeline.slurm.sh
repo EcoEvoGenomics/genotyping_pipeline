@@ -105,7 +105,7 @@ chkprevious() {
 # Begin work
 cd $repository_path
 
-output_dir=./output
+output_dir=${repository_path}/output
 preprocess_reads_output_dir=${output_dir}/01-preprocessed_reads
 align_reads_output_dir=${output_dir}/02-aligned_reads
 call_variants_output_dir=${output_dir}/03-variants_unfiltered

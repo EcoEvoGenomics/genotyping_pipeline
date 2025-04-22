@@ -6,3 +6,7 @@ module_order:
 
 picard_config:
   s_name_filenames: true
+
+sample_names_replace_regex: true
+sample_names_replace:
+  "^(.*?)(?=\\.)": "\\1"

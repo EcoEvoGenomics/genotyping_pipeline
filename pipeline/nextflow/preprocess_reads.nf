@@ -45,6 +45,7 @@ process parse_sample {
     script:
     """
     mkdir qc-metrics
+    seqkit stats -j ${task.cpus} -To qc-metrics/unprocessed.tsv *.fastq.gz
     printf '%s\\t%s\\n' \
         'sample' '${sample}' \
         'deduplicate' '${params.deduplicate}' \
@@ -72,7 +73,7 @@ process deduplicate_reads {
     """
     seqkit rmdup -j ${task.cpus} --by-name -o ${r1_reads.simpleName}_deduplicated.fastq.gz ${r1_reads}
     seqkit rmdup -j ${task.cpus} --by-name -o ${r2_reads.simpleName}_deduplicated.fastq.gz ${r2_reads}
-    seqkit stats -j ${task.cpus} -To qc-metrics/deduplication.tsv *.fastq.gz
+    seqkit stats -j ${task.cpus} -To qc-metrics/deduplication.tsv *deduplicated.fastq.gz
     """
 }
 
@@ -95,7 +96,7 @@ process downsample_reads {
     """
     seqkit sample --two-pass -n ${params.read_target} -o ${r1_reads.simpleName}_downsampled.fastq.gz ${r1_reads}
     seqkit sample --two-pass -n ${params.read_target} -o ${r2_reads.simpleName}_downsampled.fastq.gz ${r2_reads}
-    seqkit stats -j ${task.cpus} -To qc-metrics/downsampling.tsv *.fastq.gz
+    seqkit stats -j ${task.cpus} -To qc-metrics/downsampling.tsv *downsampled.fastq.gz
     """
 }
 

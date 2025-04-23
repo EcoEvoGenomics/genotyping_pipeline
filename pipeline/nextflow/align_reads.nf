@@ -27,7 +27,7 @@ workflow {
 process align_reads {
     
     publishDir "${params.publish_dir}/${sample}/", saveAs: { filename -> "$filename" }, mode: 'copy'
-    memory { 24.GB + 10.GB * Math.ceil(r1_file.size() / 1024 ** 3) }
+    memory { 24.GB + 6.GB * Math.ceil(Math.max(r1_file.size(), r2_file.size()) / 1024 ** 3) }
 
     input:
     tuple val(sample), path(r1_file), path(r2_file)

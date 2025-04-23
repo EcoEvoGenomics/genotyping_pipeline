@@ -100,7 +100,7 @@ process define_windows {
     split -l \${lines_per_file} scaffolds.list scaffolds:
 
     # CHANGE TO NUMERICAL FILE SUFFIXES
-    file_counter=1
+    file_counter=0
     for file in scaffolds:*; do
         new_name=\$(printf "%02d" "\$file_counter")
         mv "\$file" "scaffolds:\$new_name"

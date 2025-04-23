@@ -63,12 +63,12 @@ process define_windows {
     """
     # DIRECTORY OF GENOME WINDOW FILES
     mkdir genome_windows
-    cd genome_windows
 
     # MAKE FILE OF CHROMOSOME AND SCAFFOLD SIZES
-    cut -f 1-2 ${ref_index} > genome_size.txt
+    cut -f 1-2 ${ref_index} > genome_windows/genome_size.txt
 
     # MAKE CHROMOSOME WINDOWS
+    cd genome_windows
     bedtools makewindows -g genome_size.txt -w ${window_size} \
     | grep -v ${ref_scaffold_name} \
     | awk '{print \$1":"\$2"-"\$3}' \

@@ -49,7 +49,7 @@ workflow{
 process define_windows {
 
     input:
-    file(ref_index)
+    path(ref_index), stageAs: "genome_index.fa.fai", mode: "copy"
     val(window_size)
     val(ref_scaffold_name)
 
@@ -64,7 +64,7 @@ process define_windows {
     cd genome_windows
 
     # MAKE FILE OF CHROMOSOME AND SCAFFOLD SIZES
-    cut -f 1-2 ${ref_index} > genome_size.txt
+    cut -f 1-2 genome_index.fa.fai > genome_size.txt
 
     # MAKE CHROMOSOME WINDOWS
     bedtools makewindows -g genome_size.txt -w ${window_size} \

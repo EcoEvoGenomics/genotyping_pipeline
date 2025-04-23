@@ -97,7 +97,15 @@ process define_windows {
     ((lines_per_file = (total_lines + num_files - 1) / num_files))
 
     # SPLIT SCAFFOLDS ACROSS MULTIPLE FILES
-    split -d --lines=\${lines_per_file} scaffolds.list scaffolds:
+    split -l \${lines_per_file} scaffolds.list scaffolds:
+
+    # CHANGE TO NUMERICAL FILE SUFFIXES
+    file_counter=1
+    for file in scaffolds:*; do
+        new_name=\$(printf "%02d" "\$file_counter")
+        mv "\$file" "scaffolds:\$new_name"
+        ((file_counter++))
+    done
 
     # ADD SCAFFOLDS TO WINDOW LIST ONLY IF ANY EXIST
     n_scaffolds=\$(ls scaffolds:* | wc -l)

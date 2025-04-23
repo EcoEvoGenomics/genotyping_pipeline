@@ -5,8 +5,29 @@ module_order:
   - 'bcftools'
 
 picard_config:
-  s_name_filenames: true
+  s_name_filenames: True
 
-sample_names_replace_regex: true
-sample_names_replace:
-  "^(.*?)(?=\\.)": "\\1"
+extra_fn_clean_exts:
+  - ".alignment"
+  - ".base_distribution_by_cycle"
+  - ".dedup"
+  - ".gcbias_detail"
+  - ".gcbias_summary"
+  - ".insert_size"
+  - ".mean_quality_by_cycle"
+  - ".quality_yield"
+  - ".qualityscore"
+
+highlight_patterns:
+  - "PBAC"
+  - "PDOM"
+  - "PHIS"
+  - "PITA"
+  - "PMON"
+
+highlight_colors:
+  - "#000080"
+  - "#1E90FF"
+  - "#8B0000"
+  - "#FFD700"
+  - "#008B00"

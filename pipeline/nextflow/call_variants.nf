@@ -49,7 +49,7 @@ workflow{
 process define_windows {
 
     input:
-    path(ref_index)
+    file(ref_index)
     val(window_size)
     val(ref_scaffold_name)
 

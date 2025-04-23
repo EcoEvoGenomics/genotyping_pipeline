@@ -13,8 +13,8 @@ workflow {
     Channel.fromPath("${params.reads_dir}/*", type: 'dir')
     .map { dir -> 
         def sample = dir.getName()
-        def r1_file = file("${dir}/${sample}_R1.fastq.gz")
-        def r2_file = file("${dir}/${sample}_R2.fastq.gz")
+        def r1_file = file("${dir}/${sample}_R1_TRIM.fastq.gz")
+        def r2_file = file("${dir}/${sample}_R2_TRIM.fastq.gz")
         return tuple(sample, r1_file, r2_file)
     }
     .set { trimmed_reads }

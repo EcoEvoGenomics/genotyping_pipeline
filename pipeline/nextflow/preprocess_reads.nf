@@ -111,23 +111,23 @@ process trim_reads {
 
     input: 
     val(sample)
-    file(r1_reads)
-    file(r2_reads)
+    file("${sample}_R1.fastq.gz")
+    file("${sample}_R2.fastq.gz")
     path('qc-metrics/*'), stageAs: './qc-metrics/'
 
     output:
     val(sample)
-    file("${sample}_R1.fastq.gz")
-    file("${sample}_R2.fastq.gz")
+    file("${sample}_R1_TRIM.fastq.gz")
+    file("${sample}_R2_TRIM.fastq.gz")
     path("qc-metrics/*")
 
     script:
     """
     fastp \
-    --in1 ${r1_reads} \
-    --in2 ${r2_reads} \
-    --out1 ${sample}_R1.fastq.gz \
-    --out2 ${sample}_R2.fastq.gz \
+    --in1 ${sample}_R1.fastq.gz \
+    --in2 ${sample}_R2.fastq.gz \
+    --out1 ${sample}_R1_TRIM.fastq.gz \
+    --out2 ${sample}_R2_TRIM.fastq.gz \
     --report_title "${sample}" \
     --html qc-metrics/${sample}.html \
     --json qc-metrics/${sample}.json

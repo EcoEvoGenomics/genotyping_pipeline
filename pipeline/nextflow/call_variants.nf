@@ -16,8 +16,10 @@ workflow{
     .map { cram -> "${cram.toString()}\n" }
     .collectFile()
 
+
     // Prepare Channels for the genome windows
-    define_windows(params.ref_index, params.window_size, params.ref_scaffold_name)
+    def ref_index = file(params.ref_index)
+    define_windows(ref_index, params.window_size, params.ref_scaffold_name)
     def windows_dir = define_windows.out.windows_dir
     def window_list = define_windows.out.windows.map{path -> file(path.toString())}.readLines()
 
@@ -49,7 +51,7 @@ workflow{
 process define_windows {
 
     input:
-    path(ref_index), stageAs: "genome_index.fa.fai", mode: "copy"
+    path(ref_index)
     val(window_size)
     val(ref_scaffold_name)
 
@@ -64,7 +66,7 @@ process define_windows {
     cd genome_windows
 
     # MAKE FILE OF CHROMOSOME AND SCAFFOLD SIZES
-    cut -f 1-2 genome_index.fa.fai > genome_size.txt
+    cut -f 1-2 ${ref_index} > genome_size.txt
 
     # MAKE CHROMOSOME WINDOWS
     bedtools makewindows -g genome_size.txt -w ${window_size} \

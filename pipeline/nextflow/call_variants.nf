@@ -96,23 +96,27 @@ process define_windows {
     > scaffolds.tmp
     mv scaffolds.tmp scaffolds.list
 
-    # DETERMINE HOW TO SPLIT SCAFFOLDS ACROSS MULTIPLE FILES
-    total_lines=\$(wc -l <scaffolds.list)
-    num_files=10
-    ((lines_per_file = (total_lines + num_files - 1) / num_files))
-
-    # SPLIT SCAFFOLDS ACROSS MULTIPLE FILES
-    split -l \${lines_per_file} scaffolds.list scaffolds:
-
-    # CHANGE TO NUMERICAL FILE SUFFIXES
+    # CREATE SCAFFOLD GROUP FILES WITH NO MORE THAN window_size BASES TO GENOTYPE
     file_counter=1
-    for file in scaffolds:*; do
-        new_name=\$(printf "%02d" "\$file_counter")
-        mv "\$file" "scaffolds:\$new_name"
-        ((file_counter++))
-    done
+    base_counter=0
+    while read -r scaffold start end; do
 
-    # ADD SCAFFOLDS TO WINDOW LIST ONLY IF ANY EXIST
+        scaffold_window_bases=\$((end - start))
+        
+        # If adding window to current file would exceed window size, start new file
+        if ((base_counter + scaffold_window_bases > ${window_size})); then
+            ((file_counter++))
+            base_counter=0
+        fi
+        
+        output_file="scaffolds:\$(printf "%02d" "\$file_counter")"
+        echo -e "\$scaffold\\t\$start\\t\$end" >> "\$output_file"
+
+        base_counter=\$((base_counter + scaffold_window_bases))
+
+    done < scaffolds.list
+
+    # ADD SCAFFOLDS SUBGROUPS TO WINDOW LIST ONLY IF ANY EXIST
     n_scaffolds=\$(ls scaffolds:* | wc -l)
     if [ \${n_scaffolds} -gt 0 ]
     then

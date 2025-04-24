@@ -22,6 +22,8 @@ software_versions:
     bcftools: "1.17"
     vcftools: "0.1.16"
 
+disable_version_detection: true
+
 module_order:
   - 'fastp'
   - 'picard'

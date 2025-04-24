@@ -10,8 +10,9 @@
 
 workflow {
 
-    def config = file(params.multiqc_config)
-    run_multiqc(params.results_dir, config)
+    def config = file("./pipeline/config/multiqc_config.yaml")
+    def sparrows_logo = file("./pipeline/assets/sparrows.jpg")
+    run_multiqc(params.results_dir, config, sparrows_logo)
 
 }
 
@@ -22,6 +23,7 @@ process run_multiqc {
     input:
     path(results_dir)
     path(multiqc_config)
+    path(sparrows_logo)
 
     output:
     file('multiqc_report.html')

@@ -60,7 +60,7 @@
     ref_genome=/cluster/projects/nn10082k/ref/house_sparrow_genome_assembly-18-11-14_masked.fa
     ref_index=/cluster/projects/nn10082k/ref/house_sparrow_genome_assembly-18-11-14_masked.fa.fai
     ref_scaffold_name='scaffold'
-    ref_ploidy_file=./pipeline/defaults/default.ploidy
+    ref_ploidy_file=./pipeline/assets/default.ploidy
     
     # Path to a conda environment with Nextflow
     nextflow_envir_path=/cluster/projects/nn10082k/conda_group/nextflow

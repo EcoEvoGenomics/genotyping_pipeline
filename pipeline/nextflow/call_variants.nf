@@ -10,28 +10,33 @@
 
 // Workflow
 workflow{    
+
+    // Input files
+    def ref_ploidy = file(params.ref_ploidy_file)
+    def ref_genome = file(params.ref_genome)
+    def ref_index = file(params.ref_index)
+
+    // Prepare Channels for the genome windows
+    define_windows(ref_index, params.window_size, params.ref_scaffold_name)
+    def windows_dir = define_windows.out.windows_dir
+    def window_list = define_windows.out.windows.map{path -> file(path.toString())}.readLines()
     
-    // Channel with a file listing input CRAM paths
+    // Prepare a Channel of input CRAM paths
     def crams = Channel.fromPath("${params.cram_dir}/**.cram")
     .map { cram -> "${cram.toString()}\n" }
     .collectFile()
 
-
-    // Prepare Channels for the genome windows
-    def ref_index = file(params.ref_index)
-    define_windows(ref_index, params.window_size, params.ref_scaffold_name)
-    def windows_dir = define_windows.out.windows_dir
-    def window_list = define_windows.out.windows.map{path -> file(path.toString())}.readLines()
-
-    // Genotype windows and concatenate into chromsome VCFs
-    def chromosome_vcfs = genotype_windows(crams, file(params.ref_ploidy_file), windows_dir, window_list) \
+    // Genotype CRAMs in windows and concatenate windows into per-chromsome VCFs
+    def chromosome_vcfs = genotype_windows(crams, ref_ploidy, ref_genome, ref_index, windows_dir, window_list) \
     | map { file ->
         def key = file.baseName.toString().tokenize(':').get(0)
         return tuple(key, file)
     } \
     | groupTuple( by:0, sort:true ) \
-    | concatenate_windows \
-    | normalise_vcf \
+    | concatenate_windows
+
+    // Normalise and reheader chromosome VCFs
+    chromosome_vcfs = normalise_vcf(chromosome_vcfs, ref_genome, ref_index) \
     | reheader_vcf
 
     // Run bcftools stats on each VCF 
@@ -120,10 +125,12 @@ process define_windows {
 process genotype_windows {
 
     input:
-    path crams
-    path ploidy_file
-    path windows_dir, stageAs:'./genome_windows/'
-    each window
+    path(crams)
+    path(ploidy_file)
+    path(ref_genome)
+    path(ref_index)
+    path(windows_dir), stageAs:'./genome_windows/'
+    each(window)
 
     output:
     path("${window}.vcf.gz")
@@ -131,10 +138,10 @@ process genotype_windows {
     script:
     """
     if [[ "${window}" == "scaffold"* ]]; then
-        bcftools mpileup -d 8000 --ignore-RG -R ./genome_windows/${window} -a AD,DP,SP -Ou -f ${params.ref_genome} -b ${crams} \
+        bcftools mpileup -d 8000 --ignore-RG -R ./genome_windows/${window} -a AD,DP,SP -Ou -f ${ref_genome} -b ${crams} \
         | bcftools call --threads ${task.cpus} --ploidy-file ${ploidy_file} -f GQ,GP -mO z -o ${window}.vcf.gz
     else
-        bcftools mpileup -d 8000 --ignore-RG -r ${window} -a AD,DP,SP -Ou -f ${params.ref_genome} -b ${crams} \
+        bcftools mpileup -d 8000 --ignore-RG -r ${window} -a AD,DP,SP -Ou -f ${ref_genome} -b ${crams} \
         | bcftools call --threads ${task.cpus} --ploidy-file ${ploidy_file} -f GQ,GP -mO z -o ${window}.vcf.gz
     fi
     """
@@ -147,13 +154,11 @@ process concatenate_windows {
     tuple val(key), path(window_vcfs_in_key)
 
     output:
-    val(key)
-    file("${key}.vcf.gz")
-    file("${key}.vcf.gz.csi")
+    tuple val(key), file("${key}.vcf.gz"), file("${key}.vcf.gz.csi")
 
     script:
     """
-    key_sorted_windows=\$(echo $window_vcfs_in_key | tr ' ' '\n' | sort -t"-" -k2 -n | tr '\n' ' ')
+    key_sorted_windows=\$(echo ${window_vcfs_in_key} | tr ' ' '\n' | sort -t"-" -k2 -n | tr '\n' ' ')
     bcftools concat --threads ${task.cpus} -n -O z -o ${key}.vcf.gz \${key_sorted_windows}
     bcftools index --threads ${task.cpus} ${key}.vcf.gz
     """
@@ -163,19 +168,17 @@ process concatenate_windows {
 process normalise_vcf {
 
     input:
-    val(key)
-    file('input.vcf.gz')
-    file('input.vcf.gz.csi')
+    tuple val(key), file('input.vcf.gz'), file('input.vcf.gz.csi')
+    path(ref_genome)
+    path(ref_index)
     
     output:
-    val(key)
-    file("${key}.vcf.gz")
-    file("${key}.vcf.gz.csi")
+    tuple val(key), file("${key}.vcf.gz"), file("${key}.vcf.gz.csi")
 
     script:
     """
     # BASIC NORMALISATION
-    bcftools norm --threads ${task.cpus} --fasta-ref ${params.ref_genome} -O z -o ${key}_tmp.vcf.gz input.vcf.gz
+    bcftools norm --threads ${task.cpus} --fasta-ref ${ref_genome} -O z -o ${key}_tmp.vcf.gz input.vcf.gz
     bcftools index --threads ${task.cpus} ${key}_tmp.vcf.gz
 
     # REMOVE SPANNING INDELS AND RE-NORMALISE
@@ -191,9 +194,7 @@ process reheader_vcf {
     publishDir "${params.publish_dir}/chroms/${key}", saveAs: { filename -> "$filename" }, mode: 'copy'
 
     input:
-    val(key)
-    file('input.vcf.gz')
-    file('input.vcf.gz.csi')
+    tuple val(key), file('input.vcf.gz'), file('input.vcf.gz.csi')
     
     output:
     tuple file("${key}.vcf.gz"), file("${key}.vcf.gz.csi")
@@ -217,8 +218,8 @@ process summarise_vcf {
 
     script:
     """
-    bcftools query -l $vcf > samples.list
-    bcftools stats --samples-file samples.list $vcf > ${vcf.simpleName}.vchk
+    bcftools query -l ${vcf} > samples.list
+    bcftools stats --samples-file samples.list ${vcf} > ${vcf.simpleName}.vchk
     """
 }
 

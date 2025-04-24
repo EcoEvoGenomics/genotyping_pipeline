@@ -1,4 +1,4 @@
-title: "Genotyping Pipeline"
+title: "genotyping_pipeline"
 subtitle: "UiO Ecological and Evolutionary Genomics Group"
 intro_text: "This report summarises statistics from the genotyping pipeline by searching the output directory."
 show_analysis_time: True
@@ -9,13 +9,18 @@ custom_logo_url: "https://github.com/EcoEvoGenomics"
 custom_logo_title: "Visit our GitHub: https://github.com/EcoEvoGenomics"
 
 software_versions:
-  seqkit: "2.10.0"
-  fastp: "0.24.0"
-  clara-parabricks: "4.5.0-1"
-  samtools: "1.17"
-  bedtools: "2.30.0"
-  bcftools: "1.17"
-  vcftools: "0.1.16"
+  "Read pre-processing":
+    seqkit: "2.10.0"
+    fastp: "0.24.0"
+  "Read aligning":
+    clara-parabricks: "4.5.0-1"
+    samtools: "1.17"
+  "Variant calling":
+    bedtools: "2.30.0"
+    bcftools: "1.17"
+  "Variant filtering":
+    bcftools: "1.17"
+    vcftools: "0.1.16"
 
 module_order:
   - 'fastp'

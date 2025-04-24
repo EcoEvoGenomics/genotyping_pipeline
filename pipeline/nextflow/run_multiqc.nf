@@ -26,7 +26,7 @@ process run_multiqc {
     path(sparrows_logo)
 
     output:
-    file('multiqc_report.html')
+    file('genotyping_pipeline_multiqc_report.html')
 
     script:
     """

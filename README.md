@@ -1,9 +1,8 @@
-# Variant calling pipeline
+# Sparrow genotyping pipeline
 
-Duplicated from https://github.com/markravinet/genotyping_pipeline_v2.git on Wednesday 11 Dec 2024.
+**Authors:** Mark Ravinet and Erik Sandertun Røed
 
-### Mark Ravinet 
-### 18/11/2024
+**Maintainer:** Erik Sandertun Røed
 
 ## Introduction
 
@@ -348,4 +347,5 @@ All you need to do is be in the directory you have run the genotyping pipeline i
 ```
 multiqc .
 ```
-
+-----------------
+*This pipeline was initiated from a copy of https://github.com/markravinet/genotyping_pipeline_v2.git on Wednesday 11 Dec 2024.*

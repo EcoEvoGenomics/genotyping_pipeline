@@ -128,6 +128,10 @@ process define_windows {
 // Step 1 - Genotyping
 process genotype_windows {
 
+    memory { 2.GB * task.attempt }
+    errorStrategy 'retry'
+    maxRetries 5
+
     input:
     path(crams)
     path(ploidy_file)

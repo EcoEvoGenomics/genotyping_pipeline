@@ -106,5 +106,44 @@ flowchart TB
    v4 --> v6
 ```
 
+### Step 3: Genotyping (variant calling)
+```mermaid
+flowchart TB
+   subgraph "Input parameters"
+   v6["Genotyping window size"]
+   v22["Concatenate VCF (Y/N)"]
+   v2["Reference genome"]
+   v11["Aligned CRAMs"]
+   v4["Reference genome index"]
+   v7["Scaffold name"]
+   v0["Ploidy file"]
+   end
+   v8(["Define genotyping windows (bedtools)"])
+   v13(["Genotype (bcftools mpileup, bcftools call)"])
+   v14(["Concatenate chromosome VCF (bcftools concat, bcftools index)"])
+   v16(["Normalise VCF, remove spanning indels (bcftools norm, bcftools view)"])
+   v17(["Reheader VCF (bcftools reheader)"])
+   v19(["Get VCF stats (bcftools stats)"])
+   v21(["Collect genome-wide stats (plot-vcfstats)"])
+   v23(["Optional: Concatenate genome-wide VCF (bcftools concat, bcftools index)"])
+   v4 --> v8
+   v6 --> v8
+   v7 --> v8
+   v0 --> v13
+   v2 --> v13
+   v4 --> v13
+   v8 --> v13
+   v11 --> v13
+   v13 --> v14
+   v2 --> v16
+   v4 --> v16
+   v14 --> v16
+   v16 --> v17
+   v17 --> v19
+   v19 --> v21
+   v17 --> v23
+   v22 --> v23
+```
+
 -----------------
 *This pipeline was initiated from a copy of https://github.com/markravinet/genotyping_pipeline_v2.git on Wednesday 11 Dec 2024.*

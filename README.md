@@ -166,6 +166,16 @@ flowchart TB
    v1 --> v7
    v5 --> v7
    v5 --> v8
+   v8 --> v9
+   v7 --> v10
+   v7 --> v11
+   v6 --> v12
+   subgraph "Outputs"
+   v9["vcftools_filters.tsv"]
+   v10["filtered_variants.vcf.gz"]
+   v11["filtered_variants.vcf.gz.csi"]
+   v12["filtered_variants.vchk"]
+   end
 ```
 
 ### Step 5: Make a quality control report

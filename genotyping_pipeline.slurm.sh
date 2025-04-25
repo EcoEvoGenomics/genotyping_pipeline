@@ -14,30 +14,38 @@
 #SBATCH --mem-per-cpu=2G
 #SBATCH --time=99:00:00
 
-### ----- User input ----- ###
+### SETTINGS (1 / 2)
+###
+### ----------------- User input ----------------- ###
 
     # Path to .CSV of input samples
     # Note: samples are rows and the columns "ID, F_READ_PATH, R_READ_PATH" without headers
     sample_csv=
+    
+    # Path to this repository
+    repository_path=
 
     # Which steps to run?
-    # Note: steps must be run in order, but you can repeat filt_vcf and multiqc with different settings
-    trim_align=yes
-    call_vcf=yes
-    filt_vcf=yes
+    # Note: steps must be run in order, but you can repeat filter_variants and multiqc with different settings
+    preprocess_reads=yes
+    align_reads=yes
+    call_variants=yes
+    filter_variants=yes
     multiqc=yes
 
-    # Settings for step trim_align
-    # Note: max_cram_depth only applies if downsample_large_crams=yes
-    downsample_large_crams=no
-    max_cram_depth=30
+    # Settings for step preprocess_reads
+    # Note: read_target only applies if downsample_reads=yes
+    deduplicate_reads=no
+    downsample_reads=no
+    read_target=1000000
 
-    # Settings for step call_vcf
+    # Settings for step call_variants
     window_size=10000000
+    concatenate_unfiltered_vcfs=no
 
-    # Settings for step filt_vcf
-    # Note: change filtering_label and re-run filt_vcf to refilter output from call_vcf
-    filtering_label='DEFAULT_POP_STRUCTURE'
+    # Settings for step filter_variants
+    # Note: change filtering_label and re-run filter_variants to refilter output from call_variants
+    filtering_label='default_filters'
     filtering_min_alleles=2
     filtering_max_alleles=2
     filtering_max_missing=0.8
@@ -52,25 +60,32 @@
     ref_genome=/cluster/projects/nn10082k/ref/house_sparrow_genome_assembly-18-11-14_masked.fa
     ref_index=/cluster/projects/nn10082k/ref/house_sparrow_genome_assembly-18-11-14_masked.fa.fai
     ref_scaffold_name='scaffold'
-    ref_ploidy_file=./pipeline/defaults/default.ploidy
+    ref_ploidy_file=./pipeline/assets/default.ploidy
     
-    # Paths to this repository and to a suitable conda environment
-    repository_path=
-    conda_environment_path=/cluster/projects/nn10082k/conda_users/eriksro/genotyping_pipeline_experimental
+    # Path to a conda environment with Nextflow
+    nextflow_envir_path=/cluster/projects/nn10082k/conda_group/nextflow
 
-### --- End user input --- ###
+### --------------- End user input --------------- ###
+
+### SETTINGS (2 / 2)
+###
+### ------------ Set up environment -------------- ###
+
+    # This script must be run from an environment with:
+    # - Conda
+    # - Singularity (default on Saga)
+    # - Slurm (default on Saga)
+
+    module --quiet purge
+    module load Miniconda3/22.11.1-1
+    source ${EBROOTMINICONDA3}/bin/activate
+
+### ------------ End set up environment ---------- ###
 
 # Prepare environment
 set -o errexit
 set -o nounset
-module --quiet purge
-
-# Load modules
-module load Miniconda3/22.11.1-1
-
-# Activate conda environment
-source ${EBROOTMINICONDA3}/bin/activate
-conda activate ${conda_environment_path}
+conda activate ${nextflow_envir_path}
 
 # Function to handle missing output directories
 mkmissingdir() {
@@ -90,52 +105,67 @@ chkprevious() {
 # Begin work
 cd $repository_path
 
-output_dir=./output
-trim_align_output_dir=${output_dir}/01-aligned_reads
-call_vcf_output_dir=${output_dir}/02-variants_unfiltered
-filt_vcf_output_dir=${output_dir}/03-variants_filtered/${filtering_label}
-multiqc_output_dir=${output_dir}/04-multiqc
+output_dir=${repository_path}/output
+preprocess_reads_output_dir=${output_dir}/01-preprocessed_reads
+align_reads_output_dir=${output_dir}/02-aligned_reads
+call_variants_output_dir=${output_dir}/03-variants_unfiltered
+filter_variants_output_dir=${output_dir}/04-variants_filtered/${filtering_label}
+multiqc_output_dir=${output_dir}/05-multiqc
 
 mkmissingdir $output_dir
 
-if [ $trim_align = 'yes' ]; then
-    mkmissingdir $trim_align_output_dir
+if [ $preprocess_reads = 'yes' ]; then
+    mkmissingdir $preprocess_reads_output_dir
     nextflow -log ./.nextflow/nextflow.log \
-        run ./pipeline/nextflow/trim_and_align.nf \
-        -c ./pipeline/config/trim_and_align.config \
-        -with-report $trim_align_output_dir/workflow_report.html \
+        run ./pipeline/nextflow/preprocess_reads.nf \
+        -c ./pipeline/config/preprocess_reads.config \
+        -with-report $preprocess_reads_output_dir/workflow_report.html \
         --samples $sample_csv \
-        --ref $ref_genome \
-        --ref_scaffold_name $ref_scaffold_name \
-        --downsample_crams $downsample_large_crams \
-        --max_cram_depth $max_cram_depth \
-        --publish_dir $trim_align_output_dir
+        --deduplicate $deduplicate_reads \
+        --downsample $downsample_reads \
+        --read_target $read_target \
+        --publish_dir $preprocess_reads_output_dir
 fi
 
-if [ $call_vcf = 'yes' ]; then
-    chkprevious "Step: call_vcf" $trim_align_output_dir
-    mkmissingdir $call_vcf_output_dir
+if [ $align_reads = 'yes' ]; then
+    chkprevious "Step: align_reads" $preprocess_reads_output_dir
+    mkmissingdir $align_reads_output_dir
+    nextflow -log ./.nextflow/nextflow.log \
+        run ./pipeline/nextflow/align_reads.nf \
+        -c ./pipeline/config/align_reads.config \
+        -with-report $align_reads_output_dir/workflow_report.html \
+        --reads_dir $preprocess_reads_output_dir \
+        --ref_genome $ref_genome \
+        --ref_index $ref_index \
+        --ref_scaffold_name $ref_scaffold_name \
+        --publish_dir $align_reads_output_dir
+fi
+
+if [ $call_variants = 'yes' ]; then
+    chkprevious "Step: call_variants" $align_reads_output_dir
+    mkmissingdir $call_variants_output_dir
     nextflow -log ./.nextflow/nextflow.log \
         run ./pipeline/nextflow/call_variants.nf \
         -c ./pipeline/config/call_variants.config \
-        -with-report $call_vcf_output_dir/workflow_report.html \
-        --cram_dir $trim_align_output_dir \
+        -with-report $call_variants_output_dir/workflow_report.html \
+        --cram_dir $align_reads_output_dir \
         --window_size $window_size \
-        --ref $ref_genome \
+        --ref_genome $ref_genome \
         --ref_index $ref_index \
         --ref_scaffold_name $ref_scaffold_name \
         --ref_ploidy_file $ref_ploidy_file \
-        --publish_dir $call_vcf_output_dir
+        --concatenate_vcf $concatenate_unfiltered_vcfs \
+        --publish_dir $call_variants_output_dir
 fi
 
-if [ $filt_vcf = 'yes' ]; then
-    chkprevious "Step: filt_vcf" $call_vcf_output_dir
-    mkmissingdir $filt_vcf_output_dir
+if [ $filter_variants = 'yes' ]; then
+    chkprevious "Step: filter_variants" $call_variants_output_dir
+    mkmissingdir $filter_variants_output_dir
     nextflow -log ./.nextflow/nextflow.log \
         run ./pipeline/nextflow/filter_variants.nf \
         -c ./pipeline/config/filter_variants.config \
-        -with-report $filt_vcf_output_dir/workflow_report.html \
-        --vcf_dir $call_vcf_output_dir/chroms \
+        -with-report $filter_variants_output_dir/workflow_report.html \
+        --vcf_dir $call_variants_output_dir/chroms \
         --filtering_label $filtering_label \
         --min_alleles $filtering_min_alleles \
         --max_alleles $filtering_max_alleles \
@@ -146,20 +176,16 @@ if [ $filt_vcf = 'yes' ]; then
         --maxDP $filtering_maxDP \
         --minQ $filtering_minQ \
         --keep $filtering_keep \
-        --publish_dir $filt_vcf_output_dir
+        --publish_dir $filter_variants_output_dir
 fi
 
 if [ $multiqc = 'yes' ]; then
-    # NB: Temporary solution only!
-    # Deactivate pipeline environment, then conda. Purge and use Saga MultiQC module to get later version.
-    conda deactivate
-    conda deactivate
-    module --quiet purge
-    module load MultiQC/1.22.3-foss-2023b
-    multiqc --outdir $multiqc_output_dir \
-        --config ./pipeline/config/multiqc_config.yaml \
-        --force \
-        $output_dir
+    mkmissingdir $multiqc_output_dir
+    nextflow -log ./.nextflow/nextflow.log \
+        run ./pipeline/nextflow/run_multiqc.nf \
+        -c ./pipeline/config/run_multiqc.config \
+        --results_dir $output_dir \
+        --publish_dir $multiqc_output_dir
 fi
 
 # End work

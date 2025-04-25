@@ -5,11 +5,11 @@
 //
 // Workflow: Filter VCF
 //
-// Developed by Mark Ravinet
+// Originally developed by Mark Ravinet
 // Co-developed and maintained by Erik Sandertun Røed
 
 // Include duplicate processes
-include { summarise_vcf; concatenate_all } from './call_variants.nf'
+include { summarise_vcf; concatenate_vchks; concatenate_vcfs } from './call_variants.nf'
 
 // Workflow
 workflow{
@@ -29,11 +29,8 @@ workflow{
   | summarise_vcf
 
   // Concatenate and output chromosome-level VCFs and VCHKs
-  concatenate_all(
-        (filtered_chromosome_vcfs.flatten().collect()),
-        (filtered_chromosome_vchks.collect()),
-        "VARIANTS_${params.filtering_label}"
-    )
+  concatenate_vchks(filtered_chromosome_vchks.collect(), "variants_${params.filtering_label}")
+  concatenate_vcfs(filtered_chromosome_vcfs.flatten().collect(), "variants_${params.filtering_label}")
 
   // Separately:
   save_filters_to_file()
@@ -104,7 +101,7 @@ process save_filters_to_file {
   publishDir "${params.publish_dir}", saveAs: { filename -> "$filename" }, mode: 'copy'
 
   output:
-  file("${params.filtering_label}_vcftools_filters.tsv")
+  file("vcftools_${params.filtering_label}.tsv")
 
   script:
   """
@@ -118,6 +115,6 @@ process save_filters_to_file {
     'maxDP' '${params.maxDP}' \
     'minQ' '${params.minQ}' \
     'keep' '${params.keep}' \
-    > ${params.filtering_label}_vcftools_filters.tsv
+    > vcftools_${params.filtering_label}.tsv
   """
 }

@@ -1,5 +1,65 @@
+title: "genotyping_pipeline"
+subtitle: "UiO Ecological and Evolutionary Genomics Group"
+intro_text: "This report summarises statistics from the genotyping pipeline by searching the output directory."
+show_analysis_time: True
+show_analysis_paths: False
+
+custom_logo: "sparrows.jpg"
+custom_logo_url: "https://github.com/EcoEvoGenomics"
+custom_logo_title: "Visit our GitHub: https://github.com/EcoEvoGenomics"
+
+highlight_patterns:
+  - "PBAC"
+  - "PDOM"
+  - "PHIS"
+  - "PITA"
+  - "PMON"
+
+highlight_colors:
+  - "#000080"
+  - "#1E90FF"
+  - "#8B0000"
+  - "#FFD700"
+  - "#008B00"
+
+table_columns_visible:
+  "Bcftools: Stats": false
+
 module_order:
   - 'fastp'
   - 'picard'
   - 'samtools'
   - 'bcftools'
+
+remove_sections:
+  - bcftools-stats_indel_plot
+
+extra_fn_clean_exts:
+  - ".alignment"
+  - ".base_distribution_by_cycle"
+  - ".dedup"
+  - ".gcbias_detail"
+  - ".gcbias_summary"
+  - ".insert_size"
+  - ".mean_quality_by_cycle"
+  - ".quality_yield"
+  - ".qualityscore"
+
+picard_config:
+  s_name_filenames: True
+
+software_versions:
+  "Read pre-processing":
+    seqkit: "2.10.0"
+    fastp: "0.24.0"
+  "Read aligning":
+    clara-parabricks: "4.5.0-1"
+    samtools: "1.17"
+  "Variant calling":
+    bedtools: "2.30.0"
+    bcftools: "1.17"
+  "Variant filtering":
+    bcftools: "1.17"
+    vcftools: "0.1.16"
+
+disable_version_detection: true

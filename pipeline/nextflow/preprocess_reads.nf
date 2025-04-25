@@ -82,6 +82,8 @@ process deduplicate_reads {
 // Step 2 (Optional) - Downsample reads
 process downsample_reads {
     
+    memory { 1.GB * Math.ceil(Math.max(r1_reads.size(), r2_reads.size()) / 1024 ** 3) }
+
     input: 
     val(sample)
     file(r1_reads)

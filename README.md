@@ -74,6 +74,7 @@ flowchart TB
    subgraph "Input parameters"
    v7["Downsample (Y/N)"]
    v4["Deduplicate (Y/N)"]
+   v9["Read target"]
    v0["Samples CSV"]
    end
    v2(["Parse sample files"])
@@ -86,6 +87,7 @@ flowchart TB
    v8 --> v10
    v4 --> v5
    v7 --> v8
+   v9 --> v8
 ```
 
 ### Step 2: Read alignment

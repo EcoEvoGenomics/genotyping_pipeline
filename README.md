@@ -77,9 +77,9 @@ flowchart TB
    v0["Samples CSV"]
    end
    v2(["Parse sample files"])
-   v5(["Software: seqkit rmdup"])
-   v8(["Software: seqkit sample"])
-   v10(["Software: fastp"])
+   v5(["Optional: Deduplicate reads (seqkit rmdup)"])
+   v8(["Optional: Downsample reads (seqkit sample)"])
+   v10(["Trim reads (fastp)"])
    v0 --> v2
    v2 --> v5
    v5 --> v8
@@ -96,8 +96,8 @@ flowchart TB
    v3["Reference genome index"]
    v0["Pre-processed reads"]
    end
-   v4(["Software: clara-parabricks fq2bam"])
-   v6(["Software: samtools depth, samtools flagstat"])
+   v4(["Align reads (pbrun fq2bam)"])
+   v6(["Calculate stats (samtools depth, samtools flagstat)"])
    v0 --> v4
    v2 --> v4
    v3 --> v4

@@ -5,86 +5,49 @@
 **Maintainer:** Erik Sandertun Røed
 
 ## Introduction
+Welcome to the guide for the Ecological & Evolutionary Genomics Group sparrow genotyping pipeline. With this pipeline, you will only have to submit a single script to convert raw reads into a filtered `.vcf` file ready for your analyses. More than merely *simplifying* the process, the pipeline *standardises* genotyping within the group so that different projects produce and use compatible datasets. Just as important, the construction of the pipeline emphasises *reproducibility* to promote open science. Readers of our papers should be able to reproduce our results with minimal effort.
 
-Welcome to the readme and guide for the Sparrow Ecological & Evolutionary Genommics group variant calling pipeline. After many years of calling variants using a set of multiple slurm scripts, I decided to write a nextflow pipeline that vastly simplifies the process, meaning that you will only have to submit three scripts to go from raw reads to a final, filtered `vcf` ready for analysis.
+### The pipeline 
+There are five primary steps in the pipeline, and you can specify whether to run all in one go or do them stepwise. In order, they are ...
 
-The scripts are designed to require minimal input from a user but they will produce finished output, statistics and reports for what programs where used in the process. As well as simplifying the process, these scripts are designed to **standardise** the variant calling used within the group, i.e. to prevent different projects using different pipelines and leading to incompatible datasets. However, more importantly, the emphasis here is to improve **reproducibility** - i.e. promoting open science and making it possible for anyone interested to reproduce results in a straightforward way.
+1. `preprocess_reads`: Trims and optionally deduplicates and / or downsamples reads.
+2. `align_reads`: Aligns the preprocessed reads to a reference genome. Outputs compressed alignment files.
+3. `call_variants`: Calls SNP variants across and calculates statistics across the whole genome.
+4. `filter_variants`: Applies filters to the SNP variants from the previous step and calculates statistics.
+5. `multiqc`: Produces a report with interactive plots showing quality control statistics for outputs produced by the pipeline.
 
-There are three steps in the pipeline, each run using a specific nextflow script:
+More details on each step are provided below.
 
-1. `trim_map_realign` - trim reads for quality and adapter sequences, map to a reference genome and perform indel realignment.
-2. `call_variants` - call variants across genome windows, concatenate them together to produce per chromosome vcf files.
-3. `filter_variants` - filter vcfs for population structure and genome scan analysis.
+## Installation and quick-start
+This pipeline is developed primarily for in-house use on the NRIS Saga HPC, but should run on other compute resources and for other projects with minor modifications to its configuration files.
 
-In addition to these scripts, there are three helper scripts which are optional. These are:
+### Prerequesites
+The pipeline requires a Linux HPC environment configured with the job management software SLURM, the container software Singularity (or Apptainer) and the environment management software Conda. If you are working on the NRIS Saga HPC, these softwares are pre-installed and the pipeline pre-configured to use them without manual intervention.
 
-1. `downsample_bams` - a nextflow script that will calculate the depth of a bam, see if it exceeds a threshold you set and if so, downsample it to match that. This is useful if you are combining samples with different read depths. 
-2. `create_genome_windows` - a shell script to split your genome of choice into windows for `call_variants` to run on. So you can split the genome into 10 Mb windows and call variants much more efficiently.
-3. `concat_vcfs` - concatenate the variant vcfs created by `filter_variants` into a single vcf for the entire genome
-
-## Installation
-
-The simplest way to install everything you need for these scripts to work is to use template `conda` environment. This means you first need to install and setup `conda`. 
-
-**For users working on the Saga infrastructure** you do not need to install `conda`. You can instead follow the guidelines [here](https://github.com/markravinet/markravinet.github.io/wiki/5_using_conda_Saga) to run the pipeline using the shared installed `conda` modules. 
-
-### Installing conda
-
-The full `conda` installation is not necessary. Instead you can use miniconda. Go here and copy the link address for the latest release for Linux 64-bit. Then use `wget` to download it like so:
-
+### Obtaining the pipeline
+The easiest (and the intended) way to obtain and run the pipeline is to clone this GitHub repository to a suitable HPC location (on the NIRS Saga HPC, this is *exclusively* your `$USERWORK` directory, as the pipeline can produce terabytes of working files):
 ```
-wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
+git clone https://github.com/EcoEvoGenomics/genotyping_pipeline
+```
+On occasion we upgrade or modify the pipeline. As a rule this will happen on a separate branch to maintain consistency on the main branch. If you wish to use an in-development version of the pipeline you can obtain a specific branch, e.g. `experimental`:
+```
+git clone -b experimental https://github.com/EcoEvoGenomics/genotyping_pipeline
 ```
 
-From your home directory, simply run this script:
-
+### Configuring a Nextflow Conda environment
+To maximise portability, especially for external users, most of the pipeline dependencies are managed automatically with containers obtained on-demand. But the software Nextflow manages this automation, so Nextflow itself must be manually installed in a Conda environment. Members of the Ecological and Evolutionary Genomics Group can and should use our pre-configured environment, which the pipeline is set to use by default. Other users can replicate our environment with the `nextflow.yml` file:
 ```
-bash Miniconda3-latest-Linux-x86_64.sh
-```
-
-Follow the prompts and this will install `conda`. Once you have done that, you will need to update it to ensure there are no issues.
-
-```
-conda update conda
+conda create --name nf -f nextflow.yml 
 ```
 
-We are then read to set up the `conda` environment you need to run the scripts.
+### Running the pipeline
+In brief the three steps required to run the pipeline once you have cloned the repository are:
 
-### Using mamba
+1. Download your reads to a location where the pipeline can reach them. If you have e.g. stored your reads on the NRIS NIRD storage infrastructure, you should copy them to your `$USERWORK` on the NRIS Saga HPC.
+2. Prepare a comma-separated `.csv` file with three columns and *no headers*: each row is a sample where the first column should hold the sample name (e.g. `PDOM2024IND0001M`), the second column holds the *absolute* path to the R1 (i.e. forward) read file in `.fastq.gz` format, and the third column the absolute path to the R2 (i.e. reverse) read file.
+3. Submit the `genotyping_pipeline.slurm.sh` script, completing and modifying `SETTINGS (1 / 2) User input` as required. Users of other HPC resources than the NRIS Saga HPC will likely have to modify the `SETTINGS (2 / 2) Set up environment` section to ensure Slurm, Singularity, and Conda are set up appropriately. Apart from modifying the SLURM header you should not modify the script outside the `SETTINGS` blocks.
 
-Conda can be quite slow, so a way to speed it up is to use `mamba`. This is easy to install. You can do so like this:
-
-```
-conda install -c conda-forge mamba
-```
-
-Once `mamba` is installed you are ready to configure the `conda` environment to use the pipeline.
-
-### Configuring the conda environment
-
-In order to ensure you have all the tools needed to run the pipeline, you can configure the `conda` environment using the `nextflow.yml` provided here. This is also a reference of all the software versions used to run the code. It is very simple to do this, just use the following command:
-
-```
-mamba env create --name nf -f nextflow.yml 
-```
-
-This will create a `mamba`/`conda` environment called `nf` that contains all the software necessary to run the scripts with minimal manual configuration. 
-
-Finally in order to ensure `abra2` can access the libraries it needs to run, you will need to add the following line to your `bash_profile` or `bashrc`:
-
-```
- export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:~/miniconda3/lib
-```
-
-You might also need to increase the amount of memory that `abra2` has access to. In order to do this, you should use `nano` to edit the `~/miniconda3/envs/nf/share/abra2-2.23-1/abra2` so that the `JAVA_TOOL_OPTIONS` variable is increased like so:
-
-```
-JAVA_TOOL_OPTIONS="-Xmx8G"
-```
-
-### A quick note on Java based errors
-
-Although most of the tools for the pipeline should run without issue, you might get an error that some of the tools cannot run because there is no `java` environment. If this is the case, you need to either install `java` or load the `java` module on your cluster - the pipeline should then work without issue.
+Additional details and examples are provided for each step below. If you are unfamiliar with the pipeline, please do read on!
 
 ## Step 1  - trimming, mapping and aligning
 

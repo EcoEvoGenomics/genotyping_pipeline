@@ -71,7 +71,7 @@ As an example, your file should look like this but **without headers**:
 ### Step 1: Read pre-processing
 ```mermaid
 flowchart TB
-   subgraph "Input parameters"
+   subgraph "Inputs and user parameters"
    v7["Downsample (Y/N)"]
    v4["Deduplicate (Y/N)"]
    v9["Read target"]
@@ -93,7 +93,7 @@ flowchart TB
 ### Step 2: Read alignment
 ```mermaid
 flowchart TB
-   subgraph "Input parameters"
+   subgraph "Inputs and user parameters"
    v2["Reference genome"]
    v3["Reference genome index"]
    v0["Pre-processed reads"]
@@ -111,7 +111,7 @@ flowchart TB
 ### Step 3: Genotyping (variant calling)
 ```mermaid
 flowchart TB
-   subgraph "Input parameters"
+   subgraph "Inputs and user parameters"
    v6["Genotyping window size"]
    v22["Concatenate VCF (Y/N)"]
    v2["Reference genome"]

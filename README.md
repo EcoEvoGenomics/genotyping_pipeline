@@ -49,9 +49,28 @@ In brief the three steps required to run the pipeline once you have cloned the r
 
 Additional details and examples are provided for each step below. If you are unfamiliar with the pipeline, please do read on!
 
-## Step 1  - trimming, mapping and aligning
+## Step 1: Read pre-processing
 
-This first script will take your raw reads and run them through [fastqc](https://www.bioinformatics.babraham.ac.uk/projects/fastqc/) for a quality assessment. It will then trim them for low-quality bases and remove any adapter sequences. It will then map them to a reference genome of your choice (default is the 2014 House sparrow reference). It also ensures that the samples are renamed to the correct name for all downstream analysis. Finally, the script will produce statistics on the mapping efficiency and depth of coverage of each mapped individual. Note that as of November 2024, the pipeline has been updated so that it only outputs [cram files](https://en.wikipedia.org/wiki/CRAM_(file_format)). 
+```mermaid
+flowchart TB
+    subgraph " "
+    subgraph params
+    v7["downsample"]
+    v4["deduplicate"]
+    v0["samples"]
+    end
+    v2([parse_sample])
+    v5([deduplicate_reads])
+    v8([downsample_reads])
+    v10([trim_reads])
+    v0 --> v2
+    v2 --> v5
+    v5 --> v8
+    v8 --> v10
+    end
+```
+
+This first script will take your raw reads and run them through [fastqc](https://www.bioinformatics.babraham.ac.uk/projects/fastqc/) for a quality assessment. It will then trim them for low-quality bases and remove any adapter sequences. It will then map them to a reference genome of your choice (default is the 2014 House sparrow reference). It also ensures that the samples are renamed to the correct name for all downstream analysis. Finally, the script will produce statistics on the mapping efficiency and depth of coverage of each mapped individual.
 
 ### The input csv format
 

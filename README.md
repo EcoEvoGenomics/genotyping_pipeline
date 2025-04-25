@@ -53,23 +53,21 @@ Additional details and examples are provided for each step below. If you are unf
 
 ```mermaid
 flowchart TB
-    subgraph " "
-    subgraph params
-    v7["downsample"]
-    v4["deduplicate"]
-    v0["samples"]
-    end
-    v2([parse_sample])
-    v5([deduplicate_reads])
-    v8([downsample_reads])
-    v10([trim_reads])
-    v0 --> v2
-    v2 --> v5
-    v5 --> v8
-    v8 --> v10
-    v4 --> v5
-    v7 --> v8
-    end
+   subgraph "Input parameters"
+   v7["Downsample (Y/N)"]
+   v4["Deduplicate (Y/N)"]
+   v0["Sample CSV"]
+   end
+   v2(["Parse sample"])
+   v5(["Software: seqkit rmdup"])
+   v8(["Software: seqkit sample"])
+   v10(["Software: fastp"])
+   v0 --> v2
+   v2 --> v5
+   v5 --> v8
+   v8 --> v10
+   v4 --> v5
+   v7 --> v8
 ```
 
 This first script will take your raw reads and run them through [fastqc](https://www.bioinformatics.babraham.ac.uk/projects/fastqc/) for a quality assessment. It will then trim them for low-quality bases and remove any adapter sequences. It will then map them to a reference genome of your choice (default is the 2014 House sparrow reference). It also ensures that the samples are renamed to the correct name for all downstream analysis. Finally, the script will produce statistics on the mapping efficiency and depth of coverage of each mapped individual.

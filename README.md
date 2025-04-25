@@ -67,6 +67,8 @@ flowchart TB
     v2 --> v5
     v5 --> v8
     v8 --> v10
+    v4 --> v5
+    v7 --> v8
     end
 ```
 

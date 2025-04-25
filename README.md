@@ -53,7 +53,7 @@ Additional details and examples are provided for each step below. If you are unf
 
 The input `.csv` file should be formatted with one sample per row and the following columns:
 
-1. UiO sample name, e.g. `PDOM2024IND0001M`
+1. Sample name, e.g. `PDOM2024IND0001M` for a sparrow from our groups collection
 2. Forward read location - this should be the **full path** to the forward read
 3. Reverse read location - this should be the **full path** to the reverse read
 

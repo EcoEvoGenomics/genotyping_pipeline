@@ -88,6 +88,16 @@ flowchart TB
    v4 --> v5
    v7 --> v8
    v9 --> v8
+   v10 --> v11
+   v10 --> v12
+   v5 --> v13
+   v8 --> v13
+   v10 --> v13
+   subgraph "Outputs per sample"
+   v11["SAMPLE_ID_R1_TRIM.fastq.gz"]
+   v12["SAMPLE_ID_R2_TRIM.fastq.gz"]
+   v13["qc-metrics/"]
+   end
 ```
 
 ### Step 2: Read alignment
@@ -106,6 +116,15 @@ flowchart TB
    v2 --> v6
    v3 --> v6
    v4 --> v6
+   v4 --> v7
+   v4 --> v8
+   v4 --> v9
+   v6 --> v9
+   subgraph "Outputs per sample"
+   v7["SAMPLE_ID.cram"]
+   v8["SAMPLE_ID.cram.crai"]
+   v9["qc-metrics/"]
+   end
 ```
 
 ### Step 3: Genotyping (variant calling)
@@ -145,6 +164,17 @@ flowchart TB
    v19 --> v21
    v17 --> v23
    v22 --> v23
+
+   v21 --> v26
+   v23 --> v24
+   v23 --> v25
+   v14 --> v27
+   subgraph "Outputs"
+   v24["unfiltered_variants.vcf.gz"]
+   v25["unfiltered_variants.vcf.gz.csi"]
+   v26["unfiltered_variants.vchk"]
+   v27["chroms/"]
+   end
 ```
 
 ### Step 4: Variant filtering
@@ -170,11 +200,13 @@ flowchart TB
    v7 --> v10
    v7 --> v11
    v6 --> v12
-   subgraph "Outputs"
+   v1 --> v13
+   subgraph "Outputs per filters"
    v9["vcftools_filters.tsv"]
    v10["filtered_variants.vcf.gz"]
    v11["filtered_variants.vcf.gz.csi"]
    v12["filtered_variants.vchk"]
+   v13["chroms/"]
    end
 ```
 
@@ -186,6 +218,10 @@ flowchart TB
     end
     v3(["Run MultiQC"])
     v2 --> v3
+    v3 --> v4
+    subgraph "Outputs"
+    v4["genotyping_pipeline_multiqc_report.html"]
+    end
 ```
 
 -----------------

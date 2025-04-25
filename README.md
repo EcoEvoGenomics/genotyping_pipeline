@@ -56,9 +56,9 @@ flowchart TB
    subgraph "Input parameters"
    v7["Downsample (Y/N)"]
    v4["Deduplicate (Y/N)"]
-   v0["Sample CSV"]
+   v0["Samples CSV"]
    end
-   v2(["Parse sample"])
+   v2(["Parse sample files"])
    v5(["Software: seqkit rmdup"])
    v8(["Software: seqkit sample"])
    v10(["Software: fastp"])

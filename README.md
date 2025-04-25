@@ -126,7 +126,7 @@ flowchart TB
    v16(["Normalise VCF, remove spanning indels (bcftools norm, bcftools view)"])
    v17(["Reheader VCF (bcftools reheader)"])
    v19(["Get VCF stats (bcftools stats)"])
-   v21(["Collect genome-wide stats (plot-vcfstats)"])
+   v21(["Collect genome-wide stats (bcftools plot-vcfstats)"])
    v23(["Optional: Concatenate genome-wide VCF (bcftools concat, bcftools index)"])
    v4 --> v8
    v6 --> v8
@@ -145,6 +145,37 @@ flowchart TB
    v19 --> v21
    v17 --> v23
    v22 --> v23
+```
+
+### Step 4: Variant filtering
+```mermaid
+flowchart TB
+   subgraph "Inputs and user parameters"
+   v5["Filtering settings"]
+   v0["Unfiltered chromosome VCFs"]
+   end
+   v1(["Filter VCF (vcftools, bcftools)"])
+   v3(["Get VCF stats (bcftools stats)"])
+   v6(["Collect genome-wide stats (bcftools plot-vcftstats)"])
+   v7(["Concatenate genome-wide VCF (bcftools concat, bcftools index)"])
+   v8(["Save filtering parameters to file"])
+   v0 --> v1
+   v1 --> v3
+   v3 --> v6
+   v5 --> v6
+   v1 --> v7
+   v5 --> v7
+   v5 --> v8
+```
+
+### Step 5: Make a quality control report
+```mermaid
+flowchart TB
+    subgraph "Inputs"
+    v2["Pipeline output directory"]
+    end
+    v3(["Run MultiQC"])
+    v2 --> v3
 ```
 
 -----------------

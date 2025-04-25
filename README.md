@@ -44,13 +44,31 @@ conda create --name nf -f nextflow.yml
 In brief the three steps required to run the pipeline once you have cloned the repository are:
 
 1. Download your reads to a location where the pipeline can reach them. If you have e.g. stored your reads on the NRIS NIRD storage infrastructure, you should copy them to your `$USERWORK` on the NRIS Saga HPC.
-2. Prepare a comma-separated `.csv` file with three columns and *no headers*: each row is a sample where the first column should hold the sample name (e.g. `PDOM2024IND0001M`), the second column holds the *absolute* path to the R1 (i.e. forward) read file in `.fastq.gz` format, and the third column the absolute path to the R2 (i.e. reverse) read file.
+2. Prepare a comma-separated `.csv` file with sample information. See below.
 3. Submit the `genotyping_pipeline.slurm.sh` script, completing and modifying `SETTINGS (1 / 2) User input` as required. Users of other HPC resources than the NRIS Saga HPC will likely have to modify the `SETTINGS (2 / 2) Set up environment` section to ensure Slurm, Singularity, and Conda are set up appropriately. Apart from modifying the SLURM header you should not modify the script outside the `SETTINGS` blocks.
 
 Additional details and examples are provided for each step below. If you are unfamiliar with the pipeline, please do read on!
 
-## Step 1: Read pre-processing
+### The samples csv format
 
+The input `.csv` file should be formatted with one sample per row and the following columns:
+
+1. UiO sample name, e.g. `PDOM2024IND0001M`
+2. Forward read location - this should be the **full path** to the forward read
+3. Reverse read location - this should be the **full path** to the reverse read
+
+As an example, your file should look like this but **without headers**:
+
+| Sample ID | Path to R1 FASTQ.GZ file | Path to R2 FASTQ.GZ file |
+|------------------|-------------------------|-------------------------|
+| PDOM2024IND0001M | /path/to/1_R1.fastq.gz | /path/to/1_R2.fastq.gz |
+| PDOM2024IND0002F | /path/to/2_R1.fastq.gz | /path/to/2_R2.fastq.gz |
+| ... | ... | ... |
+
+**Note:** If an individual is sequenced across multiple lanes, you will have multiple sets of files for the individual. The previous version of the pipeline was built to account for this, **however** this version currently does not accommodate it because of the choice of aligner software. *This will be remedied somehow in a future update*.
+
+## The pipeline in detail
+### Step 1: Read pre-processing
 ```mermaid
 flowchart TB
    subgraph "Input parameters"
@@ -70,79 +88,23 @@ flowchart TB
    v7 --> v8
 ```
 
-This first script will take your raw reads and run them through [fastqc](https://www.bioinformatics.babraham.ac.uk/projects/fastqc/) for a quality assessment. It will then trim them for low-quality bases and remove any adapter sequences. It will then map them to a reference genome of your choice (default is the 2014 House sparrow reference). It also ensures that the samples are renamed to the correct name for all downstream analysis. Finally, the script will produce statistics on the mapping efficiency and depth of coverage of each mapped individual.
-
-### The input csv format
-
-In order to run this script, you need to provide it with a csv file with the following columns:
-
-1. Original sample name (only necessary for older samples, otherwise this can just be the sample name)
-2. New sample name (i.e. UoN code) - if this is already the sample name in 1, then just repeat it here
-3. Forward read location - this should be the **full path** to the forward read
-4. Reverse read location - this should be the **full path** to the reverse read
-5. Adapter name - the name for the adapter sequences - this should be one of the set of options outlined below.
-
-**A quick note on sample names!** The script will split names based on underscores, so if your samples are called `FH_99` and `FH_100` for example, it will merge them all into a sample called `FH`. So to avoid this, you need to alter them so that they are called `FH99` and `FH100`
-
-Adapters should be written exactly as one of the following options:
-- `Illumina_UD-PE`
-- `NexteraPE-PE`
-- `TruSeq2-PE`
-- `TruSeq3-PE-2`
-- `TruSeq3-PE`
-- `TruSeqUD-PE`
-
-**Note** If your individual has multiple forward and reverse reads, these should all be entered into a separate row for the csv (i.e. for each forward and reverse pair). This will happen when an individual is sequenced across multiple lanes for example. The script is built to account for this and you can give each line the same sample name - **however** the read locations must be different for each. 
-
-An example of the file format is shown below - note that the true file **should not have headers**:
-| old name | new name | read1 path | read2 path | adapter |
-|------------------|------------------|-------------------------|-------------------------|------------|
-| old_sample1_name | new_sample1_name | /path/to/forward_read1/ | /path/to/reverse_read1/ | TruSeq3-PE |
-| old_sample2_name | new_sample2_name | /path/to/forward_read2/ | /path/to/reverse_read2/ | TruSeqUD-PE |
-
-### Running the script
-
-Once you have your input csv file ready, you can run the script. To do this, you just need to do the following:
-
+### Step 2: Read alignment
+```mermaid
+flowchart TB
+   subgraph "Input parameters"
+   v2["Reference genome"]
+   v3["Reference genome index"]
+   v0["Pre-processed reads"]
+   end
+   v4(["Software: clara-parabricks fq2bam"])
+   v6(["Software: samtools depth, samtools flagstat"])
+   v0 --> v4
+   v2 --> v4
+   v3 --> v4
+   v2 --> v6
+   v3 --> v6
+   v4 --> v6
 ```
-nextflow run 1_trim_map_realign.nf --samples samples_test.csv
-```
-
-Note that if you run the script in this way, it will run in default mode and use the house sparrow reference genome. In order to alter that, you can add an additional option, `--ref` and specify the location of this alternative reference. Note that in order to do that, you **must** ensure that reference genome has been indexed by bwa prior to running the analysis. There is info on [how to do that here](https://speciationgenomics.github.io/mapping_reference/):
-
-```
-nextflow run 1_trim_map_realign.nf --samples samples_test.csv --ref /path/to/alt/ref_genome.fa
-```
-### Resuming scripts if there are issues
-
-On occassion your script might run into issues. For tips on how to resolve these, see the **Troubleshooting** section below. Once you have fixed this, you can actually restart the nextflow script from a specific point using the `-resume` command. For example:
-
-```
-nextflow run 1_trim_map_realign.nf --samples samples_test.csv -resume
-```
-
-Remember the script might not pick up exactly where it left off as it runs from preset checkpoints. However, it will generally be much faster doing this than starting from scratch.
-
-### Script outputs
-
-Once complete, the script will create two directories with outputs in:
-
-1. `align` - this contains the mapped, realigned and sorted cramfiles with their indexes for each individual you ran the script on.
-2. `stats` - this directory contains statistics from each of the cramfiles for their mapping success and depth of coverage. More information below.
-
-## Step 1a - Downsampling bams
-
-Occassionally, you might need to combine data from sequencing runs with different depths. If this is the case, you will need to downsample individuals sequenced at a higher depth when combining them all together as otherwise this will bias your analysis. For example, in a PCA with 10X indiviudals vs 30X individuals, you will find differences between them that are driven by this variation in sequencing depth. The script `1a_downsample_bams.nf` is designed to handle this and is very easy to run and use.
-
-All you need to do is provide it with a list of bam files, identical to that you would use for the `2_call_variants.nf` (see **Creating a list of bams** below). For example:
-
-```
-nextflow run 1a_downsample_bams.nf --bams bams.list --depth 10
-```
-
-You should also provide the `--depth` option. The script will then calculate the depth of each sample, see if it is greater than 10X and if so, it will downsample the individuals to this level of coverage using `samtools`. If you don't add a `--depth` option, the script will default to 10 anyway but you can set this to whatever you wish.
-
-Once it has run, the script will only write outputs for the bams which exceeed the specified depth. These downsampled bams and their indexes will be written to the `align` directory with the suffix `_ds.bam` and `_ds.bam.bai` respectively. You can then use these in your variant calling analysis.
 
 ## Step 2 - Variant calling
 

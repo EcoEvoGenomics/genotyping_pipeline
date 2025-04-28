@@ -32,9 +32,9 @@ process align_reads {
     containerOptions "--nv"
     
     clusterOptions "--job-name=align_reads --gpus=2"
-    cpus 4
-    memory { 24.GB + 6.GB * Math.ceil(Math.max(r1_file.size(), r2_file.size()) / 1024 ** 3) }
-    time 6.h
+    cpus 24
+    memory { 16.GB + 7.5.GB * Math.ceil(Math.max(r1_file.size(), r2_file.size()) / 1024 ** 3) }
+    time 1.h
     
     label "gpu"
 

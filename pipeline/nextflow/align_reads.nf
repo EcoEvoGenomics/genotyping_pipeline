@@ -25,9 +25,18 @@ workflow {
 
 // Step 1 - Align to reference genome using GPU
 process align_reads {
-    
+
     publishDir "${params.publish_dir}/${sample}/", saveAs: { filename -> "$filename" }, mode: 'copy'
+
+    container "nvcr.io/nvidia/clara/clara-parabricks:4.5.0-1"
+    containerOptions "--nv"
+    
+    clusterOptions "--job-name=align_reads --gpus=2"
+    cpus 4
     memory { 24.GB + 6.GB * Math.ceil(Math.max(r1_file.size(), r2_file.size()) / 1024 ** 3) }
+    time 6.h
+    
+    tag "gpu"
 
     input:
     tuple val(sample), path(r1_file), path(r2_file)
@@ -68,6 +77,13 @@ process align_reads {
 process calc_coverage {
 
     publishDir "${params.publish_dir}/${sample}/qc-metrics", saveAs: { filename -> "$filename" }, mode: 'copy'
+
+    container "quay.io/biocontainers/samtools:1.17--hd87286a_1"
+
+    clusterOptions "--job-name=calc_coverage"
+    cpus 1
+    memory 1.GB
+    time 1.h
 
     input:
     tuple \

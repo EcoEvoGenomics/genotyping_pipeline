@@ -36,7 +36,7 @@ process align_reads {
     memory { 24.GB + 6.GB * Math.ceil(Math.max(r1_file.size(), r2_file.size()) / 1024 ** 3) }
     time 6.h
     
-    tag "gpu"
+    label "gpu"
 
     input:
     tuple val(sample), path(r1_file), path(r2_file)

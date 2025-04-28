@@ -41,6 +41,14 @@ workflow{
 process filter_vcf {
 
   publishDir "${params.publish_dir}/chroms/${key}", saveAs: { filename -> "$filename" }, mode: 'copy'
+
+  // Container: https://wave.seqera.io/view/builds/bd-39fc8ab24f49f2d6_1
+  container "community.wave.seqera.io/library/bcftools_vcftools:39fc8ab24f49f2d6"
+  
+  clusterOptions "--job-name=filter"
+  cpus 2
+  memory 1.GB
+  time 2.h
   
   input:
   tuple val(key), path('input.vcf.gz'), path('input.vcf.gz.csi') 
@@ -99,6 +107,11 @@ process filter_vcf {
 process save_filters_to_file {
 
   publishDir "${params.publish_dir}", saveAs: { filename -> "$filename" }, mode: 'copy'
+
+  clusterOptions "--job-name=save_filters"
+  cpus 1
+  memory 256.MB
+  time 5.m
 
   output:
   file("vcftools_${params.filtering_label}.tsv")

@@ -118,7 +118,7 @@ if [ $preprocess_reads = 'yes' ]; then
     mkmissingdir $preprocess_reads_output_dir
     nextflow -log ./.nextflow/nextflow.log \
         run ./pipeline/nextflow/preprocess_reads.nf \
-        -c ./pipeline/config/preprocess_reads.config \
+        -c ./pipeline/config/nextflow.config \
         -with-report $preprocess_reads_output_dir/workflow_report.html \
         --samples $sample_csv \
         --deduplicate $deduplicate_reads \
@@ -132,7 +132,7 @@ if [ $align_reads = 'yes' ]; then
     mkmissingdir $align_reads_output_dir
     nextflow -log ./.nextflow/nextflow.log \
         run ./pipeline/nextflow/align_reads.nf \
-        -c ./pipeline/config/align_reads.config \
+        -c ./pipeline/config/nextflow.config \
         -with-report $align_reads_output_dir/workflow_report.html \
         --reads_dir $preprocess_reads_output_dir \
         --ref_genome $ref_genome \
@@ -146,7 +146,7 @@ if [ $call_variants = 'yes' ]; then
     mkmissingdir $call_variants_output_dir
     nextflow -log ./.nextflow/nextflow.log \
         run ./pipeline/nextflow/call_variants.nf \
-        -c ./pipeline/config/call_variants.config \
+        -c ./pipeline/config/nextflow.config \
         -with-report $call_variants_output_dir/workflow_report.html \
         --cram_dir $align_reads_output_dir \
         --window_size $window_size \
@@ -163,7 +163,7 @@ if [ $filter_variants = 'yes' ]; then
     mkmissingdir $filter_variants_output_dir
     nextflow -log ./.nextflow/nextflow.log \
         run ./pipeline/nextflow/filter_variants.nf \
-        -c ./pipeline/config/filter_variants.config \
+        -c ./pipeline/config/nextflow.config \
         -with-report $filter_variants_output_dir/workflow_report.html \
         --vcf_dir $call_variants_output_dir/chroms \
         --filtering_label $filtering_label \
@@ -183,7 +183,7 @@ if [ $multiqc = 'yes' ]; then
     mkmissingdir $multiqc_output_dir
     nextflow -log ./.nextflow/nextflow.log \
         run ./pipeline/nextflow/run_multiqc.nf \
-        -c ./pipeline/config/run_multiqc.config \
+        -c ./pipeline/config/nextflow.config \
         --results_dir $output_dir \
         --publish_dir $multiqc_output_dir
 fi

@@ -55,6 +55,13 @@ workflow{
 // Step 0 - Write genotyping genome windows
 process define_windows {
 
+    container "quay.io/biocontainers/bedtools:2.30.0--h468198e_3"
+
+    clusterOptions "--job-name=def_windows"
+    cpus 1
+    memory 256.MB
+    time 5.m
+
     input:
     path(ref_index)
     val(window_size)
@@ -128,7 +135,13 @@ process define_windows {
 // Step 1 - Genotyping
 process genotype_windows {
 
+    container "quay.io/biocontainers/bcftools:1.17--h3cc50cf_1"
+
+    clusterOptions "--job-name=geno_windows"
+    cpus 4
     memory { 2.GB * task.attempt }
+    time 6.h
+
     errorStrategy 'retry'
     maxRetries 5
 
@@ -158,6 +171,13 @@ process genotype_windows {
 // Step 2 - Concatenate based on key values
 process concatenate_windows {
 
+    container "quay.io/biocontainers/bcftools:1.17--h3cc50cf_1"
+
+    clusterOptions "--job-name=cat_windows"
+    cpus 2
+    memory 1.GB
+    time 2.h
+
     input:
     tuple val(key), path(window_vcfs_in_key)
 
@@ -174,6 +194,13 @@ process concatenate_windows {
 
 // Step 3 - Normalise VCF
 process normalise_vcf {
+
+    container "quay.io/biocontainers/bcftools:1.17--h3cc50cf_1"
+
+    clusterOptions "--job-name=normalise"
+    cpus 2
+    memory 1.GB
+    time 6.h
 
     input:
     tuple val(key), file('input.vcf.gz'), file('input.vcf.gz.csi')
@@ -199,6 +226,13 @@ process normalise_vcf {
 // Step 4 - Reheader VCF and output to per-chromosome directories
 process reheader_vcf {
 
+    container "quay.io/biocontainers/bcftools:1.17--h3cc50cf_1"
+
+    clusterOptions "--job-name=reheader"
+    cpus 2
+    memory 1.GB
+    time 1.h
+
     publishDir "${params.publish_dir}/chroms/${key}", saveAs: { filename -> "$filename" }, mode: 'copy'
 
     input:
@@ -218,6 +252,13 @@ process reheader_vcf {
 // Step 5 - Get summary stats for each per-chromosome VCF
 process summarise_vcf {
 
+    container "quay.io/biocontainers/bcftools:1.17--h3cc50cf_1"
+
+    clusterOptions "--job-name=summarise"
+    cpus 2
+    memory 1.GB
+    time 2.h
+
     input:
     tuple file(vcf), file(csi)
 
@@ -233,8 +274,15 @@ process summarise_vcf {
 
 // Step 6A - Collect VCHKs and output combined file for MultiQC
 process concatenate_vchks {
-    
+
     publishDir "${params.publish_dir}", saveAs: { filename -> "$filename" }, mode: 'copy'
+
+    container "quay.io/biocontainers/bcftools:1.17--h3cc50cf_1"
+
+    clusterOptions "--job-name=cat_vchk"
+    cpus 1
+    memory 1.GB
+    time 1.h
 
     input:
     path(collected_vchks), stageAs: "staged_vchks/*"
@@ -259,6 +307,13 @@ process concatenate_vcfs {
     
     publishDir "${params.publish_dir}", saveAs: { filename -> "$filename" }, mode: 'copy'
 
+    container "quay.io/biocontainers/bcftools:1.17--h3cc50cf_1"
+
+    clusterOptions "--job-name=cat_vcf"
+    cpus 2
+    memory 1.GB
+    time 2.h
+    
     input:
     path(collected_vcfs), stageAs: "staged_vcfs/*"
     val(collection_name)

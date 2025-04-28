@@ -20,6 +20,13 @@ process run_multiqc {
 
     publishDir "${params.publish_dir}", saveAs: { filename -> "$filename" }, mode: 'copy'
     
+    container "quay.io/biocontainers/multiqc:1.28--pyhdfd78af_0"
+
+    clusterOptions "--job-name=multiqc"
+    cpus 1
+    memory 1.GB
+    time 30.m
+
     input:
     path(results_dir)
     path(multiqc_config)

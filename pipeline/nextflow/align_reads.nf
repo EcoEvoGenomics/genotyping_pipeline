@@ -30,9 +30,6 @@ process align_reads {
 
     container "nvcr.io/nvidia/clara/clara-parabricks:4.5.0-1"
     containerOptions "--nv"
-    
-    clusterOptions "--job-name=align_reads --gpus=2"
-    cpus 24
     memory { 16.GB + 7.5.GB * Math.ceil(Math.max(r1_file.size(), r2_file.size()) / 1024 ** 3) }
     time 1.h
     
@@ -79,8 +76,6 @@ process calc_coverage {
     publishDir "${params.publish_dir}/${sample}/qc-metrics", saveAs: { filename -> "$filename" }, mode: 'copy'
 
     container "quay.io/biocontainers/samtools:1.17--hd87286a_1"
-
-    clusterOptions "--job-name=calc_coverage"
     cpus 1
     memory 1.GB
     time 1.h

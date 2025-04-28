@@ -56,8 +56,6 @@ workflow{
 process define_windows {
 
     container "quay.io/biocontainers/bedtools:2.30.0--h468198e_3"
-
-    clusterOptions "--job-name=def_windows"
     cpus 1
     memory 256.MB
     time 5.m
@@ -136,8 +134,6 @@ process define_windows {
 process genotype_windows {
 
     container "quay.io/biocontainers/bcftools:1.17--h3cc50cf_1"
-
-    clusterOptions "--job-name=geno_windows"
     cpus 4
     memory { 2.GB * task.attempt }
     time 6.h
@@ -172,8 +168,6 @@ process genotype_windows {
 process concatenate_windows {
 
     container "quay.io/biocontainers/bcftools:1.17--h3cc50cf_1"
-
-    clusterOptions "--job-name=cat_windows"
     cpus 2
     memory 1.GB
     time 2.h
@@ -196,8 +190,6 @@ process concatenate_windows {
 process normalise_vcf {
 
     container "quay.io/biocontainers/bcftools:1.17--h3cc50cf_1"
-
-    clusterOptions "--job-name=normalise"
     cpus 2
     memory 1.GB
     time 6.h
@@ -227,8 +219,6 @@ process normalise_vcf {
 process reheader_vcf {
 
     container "quay.io/biocontainers/bcftools:1.17--h3cc50cf_1"
-
-    clusterOptions "--job-name=reheader"
     cpus 2
     memory 1.GB
     time 1.h
@@ -253,8 +243,6 @@ process reheader_vcf {
 process summarise_vcf {
 
     container "quay.io/biocontainers/bcftools:1.17--h3cc50cf_1"
-
-    clusterOptions "--job-name=summarise"
     cpus 2
     memory 1.GB
     time 2.h
@@ -278,8 +266,6 @@ process concatenate_vchks {
     publishDir "${params.publish_dir}", saveAs: { filename -> "$filename" }, mode: 'copy'
 
     container "quay.io/biocontainers/bcftools:1.17--h3cc50cf_1"
-
-    clusterOptions "--job-name=cat_vchk"
     cpus 1
     memory 1.GB
     time 1.h
@@ -308,8 +294,6 @@ process concatenate_vcfs {
     publishDir "${params.publish_dir}", saveAs: { filename -> "$filename" }, mode: 'copy'
 
     container "quay.io/biocontainers/bcftools:1.17--h3cc50cf_1"
-
-    clusterOptions "--job-name=cat_vcf"
     cpus 2
     memory 1.GB
     time 2.h

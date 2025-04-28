@@ -34,8 +34,6 @@ workflow {
 process parse_sample {
 
     container "quay.io/biocontainers/seqkit:2.10.0--h9ee0642_0"
-
-    clusterOptions "--job-name=parse_sample"
     cpus 2
     memory 1.GB
     time 15.m
@@ -65,8 +63,6 @@ process parse_sample {
 process deduplicate_reads {
 
     container "quay.io/biocontainers/seqkit:2.10.0--h9ee0642_0"
-
-    clusterOptions "--job-name=dedup_reads"
     cpus 2
     memory 4.GB
     time 1.h
@@ -97,8 +93,6 @@ process deduplicate_reads {
 process downsample_reads {
     
     container "quay.io/biocontainers/seqkit:2.10.0--h9ee0642_0"
-
-    clusterOptions "--job-name=downsample_reads"
     cpus 2
     memory { 1.GB * Math.ceil(Math.max(r1_reads.size(), r2_reads.size()) / 1024 ** 3) }
     time 1.h
@@ -131,8 +125,6 @@ process trim_reads {
     publishDir "${params.publish_dir}/${sample}/", saveAs: { filename -> "$filename" }, mode: 'copy'
 
     container "quay.io/biocontainers/fastp:0.24.0--heae3180_1"
-    
-    clusterOptions "--job-name=trim_reads"
     cpus 4
     memory 4.GB
     time 30.m

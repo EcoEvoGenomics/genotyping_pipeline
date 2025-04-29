@@ -8,6 +8,8 @@
 // Originally developed by Mark Ravinet
 // Co-developed and maintained by Erik Sandertun Røed
 
+include { downsample_reads; deduplicate_reads } from "./optional.nf"
+
 workflow {
     
     // Input 'samples' is .CSV with columns for ID, F_READ_PATH, R_READ_PATH
@@ -30,7 +32,7 @@ workflow {
 
 }
 
-// Step 0 - Parse sample
+// Step 1 - Parse sample
 process parse_sample {
 
     container "quay.io/biocontainers/seqkit:2.10.0--h9ee0642_0"
@@ -59,67 +61,7 @@ process parse_sample {
     """
 }
 
-// Step 1 (Optional) - Deduplicate reads
-process deduplicate_reads {
-
-    container "quay.io/biocontainers/seqkit:2.10.0--h9ee0642_0"
-    cpus 2
-    memory 4.GB
-    time 1.h
-    
-    input: 
-    val(sample)
-    file(r1_reads)
-    file(r2_reads)
-    path('qc-metrics/*'), stageAs: './qc-metrics/'
-
-    output:
-    val(sample)
-    file("${r1_reads.simpleName}.fastq.gz")
-    file("${r2_reads.simpleName}.fastq.gz")
-    path("qc-metrics/*")
-
-    script:
-    """
-    seqkit rmdup -j ${task.cpus} --by-name -o ${r1_reads.simpleName}_deduplicated.fastq.gz ${r1_reads}
-    seqkit rmdup -j ${task.cpus} --by-name -o ${r2_reads.simpleName}_deduplicated.fastq.gz ${r2_reads}
-    mv ${r1_reads.simpleName}_deduplicated.fastq.gz ${r1_reads.simpleName}.fastq.gz
-    mv ${r2_reads.simpleName}_deduplicated.fastq.gz ${r2_reads.simpleName}.fastq.gz
-    seqkit stats -j ${task.cpus} -To qc-metrics/deduplication.tsv *.fastq.gz
-    """
-}
-
-// Step 2 (Optional) - Downsample reads
-process downsample_reads {
-    
-    container "quay.io/biocontainers/seqkit:2.10.0--h9ee0642_0"
-    cpus 2
-    memory { 1.GB * Math.ceil(Math.max(r1_reads.size(), r2_reads.size()) / 1024 ** 3) }
-    time 1.h
-
-    input: 
-    val(sample)
-    file(r1_reads)
-    file(r2_reads)
-    path('qc-metrics/*'), stageAs: './qc-metrics/'
-    
-    output:
-    val(sample)
-    file("${r1_reads.simpleName}.fastq.gz")
-    file("${r2_reads.simpleName}.fastq.gz")
-    path("qc-metrics/*")
-
-    script:
-    """
-    seqkit sample --two-pass -n ${params.read_target} -o ${r1_reads.simpleName}_downsampled.fastq.gz ${r1_reads}
-    seqkit sample --two-pass -n ${params.read_target} -o ${r2_reads.simpleName}_downsampled.fastq.gz ${r2_reads}
-    mv ${r1_reads.simpleName}_downsampled.fastq.gz ${r1_reads.simpleName}.fastq.gz
-    mv ${r2_reads.simpleName}_downsampled.fastq.gz ${r2_reads.simpleName}.fastq.gz
-    seqkit stats -j ${task.cpus} -To qc-metrics/downsampling.tsv *.fastq.gz
-    """
-}
-
-// Step 3 - Read trim_reads
+// Step 2 - Read trim_reads
 process trim_reads {
 
     publishDir "${params.publish_dir}/${sample}/", saveAs: { filename -> "$filename" }, mode: 'copy'

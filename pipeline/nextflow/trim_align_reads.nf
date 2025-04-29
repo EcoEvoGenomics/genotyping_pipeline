@@ -62,7 +62,7 @@ process parse_input_reads {
 // Step 2 - Read trim_reads
 process trim_reads {
 
-    publishDir "${params.publish_dir}/${ID}/", saveAs: { filename -> "$filename" }, mode: 'copy'
+    publishDir "${params.publish_dir}/${ID}/fastq", saveAs: { filename -> "$filename" }, mode: 'copy'
 
     container "quay.io/biocontainers/fastp:0.24.0--heae3180_1"
     cpus 4
@@ -91,25 +91,25 @@ process trim_reads {
 // Step 3 - Align to reference genome using GPU
 process align_reads {
 
-    publishDir "${params.publish_dir}/${sample}/", saveAs: { filename -> "$filename" }, mode: 'copy'
+    publishDir "${params.publish_dir}/${ID}/cram", saveAs: { filename -> "$filename" }, mode: 'copy'
 
     container "nvcr.io/nvidia/clara/clara-parabricks:4.5.0-1"
     containerOptions "--nv"
-    memory { 16.GB + 7.5.GB * Math.ceil(Math.max(r1_file.size(), r2_file.size()) / 1024 ** 3) }
+    memory { 16.GB + 7.5.GB * Math.ceil(Math.max(R1.size(), R2.size()) / 1024 ** 3) }
     time 1.h
     
     label "gpu"
 
     input:
-    tuple val(sample), path(r1_file), path(r2_file), path(qcmetrics, stageAs: './qc-metrics/')
-    path('ref_genome.fa')
-    path('ref_genome.fa.fai')
+    tuple val(ID), path(R1), path(R2), path(qcmetrics, stageAs: './fastq-qc-metrics/')
+    path(reference_genome)
+    path(reference_genome_index)
 
     output:
     tuple \
-    val(sample), \
-    path("${sample}.cram"), \
-    path("${sample}.cram.crai"), \
+    val(ID), \
+    path("${ID}.cram"), \
+    path("${ID}.cram.crai"), \
     path('qc-metrics/*')
 
     script:
@@ -119,19 +119,18 @@ process align_reads {
 
     # Align with Parabricks FQ2BAM
     pbrun fq2bam \
-    --ref ref_genome.fa \
-    --in-fq ${r1_file} ${r2_file} \
-    --out-bam ${sample}.cram \
-    --out-duplicate-metrics qc-metrics/dedup.txt \
-    --out-qc-metrics-dir qc-metrics \
+    --ref ${reference_genome} \
+    --in-fq ${R1} ${R2} \
+    --out-bam ${ID}.cram \
+    --out-duplicate-metrics ${qcmetrics}/dedup.txt \
+    --out-qc-metrics-dir ${qcmetrics} \
     --tmp .
 
     # Parse QC files
-    rm qc-metrics/*.pdf
-    rm qc-metrics/*.png
-    for file in qc-metrics/*.txt; do
-        mv \$file qc-metrics/${sample}.\$(basename \$file .txt)
+    rm ${qcmetrics}/*.pdf
+    rm ${qcmetrics}/*.png
+    for file in ${qcmetrics}/*.txt; do
+        mv \$file ${qcmetrics}/${ID}.\$(basename \$file .txt)
     done
     """
-}
 }

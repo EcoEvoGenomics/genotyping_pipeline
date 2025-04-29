@@ -115,7 +115,43 @@ process group_reads {
 
     script:
     """
-    echo "Sample ID: ${ID}"
+    # Obtain list of lanes present for the sample
+    find -type l,f -name "${ID}*.fastq.gz" \
+    | awk -F'_' '{print \$2}' \
+    | sort \
+    | uniq \
+    > lanes.list
+
+    # For each lane, write entry to fastq file list
+    while IFS= read -r lane; do
+
+        # Obtain info for for read group (https://gatk.broadinstitute.org/hc/en-us/articles/360035890671-Read-groups)
+        READ_HEADER=\$(zcat ${ID}_\${lane}_R1.fastq.gz | head -1)
+
+        INSTRUMENT=\$(echo \${READ_HEADER} | awk 'BEGIN {FS = ":"}; { print \$1}' | awk '{sub(/@/,""); print}')
+        FLOWCELL=\$(echo \${READ_HEADER} | awk 'BEGIN {FS = ":"}; {print \$3}')
+        FLOWCELL_LANE=\$(echo \${READ_HEADER} | awk 'BEGIN {FS = ":"}; {print \$4}')
+        INDEX=\$(echo \${READ_HEADER} | awk 'BEGIN {FS = ":"}; {print \$10}')
+        PLATFORM=Illumina
+
+        # Construct read group
+        FLOWCELL_ID=\${FLOWCELL}.\${FLOWCELL_LANE}
+        PLATFORM_UNIT=\${FLOWCELL}.\${FLOWCELL_LANE}.\${INDEX}
+        LIBRARY=${ID}.\${INDEX}
+        
+        READGROUP="@RG\\tID:\${FLOWCELL_ID}\\tPL:\${PLATFORM}\\tLB:\${LIBRARY}\\tSM:${ID}\\tPU:\${PLATFORM_UNIT}"
+
+        # Write to list
+        printf '%s %s %s\\n' \
+            ".reads/${ID}_\${lane}_R1.fastq.gz" \
+            ".reads/${ID}_\${lane}_R2.fastq.gz" \
+            "\${READGROUP}" \
+        >> ${ID}_reads.list
+
+    done < lanes.list
+
+    echo "Testing:"
+    echo "${ Math.ceil(grouped_reads.size() / 1024 ** 3) } GB"
     """
 }
 

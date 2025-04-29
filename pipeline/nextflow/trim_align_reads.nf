@@ -126,6 +126,13 @@ process align_reads {
     --out-qc-metrics-dir ${qcmetrics} \
     --tmp .
 
+    # obtain coverage statistics with Parabricks BAMMETRICS
+    pbrun bammetrics \
+    --ref ${reference_genome} \
+    --bam ${ID}.cram \
+    --out-metrics-file ${qcmetrics}/${ID}.bammetrics \
+    --tmp-dir .
+
     # Parse QC files
     rm ${qcmetrics}/*.pdf
     rm ${qcmetrics}/*.png

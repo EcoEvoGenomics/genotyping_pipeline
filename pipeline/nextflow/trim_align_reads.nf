@@ -41,13 +41,10 @@ process parse_sample {
     time 15.m
 
     input:
-    tuple val(sample), path(f_read), path(r_read)
+    tuple val(sample), path(r1_reads), path(r2_reads)
 
     output:
-    val(sample)
-    path(f_read)
-    path(r_read)
-    path('qc-metrics/*')
+    tuple val(sample), path(r1_reads), path(r2_reads), path('qc-metrics/*')
 
     script:
     """
@@ -71,25 +68,19 @@ process trim_reads {
     memory 4.GB
     time 30.m
 
-    input: 
-    val(sample)
-    file("${sample}_R1.fastq.gz")
-    file("${sample}_R2.fastq.gz")
-    path('qc-metrics/*'), stageAs: './qc-metrics/'
+    input:
+    tuple val(sample), file(r1_reads), file(r2_reads), path(qcmetrics, stageAs: './qc-metrics/')
 
     output:
-    val(sample)
-    file("${sample}_R1_TRIM.fastq.gz")
-    file("${sample}_R2_TRIM.fastq.gz")
-    path("qc-metrics/*")
+    tuple val(sample), file("${sample}_R1.fastq.gz"), file("${sample}_R2.fastq.gz"), path("qc-metrics/*")
 
     script:
     """
     fastp \
-    --in1 ${sample}_R1.fastq.gz \
-    --in2 ${sample}_R2.fastq.gz \
-    --out1 ${sample}_R1_TRIM.fastq.gz \
-    --out2 ${sample}_R2_TRIM.fastq.gz \
+    --in1 ${r1_reads} \
+    --in2 ${r2_reads} \
+    --out1 ${sample}_R1.fastq.gz \
+    --out2 ${sample}_R2.fastq.gz \
     --report_title "${sample}" \
     --html qc-metrics/${sample}.html \
     --json qc-metrics/${sample}.json

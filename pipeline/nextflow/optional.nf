@@ -6,16 +6,10 @@ process deduplicate_reads {
     time 1.h
     
     input:
-    val(sample)
-    file(r1_reads)
-    file(r2_reads)
-    path('qc-metrics/*'), stageAs: './qc-metrics/'
+    tuple val(sample), file(r1_reads), file(r2_reads), path(qcmetrics, stageAs: './qc-metrics/')
 
     output:
-    val(sample)
-    file("${r1_reads.simpleName}.fastq.gz")
-    file("${r2_reads.simpleName}.fastq.gz")
-    path("qc-metrics/*")
+    tuple val(sample), file("${r1_reads.simpleName}.fastq.gz"), file("${r2_reads.simpleName}.fastq.gz"), path("qc-metrics/*")
 
     script:
     """
@@ -34,17 +28,11 @@ process downsample_reads {
     memory { 1.GB * Math.ceil(Math.max(r1_reads.size(), r2_reads.size()) / 1024 ** 3) }
     time 1.h
 
-    input: 
-    val(sample)
-    file(r1_reads)
-    file(r2_reads)
-    path('qc-metrics/*'), stageAs: './qc-metrics/'
+    input:
+    tuple val(sample), file(r1_reads), file(r2_reads), path('qc-metrics/*', stageAs: './qc-metrics/')
     
     output:
-    val(sample)
-    file("${r1_reads.simpleName}.fastq.gz")
-    file("${r2_reads.simpleName}.fastq.gz")
-    path("qc-metrics/*")
+    tuple val(sample), file("${r1_reads.simpleName}.fastq.gz"), file("${r2_reads.simpleName}.fastq.gz"), path("qc-metrics/*")
 
     script:
     """

@@ -19,17 +19,24 @@ workflow {
         .set { samples }
 
     def parsed_reads = parse_input_reads(samples.input_reads)
-
     if (params.deduplicate == 'yes') {
         parsed_reads = deduplicate_reads(parsed_reads)
     }
-
     if (params.downsample == 'yes') {
         parsed_reads = downsample_reads(parsed_reads)
     }
 
     def trimmed_reads = trim_reads(parsed_reads)
-    def aligned_reads = align_reads(trimmed_reads, file(params.ref_genome), file(params.ref_index))
+    def grouped_reads = Channel.of(trimmed_reads.out.R1, trimmed_reads.out.R2) \
+    | flatten
+    | map { file -> 
+        def id   = file.name.toString().tokenize("_").get(0)
+        return tuple(id, file)
+    } \
+    | groupTuple(by: 0, sort: true, remainder: true) \
+    | parse_read_groups
+    
+    align_reads(grouped_reads, file(params.ref_genome), file(params.ref_index))
 
 }
 
@@ -73,7 +80,9 @@ process trim_reads {
     tuple val(ID), val(LANE), file(R1), file(R2), path(qcmetrics, stageAs: './qc-metrics/')
 
     output:
-    tuple val(ID), val(LANE), file("${ID}_${LANE}_R1.fastq.gz"), file("${ID}_${LANE}_R2.fastq.gz"), path("qc-metrics/*")
+    file("${ID}_${LANE}_R1.fastq.gz"), emit: R1
+    file("${ID}_${LANE}_R2.fastq.gz"), emit: R2
+    path("qc-metrics/*"), emit: QC
 
     script:
     """
@@ -85,6 +94,21 @@ process trim_reads {
     --report_title "${ID}_${LANE}" \
     --html qc-metrics/${ID}_${LANE}.html \
     --json qc-metrics/${ID}_${LANE}.json
+    """
+}
+
+process parse_read_groups {
+    
+    cpus 1
+    memory 256.MB
+    time 5.m
+
+    input:
+    tuple val(ID), path(READS, stageAs: "./fastq")
+
+    script:
+    """
+    echo "Sample ID: ${ID}"
     """
 }
 
@@ -122,7 +146,7 @@ process align_reads {
     --out-qc-metrics-dir ${qcmetrics} \
     --tmp .
 
-    # obtain coverage statistics with Parabricks BAMMETRICS
+    # Obtain coverage statistics with Parabricks BAMMETRICS
     pbrun bammetrics \
     --ref ${reference_genome} \
     --bam ${ID}.cram \

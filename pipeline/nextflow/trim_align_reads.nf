@@ -18,7 +18,7 @@ workflow {
         .multiMap { cols -> input_reads: [cols[0], cols[1], cols[2], cols[3]] }
         .set { samples }
 
-    def parsed_reads = parse_input_reads(samples.input_reads)
+    def parsed_reads = parse_input(samples.input_reads)
     if (params.deduplicate == 'yes') {
         parsed_reads = deduplicate_reads(parsed_reads)
     }
@@ -27,21 +27,21 @@ workflow {
     }
 
     def trimmed_reads = trim_reads(parsed_reads)
-    def grouped_reads = Channel.of(trimmed_reads.out.R1, trimmed_reads.out.R2) \
+    def grouped_reads = trimmed_reads[0] \
     | flatten
     | map { file -> 
         def id   = file.name.toString().tokenize("_").get(0)
         return tuple(id, file)
     } \
     | groupTuple(by: 0, sort: true, remainder: true) \
-    | parse_read_groups
+    | group_reads
     
     align_reads(grouped_reads, file(params.ref_genome), file(params.ref_index))
 
 }
 
 // Step 1 - Parse input reads for a sample
-process parse_input_reads {
+process parse_input {
 
     container "quay.io/biocontainers/seqkit:2.10.0--h9ee0642_0"
     cpus 2
@@ -69,7 +69,7 @@ process parse_input_reads {
 // Step 2 - Read trim_reads
 process trim_reads {
 
-    publishDir "${params.publish_dir}/${ID}/${LANE}/fastq", saveAs: { filename -> "$filename" }, mode: 'copy'
+    publishDir "${params.publish_dir}/${ID}/${LANE}", saveAs: { filename -> "$filename" }, mode: 'copy'
 
     container "quay.io/biocontainers/fastp:0.24.0--heae3180_1"
     cpus 4
@@ -80,9 +80,8 @@ process trim_reads {
     tuple val(ID), val(LANE), file(R1), file(R2), path(qcmetrics, stageAs: './qc-metrics/')
 
     output:
-    file("${ID}_${LANE}_R1.fastq.gz"), emit: R1
-    file("${ID}_${LANE}_R2.fastq.gz"), emit: R2
-    path("qc-metrics/*"), emit: QC
+    tuple file("${ID}_${LANE}_R1.fastq.gz"), file("${ID}_${LANE}_R2.fastq.gz")
+    path("qc-metrics/*")
 
     script:
     """
@@ -97,14 +96,17 @@ process trim_reads {
     """
 }
 
-process parse_read_groups {
+process group_reads {
     
     cpus 1
     memory 256.MB
     time 5.m
 
     input:
-    tuple val(ID), path(READS, stageAs: "./fastq")
+    tuple val(ID), path(grouped_reads, stageAs: "./reads/*")
+
+    output:
+    tuple val(ID), path(grouped_reads), file("${ID}_reads.list")
 
     script:
     """
@@ -115,17 +117,17 @@ process parse_read_groups {
 // Step 3 - Align to reference genome using GPU
 process align_reads {
 
-    publishDir "${params.publish_dir}/${ID}/${LANE}/cram", saveAs: { filename -> "$filename" }, mode: 'copy'
+    publishDir "${params.publish_dir}/${ID}", saveAs: { filename -> "$filename" }, mode: 'copy'
 
     container "nvcr.io/nvidia/clara/clara-parabricks:4.5.0-1"
     containerOptions "--nv"
-    memory { 16.GB + 7.5.GB * Math.ceil(Math.max(R1.size(), R2.size()) / 1024 ** 3) }
+    memory { 16.GB + 7.5.GB * Math.ceil(grouped_reads.size() / 1024 ** 3) }
     time 1.h
     
     label "gpu"
 
     input:
-    tuple val(ID), val(LANE), path(R1), path(R2), path(qcmetrics, stageAs: './fastq-qc-metrics/')
+    tuple val(ID), path(grouped_reads, stageAs: "./reads"), file(reads_list)
     path(reference_genome)
     path(reference_genome_index)
 
@@ -140,24 +142,24 @@ process align_reads {
     # Align with Parabricks FQ2BAM
     pbrun fq2bam \
     --ref ${reference_genome} \
-    --in-fq ${R1} ${R2} \
+    --in-fq-list ${reads_list} \
     --out-bam ${ID}.cram \
-    --out-duplicate-metrics ${qcmetrics}/dedup.txt \
-    --out-qc-metrics-dir ${qcmetrics} \
+    --out-duplicate-metrics qc-metrics/dedup.txt \
+    --out-qc-metrics-dir qc-metrics \
     --tmp .
 
     # Obtain coverage statistics with Parabricks BAMMETRICS
     pbrun bammetrics \
     --ref ${reference_genome} \
     --bam ${ID}.cram \
-    --out-metrics-file ${qcmetrics}/${ID}.bammetrics \
+    --out-metrics-file qc-metrics/${ID}.bammetrics \
     --tmp-dir .
 
     # Parse QC files
-    rm ${qcmetrics}/*.pdf
-    rm ${qcmetrics}/*.png
-    for file in ${qcmetrics}/*.txt; do
-        mv \$file ${qcmetrics}/${ID}.\$(basename \$file .txt)
+    rm qc-metrics/*.pdf
+    rm qc-metrics/*.png
+    for file in qc-metrics/*.txt; do
+        mv \$file qc-metrics/${ID}.\$(basename \$file .txt)
     done
     """
 }

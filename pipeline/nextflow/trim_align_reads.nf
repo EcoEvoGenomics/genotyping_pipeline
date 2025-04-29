@@ -148,9 +148,6 @@ process group_reads {
         >> ${ID}_reads.list
 
     done < lanes.list
-
-    echo "Testing:"
-    echo "${ Math.ceil(grouped_reads.size() / 1024 ** 3) } GB"
     """
 }
 
@@ -161,7 +158,6 @@ process align_reads {
 
     container "nvcr.io/nvidia/clara/clara-parabricks:4.5.0-1"
     containerOptions "--nv"
-    memory { 16.GB + 7.5.GB * Math.ceil(grouped_reads.size() / 1024 ** 3) }
     time 1.h
     
     label "gpu"
@@ -192,7 +188,7 @@ process align_reads {
     pbrun bammetrics \
     --ref ${reference_genome} \
     --bam ${ID}.cram \
-    --out-metrics-file qc-metrics/${ID}.bammetrics \
+    --out-metrics-file qc-metrics/bammetrics.txt \
     --tmp-dir .
 
     # Parse QC files

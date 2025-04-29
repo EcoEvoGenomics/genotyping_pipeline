@@ -15,25 +15,25 @@ workflow {
     // Input 'samples' is .CSV with columns for ID, F_READ_PATH, R_READ_PATH
     Channel.fromPath(params.samples)
         .splitCsv()
-        .multiMap { cols -> sample: [cols[0], cols[1], cols[2]] }
+        .multiMap { cols -> input_reads: [cols[0], cols[1], cols[2]] }
         .set { samples }
 
-    def parsed_samples = parse_sample(samples.sample)
+    def parsed_reads = parse_input_reads(samples.input_reads)
 
     if (params.deduplicate == 'yes') {
-        parsed_samples = parsed_samples | deduplicate_reads
+        parsed_reads = deduplicate_reads(parsed_reads)
     }
 
     if (params.downsample == 'yes') {
-        parsed_samples = parsed_samples | downsample_reads
+        parsed_reads = downsample_reads(parsed_reads)
     }
 
-    parsed_samples | trim_reads
+    def trimmed_reads = trim_reads(parsed_reads)
 
 }
 
-// Step 1 - Parse sample
-process parse_sample {
+// Step 1 - Parse input reads for a sample
+process parse_input_reads {
 
     container "quay.io/biocontainers/seqkit:2.10.0--h9ee0642_0"
     cpus 2
@@ -41,17 +41,17 @@ process parse_sample {
     time 15.m
 
     input:
-    tuple val(sample), path(r1_reads), path(r2_reads)
+    tuple val(ID), path(R1), path(R2)
 
     output:
-    tuple val(sample), path(r1_reads), path(r2_reads), path('qc-metrics/*')
+    tuple val(ID), path(R1), path(R2), path('qc-metrics/*')
 
     script:
     """
     mkdir qc-metrics
     seqkit stats -j ${task.cpus} -To qc-metrics/unprocessed.tsv *.fastq.gz
     printf '%s\\t%s\\n' \
-        'sample' '${sample}' \
+        'ID' '${ID}' \
         'deduplicate' '${params.deduplicate}' \
         'downsample' '${params.downsample}' \
         > qc-metrics/settings.tsv
@@ -61,7 +61,7 @@ process parse_sample {
 // Step 2 - Read trim_reads
 process trim_reads {
 
-    publishDir "${params.publish_dir}/${sample}/", saveAs: { filename -> "$filename" }, mode: 'copy'
+    publishDir "${params.publish_dir}/${ID}/", saveAs: { filename -> "$filename" }, mode: 'copy'
 
     container "quay.io/biocontainers/fastp:0.24.0--heae3180_1"
     cpus 4
@@ -69,20 +69,20 @@ process trim_reads {
     time 30.m
 
     input:
-    tuple val(sample), file(r1_reads), file(r2_reads), path(qcmetrics, stageAs: './qc-metrics/')
+    tuple val(ID), file(R1), file(R2), path(qcmetrics, stageAs: './qc-metrics/')
 
     output:
-    tuple val(sample), file("${sample}_R1.fastq.gz"), file("${sample}_R2.fastq.gz"), path("qc-metrics/*")
+    tuple val(ID), file("${ID}_R1.fastq.gz"), file("${ID}_R2.fastq.gz"), path("qc-metrics/*")
 
     script:
     """
     fastp \
-    --in1 ${r1_reads} \
-    --in2 ${r2_reads} \
-    --out1 ${sample}_R1.fastq.gz \
-    --out2 ${sample}_R2.fastq.gz \
-    --report_title "${sample}" \
-    --html qc-metrics/${sample}.html \
-    --json qc-metrics/${sample}.json
+    --in1 ${R1} \
+    --in2 ${R2} \
+    --out1 ${ID}_R1.fastq.gz \
+    --out2 ${ID}_R2.fastq.gz \
+    --report_title "${ID}" \
+    --html qc-metrics/${ID}.html \
+    --json qc-metrics/${ID}.json
     """
 }

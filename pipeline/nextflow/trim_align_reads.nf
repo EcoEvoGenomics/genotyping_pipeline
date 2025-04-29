@@ -126,7 +126,7 @@ process group_reads {
     while IFS= read -r lane; do
 
         # Obtain info for for read group (https://gatk.broadinstitute.org/hc/en-us/articles/360035890671-Read-groups)
-        READ_HEADER=\$(zcat .reads/${ID}_\${lane}_R1.fastq.gz | head -1)
+        READ_HEADER=\$(zcat ./reads/${ID}_\${lane}_R1.fastq.gz | head -1)
 
         INSTRUMENT=\$(echo \${READ_HEADER} | awk 'BEGIN {FS = ":"}; { print \$1}' | awk '{sub(/@/,""); print}')
         FLOWCELL=\$(echo \${READ_HEADER} | awk 'BEGIN {FS = ":"}; {print \$3}')

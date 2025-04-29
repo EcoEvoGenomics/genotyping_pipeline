@@ -18,6 +18,7 @@ workflow {
         .multiMap { cols -> input_reads: [cols[0], cols[1], cols[2], cols[3]] }
         .set { samples }
 
+    // First parse input reads:
     def parsed_reads = parse_input(samples.input_reads)
     if (params.deduplicate == 'yes') {
         parsed_reads = deduplicate_reads(parsed_reads)
@@ -26,7 +27,10 @@ workflow {
         parsed_reads = downsample_reads(parsed_reads)
     }
 
+    // Then, trim with fastp ...
     def trimmed_reads = trim_reads(parsed_reads)
+
+    // Now, group separate file pairs (lanes) for each sample and make read groups:
     def grouped_reads = trimmed_reads[0] \
     | flatten
     | map { file -> 
@@ -36,6 +40,7 @@ workflow {
     | groupTuple(by: 0, sort: true, remainder: true) \
     | group_reads
     
+    // Finally, pass all files of each sample together to the aligner:
     align_reads(grouped_reads, file(params.ref_genome), file(params.ref_index))
 
 }

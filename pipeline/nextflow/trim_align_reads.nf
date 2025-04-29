@@ -12,10 +12,10 @@ include { downsample_reads; deduplicate_reads } from "./optional.nf"
 
 workflow {
     
-    // Input 'samples' is .CSV with columns for ID, F_READ_PATH, R_READ_PATH
+    // Input 'samples' is .CSV with columns for ID, LANE, F_READ_PATH, R_READ_PATH
     Channel.fromPath(params.samples)
         .splitCsv()
-        .multiMap { cols -> input_reads: [cols[0], cols[1], cols[2]] }
+        .multiMap { cols -> input_reads: [cols[0], cols[1], cols[2], cols[3]] }
         .set { samples }
 
     def parsed_reads = parse_input_reads(samples.input_reads)
@@ -42,17 +42,17 @@ process parse_input_reads {
     time 15.m
 
     input:
-    tuple val(ID), path(R1), path(R2)
+    tuple val(ID), val(LANE), path(R1), path(R2)
 
     output:
-    tuple val(ID), path(R1), path(R2), path('qc-metrics/*')
+    tuple val(ID), val(LANE), path(R1), path(R2), path('qc-metrics/*')
 
     script:
     """
     mkdir qc-metrics
     seqkit stats -j ${task.cpus} -To qc-metrics/unprocessed.tsv *.fastq.gz
     printf '%s\\t%s\\n' \
-        'ID' '${ID}' \
+        'ID_LANE' '${ID}_${LANE}' \
         'deduplicate' '${params.deduplicate}' \
         'downsample' '${params.downsample}' \
         > qc-metrics/settings.tsv
@@ -62,7 +62,7 @@ process parse_input_reads {
 // Step 2 - Read trim_reads
 process trim_reads {
 
-    publishDir "${params.publish_dir}/${ID}/fastq", saveAs: { filename -> "$filename" }, mode: 'copy'
+    publishDir "${params.publish_dir}/${ID}/${LANE}/fastq", saveAs: { filename -> "$filename" }, mode: 'copy'
 
     container "quay.io/biocontainers/fastp:0.24.0--heae3180_1"
     cpus 4
@@ -70,28 +70,28 @@ process trim_reads {
     time 30.m
 
     input:
-    tuple val(ID), file(R1), file(R2), path(qcmetrics, stageAs: './qc-metrics/')
+    tuple val(ID), val(LANE), file(R1), file(R2), path(qcmetrics, stageAs: './qc-metrics/')
 
     output:
-    tuple val(ID), file("${ID}_R1.fastq.gz"), file("${ID}_R2.fastq.gz"), path("qc-metrics/*")
+    tuple val(ID), val(LANE), file("${ID}_${LANE}_R1.fastq.gz"), file("${ID}_${LANE}_R2.fastq.gz"), path("qc-metrics/*")
 
     script:
     """
     fastp \
     --in1 ${R1} \
     --in2 ${R2} \
-    --out1 ${ID}_R1.fastq.gz \
-    --out2 ${ID}_R2.fastq.gz \
-    --report_title "${ID}" \
-    --html qc-metrics/${ID}.html \
-    --json qc-metrics/${ID}.json
+    --out1 ${ID}_${LANE}_R1.fastq.gz \
+    --out2 ${ID}_${LANE}_R2.fastq.gz \
+    --report_title "${ID}_${LANE}" \
+    --html qc-metrics/${ID}_${LANE}.html \
+    --json qc-metrics/${ID}_${LANE}.json
     """
 }
 
 // Step 3 - Align to reference genome using GPU
 process align_reads {
 
-    publishDir "${params.publish_dir}/${ID}/cram", saveAs: { filename -> "$filename" }, mode: 'copy'
+    publishDir "${params.publish_dir}/${ID}/${LANE}/cram", saveAs: { filename -> "$filename" }, mode: 'copy'
 
     container "nvcr.io/nvidia/clara/clara-parabricks:4.5.0-1"
     containerOptions "--nv"
@@ -101,16 +101,12 @@ process align_reads {
     label "gpu"
 
     input:
-    tuple val(ID), path(R1), path(R2), path(qcmetrics, stageAs: './fastq-qc-metrics/')
+    tuple val(ID), val(LANE), path(R1), path(R2), path(qcmetrics, stageAs: './fastq-qc-metrics/')
     path(reference_genome)
     path(reference_genome_index)
 
     output:
-    tuple \
-    val(ID), \
-    path("${ID}.cram"), \
-    path("${ID}.cram.crai"), \
-    path('qc-metrics/*')
+    tuple path("${ID}.cram"), path("${ID}.cram.crai"), path('qc-metrics/*')
 
     script:
     """

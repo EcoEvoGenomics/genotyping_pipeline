@@ -6,10 +6,10 @@ process deduplicate_reads {
     time 1.h
     
     input:
-    tuple val(ID), file(R1), file(R2), path(qcmetrics, stageAs: './qc-metrics/')
+    tuple val(ID), val(LANE), file(R1), file(R2), path(qcmetrics, stageAs: './qc-metrics/')
 
     output:
-    tuple val(ID), file("${R1.simpleName}.fastq.gz"), file("${R2.simpleName}.fastq.gz"), path("qc-metrics/*")
+    tuple val(ID), val(LANE), file("${R1.simpleName}.fastq.gz"), file("${R2.simpleName}.fastq.gz"), path("qc-metrics/*")
 
     script:
     """
@@ -29,10 +29,10 @@ process downsample_reads {
     time 1.h
 
     input:
-    tuple val(ID), file(R1), file(R2), path('qc-metrics/*', stageAs: './qc-metrics/')
+    tuple val(ID), val(LANE), file(R1), file(R2), path('qc-metrics/*', stageAs: './qc-metrics/')
     
     output:
-    tuple val(ID), file("${R1.simpleName}.fastq.gz"), file("${R2.simpleName}.fastq.gz"), path("qc-metrics/*")
+    tuple val(ID), val(LANE), file("${R1.simpleName}.fastq.gz"), file("${R2.simpleName}.fastq.gz"), path("qc-metrics/*")
 
     script:
     """

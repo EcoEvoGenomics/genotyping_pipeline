@@ -19,7 +19,7 @@
 ### ----------------- User input ----------------- ###
 
     # Path to .CSV of input samples
-    # Note: samples are rows and the columns "ID, F_READ_PATH, R_READ_PATH" without headers
+    # Note: samples are rows and the columns "ID, LANE, F_READ_PATH, R_READ_PATH" without headers
     sample_csv=
     
     # Path to this repository

@@ -108,7 +108,7 @@ process group_reads {
     time 5.m
 
     input:
-    tuple val(ID), path(grouped_reads, stageAs: "./reads/*")
+    tuple val(ID), path(grouped_reads, stageAs: "reads/*")
 
     output:
     tuple val(ID), path(grouped_reads), file("${ID}_reads.list")
@@ -126,7 +126,7 @@ process group_reads {
     while IFS= read -r lane; do
 
         # Obtain info for for read group (https://gatk.broadinstitute.org/hc/en-us/articles/360035890671-Read-groups)
-        READ_HEADER=\$(zcat ./reads/${ID}_\${lane}_R1.fastq.gz | head -1)
+        READ_HEADER=\$(zcat reads/${ID}_\${lane}_R1.fastq.gz | head -1)
 
         INSTRUMENT=\$(echo \${READ_HEADER} | awk 'BEGIN {FS = ":"}; { print \$1}' | awk '{sub(/@/,""); print}')
         FLOWCELL=\$(echo \${READ_HEADER} | awk 'BEGIN {FS = ":"}; {print \$3}')
@@ -142,8 +142,8 @@ process group_reads {
 
         # Write to list
         printf '%s %s %s\\n' \
-            ".reads/${ID}_\${lane}_R1.fastq.gz" \
-            ".reads/${ID}_\${lane}_R2.fastq.gz" \
+            "reads/${ID}_\${lane}_R1.fastq.gz" \
+            "reads/${ID}_\${lane}_R2.fastq.gz" \
             "\${READGROUP}" \
         >> ${ID}_reads.list
 
@@ -163,7 +163,7 @@ process align_reads {
     label "gpu"
 
     input:
-    tuple val(ID), path(grouped_reads, stageAs: "./reads"), file(reads_list)
+    tuple val(ID), path(grouped_reads, stageAs: "reads/*"), file(reads_list)
     path(reference_genome)
     path(reference_genome_index)
 

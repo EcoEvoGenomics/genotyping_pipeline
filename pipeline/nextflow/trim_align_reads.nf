@@ -139,7 +139,7 @@ process group_reads {
         PLATFORM_UNIT=\${FLOWCELL}.\${FLOWCELL_LANE}.\${INDEX}
         LIBRARY=${ID}.\${INDEX}
         
-        READGROUP="@RG\\tID:\${FLOWCELL_ID}\\tPL:\${PLATFORM}\\tLB:\${LIBRARY}\\tSM:${ID}\\tPU:\${PLATFORM_UNIT}"
+        READGROUP="@RG\\tID:\${FLOWCELL_ID}\\tLB:\${LIBRARY}\\tPL:\${PLATFORM}\\tSM:${ID}\\tPU:\${PLATFORM_UNIT}"
 
         # Write to list
         printf '%s %s %s\\n' \

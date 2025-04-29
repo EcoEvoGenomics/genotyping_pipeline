@@ -115,7 +115,7 @@ mkmissingdir $output_dir
 if [ $trim_align_reads = 'yes' ]; then
     mkmissingdir $trim_align_output_dir
     nextflow -log ./.nextflow/nextflow.log \
-        run ./pipeline/nextflow/preprocess_reads.nf \
+        run ./pipeline/nextflow/trim_align_reads.nf \
         -with-report $trim_align_output_dir/workflow_report.html \
         --samples $sample_csv \
         --deduplicate $deduplicate_reads \

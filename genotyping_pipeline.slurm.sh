@@ -27,13 +27,12 @@
 
     # Which steps to run?
     # Note: steps must be run in order, but you can repeat filter_variants and multiqc with different settings
-    preprocess_reads=yes
-    align_reads=yes
+    trim_align_reads=yes
     call_variants=yes
     filter_variants=yes
     multiqc=yes
 
-    # Settings for step preprocess_reads
+    # Settings for step trim_align_reads
     # Note: read_target only applies if downsample_reads=yes
     deduplicate_reads=no
     downsample_reads=no
@@ -106,46 +105,34 @@ chkprevious() {
 cd $repository_path
 
 output_dir=${repository_path}/output
-preprocess_reads_output_dir=${output_dir}/01-preprocessed_reads
-align_reads_output_dir=${output_dir}/02-aligned_reads
-call_variants_output_dir=${output_dir}/03-variants_unfiltered
-filter_variants_output_dir=${output_dir}/04-variants_filtered/${filtering_label}
-multiqc_output_dir=${output_dir}/05-multiqc
+trim_align_output_dir=${output_dir}/01-aligned_reads
+call_variants_output_dir=${output_dir}/02-variants_unfiltered
+filter_variants_output_dir=${output_dir}/03-variants_filtered/${filtering_label}
+multiqc_output_dir=${output_dir}/04-multiqc
 
 mkmissingdir $output_dir
 
-if [ $preprocess_reads = 'yes' ]; then
-    mkmissingdir $preprocess_reads_output_dir
+if [ $trim_align_reads = 'yes' ]; then
+    mkmissingdir $trim_align_output_dir
     nextflow -log ./.nextflow/nextflow.log \
         run ./pipeline/nextflow/preprocess_reads.nf \
-        -with-report $preprocess_reads_output_dir/workflow_report.html \
+        -with-report $trim_align_output_dir/workflow_report.html \
         --samples $sample_csv \
         --deduplicate $deduplicate_reads \
         --downsample $downsample_reads \
         --read_target $read_target \
-        --publish_dir $preprocess_reads_output_dir
-fi
-
-if [ $align_reads = 'yes' ]; then
-    chkprevious "Step: align_reads" $preprocess_reads_output_dir
-    mkmissingdir $align_reads_output_dir
-    nextflow -log ./.nextflow/nextflow.log \
-        run ./pipeline/nextflow/align_reads.nf \
-        -with-report $align_reads_output_dir/workflow_report.html \
-        --reads_dir $preprocess_reads_output_dir \
         --ref_genome $ref_genome \
         --ref_index $ref_index \
-        --ref_scaffold_name $ref_scaffold_name \
-        --publish_dir $align_reads_output_dir
+        --publish_dir $trim_align_output_dir
 fi
 
 if [ $call_variants = 'yes' ]; then
-    chkprevious "Step: call_variants" $align_reads_output_dir
+    chkprevious "Step: call_variants" $trim_align_output_dir
     mkmissingdir $call_variants_output_dir
     nextflow -log ./.nextflow/nextflow.log \
         run ./pipeline/nextflow/call_variants.nf \
         -with-report $call_variants_output_dir/workflow_report.html \
-        --cram_dir $align_reads_output_dir \
+        --cram_dir $trim_align_output_dir \
         --window_size $window_size \
         --ref_genome $ref_genome \
         --ref_index $ref_index \

@@ -177,7 +177,7 @@ process align_reads {
     path(reference_genome_index)
 
     output:
-    tuple path("${ID}.cram"), path("${ID}.cram.crai"), path('qc-metrics/*')
+    tuple val(ID), path("${ID}.cram"), path("${ID}.cram.crai"), path('qc-metrics/*')
 
     script:
     """
@@ -212,7 +212,7 @@ process align_reads {
 // Step 4 - Additional alignment statistics
 process get_alignment_stats {
 
-    publishDir "${params.publish_dir}/${sample}/qc-metrics", saveAs: { filename -> "$filename" }, mode: 'copy'
+    publishDir "${params.publish_dir}/${ID}/qc-metrics", saveAs: { filename -> "$filename" }, mode: 'copy'
 
     container "quay.io/biocontainers/samtools:1.17--hd87286a_1"
     cpus 1
@@ -221,7 +221,7 @@ process get_alignment_stats {
 
     input:
     tuple \
-    val(sample), \
+    val(ID), \
     file(cram), \
     file(index), \
     file(qcmetrics)
@@ -229,12 +229,12 @@ process get_alignment_stats {
     path(ref_index)
 
     output:
-    file("${sample}.tsv")
-    file("${sample}.flagstat")
+    file("${ID}.tsv")
+    file("${ID}.flagstat")
 
     script:
     """
-    samtools coverage --reference ${ref_genome} ${cram} | grep -v ${params.ref_scaffold_name} > ${sample}.tsv
-    samtools flagstat ${cram} > ${sample}.flagstat
+    samtools coverage --reference ${ref_genome} ${cram} | grep -v ${params.ref_scaffold_name} > ${ID}.tsv
+    samtools flagstat ${cram} > ${ID}.flagstat
     """
 }

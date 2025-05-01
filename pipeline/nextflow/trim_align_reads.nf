@@ -82,7 +82,12 @@ process trim_reads {
     time 30.m
 
     input:
-    tuple val(ID), val(LANE), file(R1), file(R2), path(qcmetrics, stageAs: './qc-metrics/')
+    tuple \
+    val(ID), \
+    val(LANE), \
+    file(R1, stageAs: "./input/${ID}_${LANE}_R1.fastq.gz"), \
+    file(R2, stageAs: "./input/${ID}_${LANE}_R2.fastq.gz"), \
+    path(qcmetrics, stageAs: "./qc-metrics/")
 
     output:
     tuple file("${ID}_${LANE}_R1.fastq.gz"), file("${ID}_${LANE}_R2.fastq.gz")
@@ -91,8 +96,8 @@ process trim_reads {
     script:
     """
     fastp \
-    --in1 ${R1} \
-    --in2 ${R2} \
+    --in1 ./input/${ID}_${LANE}_R1.fastq.gz \
+    --in2 ./input/${ID}_${LANE}_R2.fastq.gz \
     --out1 ${ID}_${LANE}_R1.fastq.gz \
     --out2 ${ID}_${LANE}_R2.fastq.gz \
     --report_title "${ID}_${LANE}" \

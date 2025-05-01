@@ -1,8 +1,8 @@
 title: "genotyping_pipeline"
 subtitle: "UiO Ecological and Evolutionary Genomics Group"
 intro_text: "This report summarises statistics from the genotyping pipeline by searching the output directory."
-show_analysis_time: True
-show_analysis_paths: False
+show_analysis_time: true
+show_analysis_paths: false
 
 custom_logo: "sparrows.jpg"
 custom_logo_url: "https://github.com/EcoEvoGenomics"
@@ -45,8 +45,33 @@ extra_fn_clean_exts:
   - ".quality_yield"
   - ".qualityscore"
 
+fastp:
+  s_name_filenames: true
+
+table_sample_merge:
+  "Lane 1":  "_L001"
+  "Lane 2":  "_L002"
+  "Lane 3":  "_L003"
+  "Lane 4":  "_L004"
+  "Lane 5":  "_L005"
+  "Lane 6":  "_L006"
+  "Lane 7":  "_L007"
+  "Lane 8":  "_L008"
+  "Lane 9":  "_L009"
+  "Lane 10": "_L010"
+  "Lane 11": "_L011"
+  "Lane 12": "_L012"
+  "Lane 13": "_L013"
+  "Lane 14": "_L014"
+  "Lane 15": "_L015"
+  "Lane 16": "_L016"
+  "Lane 17": "_L017"
+  "Lane 18": "_L018"
+  "Lane 19": "_L019"
+  "Lane 20": "_L020"
+
 picard_config:
-  s_name_filenames: True
+  s_name_filenames: true
 
 software_versions:
   "Read pre-processing":

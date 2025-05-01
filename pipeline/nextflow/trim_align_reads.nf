@@ -52,7 +52,10 @@ process parse_input {
     container "quay.io/biocontainers/seqkit:2.10.0--h9ee0642_0"
     cpus 2
     memory 1.GB
-    time 15.m
+    time { 20.m * task.attempt }
+
+    errorStrategy "retry"
+    maxRetries 2
 
     input:
     tuple val(ID), val(LANE), path(R1), path(R2)
@@ -80,7 +83,10 @@ process trim_reads {
     container "quay.io/biocontainers/fastp:0.24.0--heae3180_1"
     cpus 4
     memory 4.GB
-    time 30.m
+    time { 30.m * task.attempt}
+
+    errorStrategy "retry"
+    maxRetries 2
 
     input:
     tuple val(ID), val(LANE), file(R1), file(R2), path(qcmetrics, stageAs: './qc-metrics/')
@@ -106,7 +112,10 @@ process group_reads {
     
     cpus 1
     memory 256.MB
-    time 5.m
+    time { 10.m * task.attempt }
+
+    errorStrategy "retry"
+    maxRetries 2
 
     input:
     tuple val(ID), path(grouped_reads, stageAs: "reads/*")

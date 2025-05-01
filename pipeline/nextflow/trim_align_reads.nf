@@ -164,7 +164,7 @@ process align_reads {
     errorStrategy "retry"
     maxRetries 3
 
-    label "require-gpu"
+    label "require_gpu"
 
     input:
     tuple val(ID), path(grouped_reads, stageAs: "reads/*"), file(reads_list)

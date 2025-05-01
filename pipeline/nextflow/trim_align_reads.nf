@@ -42,7 +42,7 @@ workflow {
     
     // Finally, pass all files of each sample together to the aligner:
     def aligned_reads = align_reads(grouped_reads, file(params.ref_genome), file(params.ref_index))
-    get_alignment_stats(aligned_reads, file(params.ref_genome), file(params.ref_index))
+    get_alignment_stats(aligned_reads, file(params.ref_genome), file(params.ref_index), params.ref_scaffold_name)
 
 }
 
@@ -222,6 +222,7 @@ process get_alignment_stats {
     file(qcmetrics)
     path(ref_genome)
     path(ref_index)
+    val(ref_scaffold_name)
 
     output:
     file("${ID}.tsv")
@@ -229,7 +230,7 @@ process get_alignment_stats {
 
     script:
     """
-    samtools coverage --reference ${ref_genome} ${cram} | grep -v ${params.ref_scaffold_name} > ${ID}.tsv
+    samtools coverage --reference ${ref_genome} ${cram} | grep -v ${ref_scaffold_name} > ${ID}.tsv
     samtools flagstat ${cram} > ${ID}.flagstat
     """
 }

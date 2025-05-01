@@ -123,6 +123,7 @@ if [ $trim_align_reads = 'yes' ]; then
         --read_target $read_target \
         --ref_genome $ref_genome \
         --ref_index $ref_index \
+        --ref_scaffold_name $ref_scaffold_name \
         --publish_dir $trim_align_output_dir
 fi
 

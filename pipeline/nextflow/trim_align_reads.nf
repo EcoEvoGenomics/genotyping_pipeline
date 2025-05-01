@@ -41,8 +41,8 @@ workflow {
     | group_reads
     
     // Finally, pass all files of each sample together to the aligner:
-    align_reads(grouped_reads, file(params.ref_genome), file(params.ref_index))
-
+    def aligned_reads = align_reads(grouped_reads, file(params.ref_genome), file(params.ref_index))
+    calc_coverage(aligned_reads, file(params.ref_genome), file(params.ref_index))
 }
 
 // Step 1 - Parse input reads for a sample
@@ -205,5 +205,35 @@ process align_reads {
     for file in qc-metrics/*.txt; do
         mv \$file qc-metrics/${ID}.\$(basename \$file .txt)
     done
+    """
+}
+
+// Step 4 - Additional alignment statistics
+process calc_coverage {
+
+    publishDir "${params.publish_dir}/${sample}/qc-metrics", saveAs: { filename -> "$filename" }, mode: 'copy'
+
+    container "quay.io/biocontainers/samtools:1.17--hd87286a_1"
+    cpus 1
+    memory 1.GB
+    time 1.h
+
+    input:
+    tuple \
+    val(sample), \
+    file(cram), \
+    file(index), \
+    file(qcmetrics)
+    path(ref_genome)
+    path(ref_index)
+
+    output:
+    file("${sample}.tsv")
+    file("${sample}.flagstat")
+
+    script:
+    """
+    samtools coverage --reference ${ref_genome} ${cram} | grep -v ${params.ref_scaffold_name} > ${sample}.tsv
+    samtools flagstat ${cram} > ${sample}.flagstat
     """
 }

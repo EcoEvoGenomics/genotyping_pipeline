@@ -158,9 +158,12 @@ process align_reads {
 
     container "nvcr.io/nvidia/clara/clara-parabricks:4.5.0-1"
     containerOptions "--nv"
-    time 1.h
-    
-    label "gpu"
+    time { 20.m * task.attempt }
+
+    errorStrategy "retry"
+    maxRetries 3
+
+    label "require-gpu"
 
     input:
     tuple val(ID), path(grouped_reads, stageAs: "reads/*"), file(reads_list)

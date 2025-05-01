@@ -42,7 +42,8 @@ workflow {
     
     // Finally, pass all files of each sample together to the aligner:
     def aligned_reads = align_reads(grouped_reads, file(params.ref_genome), file(params.ref_index))
-    calc_coverage(aligned_reads, file(params.ref_genome), file(params.ref_index))
+    get_alignment_stats(aligned_reads, file(params.ref_genome), file(params.ref_index))
+
 }
 
 // Step 1 - Parse input reads for a sample
@@ -209,7 +210,7 @@ process align_reads {
 }
 
 // Step 4 - Additional alignment statistics
-process calc_coverage {
+process get_alignment_stats {
 
     publishDir "${params.publish_dir}/${sample}/qc-metrics", saveAs: { filename -> "$filename" }, mode: 'copy'
 

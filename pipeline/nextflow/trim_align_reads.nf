@@ -159,7 +159,7 @@ process align_reads {
 
     container "nvcr.io/nvidia/clara/clara-parabricks:4.5.0-1"
     containerOptions "--nv"
-    time { 20.m * task.attempt }
+    time { 30.m * task.attempt }
 
     errorStrategy "retry"
     maxRetries 3

@@ -72,7 +72,7 @@ As an example, your file should look like this but **without headers**:
 ### Step 1: Read trimming and alignment
 ```mermaid
 flowchart TB
-   subgraph params
+   subgraph "Inputs and user parameters"
    v0["Samples CSV"]
    v7["Downsample (Y/N)"]
    v4["Deduplicate (Y/N)"]
@@ -82,7 +82,7 @@ flowchart TB
    end
    v2(["Parse sample files])
    v5(["Optional: Deduplicate reads (seqkit rmdup)"])
-   v8(["Optional: Downsample reads (seqkit sample)])
+   v8(["Optional: Downsample reads (seqkit sample)"])
    v10("Trim reads (fastp)")
    v12("Group reads")
    v16("Align reads (clara-parabricks)")
@@ -101,6 +101,18 @@ flowchart TB
    v15 --> v19
    v4 --> v5
    v7 --> v8
+   v10 --> v20
+   v10 --> v21
+   v16 --> v22
+   v16 --> v23
+   v16 --> v24
+   v19 --> v24
+   subgraph "Outputs"
+   v20["Trimmed reads (per lane)"]
+   v21["Read QC metrics (per lane)"]
+   v22["SAMPLE_ID.cram"]
+   v23["SAMPLE_ID.cram.crai"]
+   v24["Alignment QC metrics"]
    end
 ```
 
@@ -141,7 +153,6 @@ flowchart TB
    v19 --> v21
    v17 --> v23
    v22 --> v23
-
    v21 --> v26
    v23 --> v24
    v23 --> v25

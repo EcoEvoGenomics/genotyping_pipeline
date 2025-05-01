@@ -80,13 +80,13 @@ flowchart TB
    v15["Reference genome index"]
    v18["Scaffold name"]
    end
-   v2(["Parse sample files])
+   v2(["Parse sample files"])
    v5(["Optional: Deduplicate reads (seqkit rmdup)"])
    v8(["Optional: Downsample reads (seqkit sample)"])
-   v10("Trim reads (fastp)")
-   v12("Group reads")
-   v16("Align reads (clara-parabricks)")
-   v19("Get alignment stats (samtools)")
+   v10(["Trim reads (fastp)"])
+   v12(["Group reads"])
+   v16(["Align reads (clara-parabricks)"])
+   v19(["Get alignment stats (samtools)"])
    v0 --> v2
    v2 --> v5
    v5 --> v8

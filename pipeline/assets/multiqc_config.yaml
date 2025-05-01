@@ -26,10 +26,14 @@ table_columns_visible:
   "Bcftools: Stats": false
 
 module_order:
-  - 'fastp'
   - 'picard'
+  - 'fastp'
   - 'samtools'
   - 'bcftools'
+
+report_section_order:
+  fastp:
+    order: +1000
 
 remove_sections:
   - bcftools-stats_indel_plot
@@ -49,26 +53,26 @@ fastp:
   s_name_filenames: true
 
 table_sample_merge:
-  "Lane 1":  "_L001"
-  "Lane 2":  "_L002"
-  "Lane 3":  "_L003"
-  "Lane 4":  "_L004"
-  "Lane 5":  "_L005"
-  "Lane 6":  "_L006"
-  "Lane 7":  "_L007"
-  "Lane 8":  "_L008"
-  "Lane 9":  "_L009"
-  "Lane 10": "_L010"
-  "Lane 11": "_L011"
-  "Lane 12": "_L012"
-  "Lane 13": "_L013"
-  "Lane 14": "_L014"
-  "Lane 15": "_L015"
-  "Lane 16": "_L016"
-  "Lane 17": "_L017"
-  "Lane 18": "_L018"
-  "Lane 19": "_L019"
-  "Lane 20": "_L020"
+  "(L001)":  "_L001"
+  "(L002)":  "_L002"
+  "(L003)":  "_L003"
+  "(L004)":  "_L004"
+  "(L005)":  "_L005"
+  "(L006)":  "_L006"
+  "(L007)":  "_L007"
+  "(L008)":  "_L008"
+  "(L009)":  "_L009"
+  "(L010)": "_L010"
+  "(L011)": "_L011"
+  "(L012)": "_L012"
+  "(L013)": "_L013"
+  "(L014)": "_L014"
+  "(L015)": "_L015"
+  "(L016)": "_L016"
+  "(L017)": "_L017"
+  "(L018)": "_L018"
+  "(L019)": "_L019"
+  "(L020)": "_L020"
 
 picard_config:
   s_name_filenames: true

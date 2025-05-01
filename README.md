@@ -8,13 +8,12 @@
 Welcome to the guide for the Ecological & Evolutionary Genomics Group sparrow genotyping pipeline. With this pipeline, you will only have to submit a single script to convert raw reads into a filtered `.vcf` file ready for your analyses. More than merely *simplifying* the process, the pipeline *standardises* genotyping within the group so that different projects produce and use compatible datasets. Just as important, the construction of the pipeline emphasises *reproducibility* to promote open science. Readers of our papers should be able to reproduce our results with minimal effort.
 
 ### The pipeline 
-There are five primary steps in the pipeline, and you can specify whether to run all in one go or do them stepwise. In order, they are ...
+There are four primary steps in the pipeline, and you can specify whether to run all in one go or do them stepwise. In order, they are ...
 
-1. `preprocess_reads`: Trims and optionally deduplicates and / or downsamples reads.
-2. `align_reads`: Aligns the preprocessed reads to a reference genome. Outputs compressed alignment files.
-3. `call_variants`: Calls SNP variants across and calculates statistics across the whole genome.
-4. `filter_variants`: Applies filters to the SNP variants from the previous step and calculates statistics.
-5. `multiqc`: Produces a report with interactive plots showing quality control statistics for outputs produced by the pipeline.
+1. `trim_align_reads`: Trims and optionally deduplicates and / or downsamples reads before aligning to a reference genome.
+2. `call_variants`: Calls SNP variants across and calculates statistics across the whole genome.
+3. `filter_variants`: Applies filters to the SNP variants from the previous step and calculates statistics.
+4. `multiqc`: Produces a report with interactive plots showing quality control statistics for outputs produced by the pipeline.
 
 More details on each step are provided below.
 
@@ -51,83 +50,61 @@ Additional details and examples are provided for each step below. If you are unf
 
 ### The samples csv format
 
-The input `.csv` file should be formatted with one sample per row and the following columns:
+The input `.csv` file should be formatted with one sample per row and the following **four** columns:
 
 1. Sample name, e.g. `PDOM2024IND0001M` for a sparrow from our groups collection
-2. Forward read location - this should be the **full path** to the forward read
-3. Reverse read location - this should be the **full path** to the reverse read
+2. Sequencing lane for the sequence files in the format "LXXX" where "XXX" is a number with leading zeroes (e.g. L001). If you have only one set of files per sample, just use "L001".
+3. Forward read location - this should be the **full path** to the forward read
+4. Reverse read location - this should be the **full path** to the reverse read
 
 As an example, your file should look like this but **without headers**:
 
-| Sample ID | Path to R1 FASTQ.GZ file | Path to R2 FASTQ.GZ file |
-|------------------|-------------------------|-------------------------|
-| PDOM2024IND0001M | /path/to/1_R1.fastq.gz | /path/to/1_R2.fastq.gz |
-| PDOM2024IND0002F | /path/to/2_R1.fastq.gz | /path/to/2_R2.fastq.gz |
-| ... | ... | ... |
+| Sample ID | Lane | Path to R1 FASTQ.GZ file | Path to R2 FASTQ.GZ file |
+|------------------|------|-------------------------|-------------------------|
+| PDOM2024IND0001M | L001 | /path/to/1M_L001_R1.fastq.gz | /path/to/1M_L001_R2.fastq.gz |
+| PDOM2024IND0001M | L002 | /path/to/1M_L002_R1.fastq.gz | /path/to/1M_L002_R2.fastq.gz |
+| PDOM2024IND0002F | L001 | /path/to/2F_R1.fastq.gz | /path/to/2F_R2.fastq.gz |
+| ... | ... | ... | ... |
 
 **Note:** If an individual is sequenced across multiple lanes, you will have multiple sets of files for the individual. The previous version of the pipeline was built to account for this, **however** this version currently does not accommodate it because of the choice of aligner software. *This will be remedied somehow in a future update*.
 
 ## The pipeline in detail
-### Step 1: Read pre-processing
+### Step 1: Read trimming and alignment
 ```mermaid
 flowchart TB
-   subgraph "Inputs and user parameters"
+   subgraph params
+   v0["Samples CSV"]
    v7["Downsample (Y/N)"]
    v4["Deduplicate (Y/N)"]
-   v9["Read target"]
-   v0["Samples CSV"]
+   v14["Reference genome"]
+   v15["Reference genome index"]
+   v18["Scaffold name"]
    end
-   v2(["Parse sample files"])
+   v2(["Parse sample files])
    v5(["Optional: Deduplicate reads (seqkit rmdup)"])
-   v8(["Optional: Downsample reads (seqkit sample)"])
-   v10(["Trim reads (fastp)"])
+   v8(["Optional: Downsample reads (seqkit sample)])
+   v10("Trim reads (fastp)")
+   v12("Group reads")
+   v16("Align reads (clara-parabricks)")
+   v19("Get alignment stats (samtools)")
    v0 --> v2
    v2 --> v5
    v5 --> v8
    v8 --> v10
+   v10 --> v12
+   v12 --> v16
+   v14 --> v16
+   v15 --> v16
+   v16 --> v19
+   v18 --> v19
+   v14 --> v19
+   v15 --> v19
    v4 --> v5
    v7 --> v8
-   v9 --> v8
-   v10 --> v11
-   v10 --> v12
-   v5 --> v13
-   v8 --> v13
-   v10 --> v13
-   subgraph "Outputs per sample"
-   v11["SAMPLE_ID_R1_TRIM.fastq.gz"]
-   v12["SAMPLE_ID_R2_TRIM.fastq.gz"]
-   v13["qc-metrics/"]
    end
 ```
 
-### Step 2: Read alignment
-```mermaid
-flowchart TB
-   subgraph "Inputs and user parameters"
-   v2["Reference genome"]
-   v3["Reference genome index"]
-   v0["Pre-processed reads"]
-   end
-   v4(["Align reads (pbrun fq2bam)"])
-   v6(["Calculate stats (samtools depth, samtools flagstat)"])
-   v0 --> v4
-   v2 --> v4
-   v3 --> v4
-   v2 --> v6
-   v3 --> v6
-   v4 --> v6
-   v4 --> v7
-   v4 --> v8
-   v4 --> v9
-   v6 --> v9
-   subgraph "Outputs per sample"
-   v7["SAMPLE_ID.cram"]
-   v8["SAMPLE_ID.cram.crai"]
-   v9["qc-metrics/"]
-   end
-```
-
-### Step 3: Genotyping (variant calling)
+### Step 2: Genotyping (variant calling)
 ```mermaid
 flowchart TB
    subgraph "Inputs and user parameters"
@@ -177,7 +154,7 @@ flowchart TB
    end
 ```
 
-### Step 4: Variant filtering
+### Step 3: Variant filtering
 ```mermaid
 flowchart TB
    subgraph "Inputs and user parameters"
@@ -210,7 +187,7 @@ flowchart TB
    end
 ```
 
-### Step 5: Make a quality control report
+### Step 4: Make a quality control report
 ```mermaid
 flowchart TB
     subgraph "Inputs"

@@ -1,6 +1,6 @@
 title: "genotyping_pipeline"
-subtitle: "UiO Ecological and Evolutionary Genomics Group"
-intro_text: "This report summarises statistics from the genotyping pipeline by searching the output directory."
+subtitle: "Sparrow Genotyping Pipeline"
+intro_text: "UiO Ecological and Evolutionary Genomics Group"
 show_analysis_time: true
 show_analysis_paths: false
 

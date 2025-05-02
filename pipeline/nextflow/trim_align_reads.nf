@@ -195,6 +195,7 @@ process align_reads {
     --out-bam ${ID}.cram \
     --out-duplicate-metrics qc-metrics/dedup.txt \
     --out-qc-metrics-dir qc-metrics \
+    --gpuwrite \
     --tmp .
 
     # Obtain coverage statistics with Parabricks BAMMETRICS

@@ -66,8 +66,6 @@ As an example, your file should look like this but **without headers**:
 | PDOM2024IND0002F | L001 | /path/to/2F_R1.fastq.gz | /path/to/2F_R2.fastq.gz |
 | ... | ... | ... | ... |
 
-**Note:** If an individual is sequenced across multiple lanes, you will have multiple sets of files for the individual. The previous version of the pipeline was built to account for this, **however** this version currently does not accommodate it because of the choice of aligner software. *This will be remedied somehow in a future update*.
-
 ## The pipeline in detail
 ### Step 1: Read trimming and alignment
 ```mermaid

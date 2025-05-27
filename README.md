@@ -34,9 +34,9 @@ git clone -b experimental https://github.com/EcoEvoGenomics/genotyping_pipeline
 ```
 
 ### Configuring a Nextflow Conda environment
-To maximise portability, especially for external users, most of the pipeline dependencies are managed automatically with containers obtained on-demand. But the software Nextflow manages this automation, so Nextflow itself must be manually installed in a Conda environment. Members of the Ecological and Evolutionary Genomics Group can and should use our pre-configured environment, which the pipeline is set to use by default. Other users can replicate our environment with the `nextflow.yml` file:
+To maximise portability, especially for external users, most of the pipeline dependencies are managed automatically with containers obtained on-demand. But the software Nextflow manages this automation, so Nextflow itself must be manually installed in a Conda environment. Members of the Ecological and Evolutionary Genomics Group can and should use our pre-configured environment, which the pipeline is set to use by default. Other users can replicate our environment with the included YAML file:
 ```
-conda create --name nf -f nextflow.yml 
+conda create --name nf -f genotyping_pipeline.conda.yaml 
 ```
 
 ### Running the pipeline

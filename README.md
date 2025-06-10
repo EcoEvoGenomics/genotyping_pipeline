@@ -139,7 +139,7 @@ This part of the pipeline produces the following outputs:
 
 ### Step 2: Genotyping (variant calling)
 
-The second script in the pipeline will take aligned crams performs genotyping on all individuals against the specified reference genome. To do this, it uses `bcftools` and will call sites at every position in the genome (i.e. it calls invariant sites as well as variants). This is obviously a large job, especially on larger genomes. So to increase efficiency, the script parallelises across genome windows. The default is 10 Mb but you can set these to whatever size you wish. Previously you had to set windows outside of the pipeline but this step now does this for you automatically. It also takes into account ploidy of the mitochondrial genome. After calling genotypes in windows, the script will take care of sorting and concatenating the windows together so that you are left with a vcf file for each chromosome, the mtDNA and also the unanchored scaffolds in your genome. These are unfiltered and ready for the next step. It also generates some statistics for downstream checking. 
+The second script in the pipeline will take aligned crams performs genotyping on all individuals against the specified reference genome. To do this, it uses `bcftools` and will call sites at every position in the genome (i.e. it calls invariant sites as well as variants). This is obviously a large job, especially on larger genomes. So to increase efficiency, the script parallelises across genome windows. The default is 10 Mb but you can set these to whatever size you wish in the slurm script. Previously you had to set windows outside of the pipeline but this step now does this for you automatically. It also takes into account ploidy of the mitochondrial genome. After calling genotypes in windows, the script will take care of sorting and concatenating the windows together so that you are left with a vcf file for each chromosome, the mtDNA and also the unanchored scaffolds in your genome. These are unfiltered and ready for the next step. It also generates some statistics for downstream checking. 
 
 
 ```mermaid
@@ -200,6 +200,9 @@ This part of the pipeline produces the following outputs:
 - CSI index for any vcf produced. 
 
 ### Step 3: Variant filtering
+
+The third script takes control of filtering your vcf files and prepares them for downstream analysis. You need to provide it with the settings you require for filtering (via the main slurm script) and it will use unfilttered chromosome level vcfs to perform filtering. Filters are applied in windows and windows are concatenatted and then normalise to remove any errors. The script will produce both per chromosome vcfs and a whole-genome vcf for additional analysis if required. The script also produces statistics on the filtered variants which can be incorporated in the multiQC reports in the next and final step. 
+
 ```mermaid
 flowchart TB
    subgraph "Inputs and user parameters"
@@ -232,7 +235,21 @@ flowchart TB
    end
 ```
 
+#### Outputs
+
+This part of the pipeline produces the following outputs:
+
+- Statistics on filtered variants (`filtered_variants.vchk`)
+- Per-chromosome and scaffold filtered variant vcf (`chrXX_unfiltered_variants.vcf.gz`)
+- Concatenated filtered variant vcf (optional)
+- CSI index for any vcf produced
+- a tsv file summarising the filters applied 
+
+
 ### Step 4: Make a quality control report
+
+The final and simplest step of the pipeline allows you to create a quality control report. This will run after any step of the pipeline or when it is run in entirety in order to give you insight into the quality of reads, samples, mapping performance and variant calling. It uses [multiqc](https://docs.seqera.io/multiqc) which is very comprehensive and provides a useful overview. This takes time to learn how to read but is well worth paying extra attention to in order to ensure your analyis has worked!  
+
 ```mermaid
 flowchart TB
     subgraph "Inputs"

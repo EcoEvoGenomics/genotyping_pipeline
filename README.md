@@ -74,7 +74,7 @@ As an example, your file should look like this but **without headers**:
 | PDOM2024IND0002F | L001 | /path/to/2F_R1.fastq.gz | /path/to/2F_R2.fastq.gz |
 | ... | ... | ... | ... |
 
-A short note on the lane codes - these are necessary to allow the pipeline to merge samples from across different lanes. You should check the sample catalogue and assess the number of lanes you require for each sample. The codes are essentially arbitrary (i.e. they could be L001, L002 or L1, L2) - all that is required is that reads from different lanes are explicitly stated as such, otherwise the pipeline will merge them. If in doubt about this, just ask! 
+A short note on the lane codes - these are necessary to allow the pipeline to merge samples from across different lanes. You should check the sample catalogue and assess the number of lanes you require for each sample. The codes are essentially arbitrary (i.e. they could be L001, L002 or L1, L2) - all that is required is that reads from different lanes are explicitly stated as such, otherwise the pipeline will fail (or at least fail to merge the lanes). If in doubt about this, just ask! 
 
 ## The pipeline in detail
 ### Step 1: Read trimming and alignment
@@ -202,6 +202,8 @@ This part of the pipeline produces the following outputs:
 ### Step 3: Variant filtering
 
 The third script takes control of filtering your vcf files and prepares them for downstream analysis. You need to provide it with the settings you require for filtering (via the main slurm script) and it will use unfilttered chromosome level vcfs to perform filtering. Filters are applied in windows and windows are concatenatted and then normalise to remove any errors. The script will produce both per chromosome vcfs and a whole-genome vcf for additional analysis if required. The script also produces statistics on the filtered variants which can be incorporated in the multiQC reports in the next and final step. 
+
+It is worth noting that filtering is not a black-box/set-and-forget/run-once process! The filters you apply matter, and not only should you think carefully about them, you may very well need to produce datasets with different filters for different downstream analyses (see https://doi.org/10.1038/s41576-024-00738-6). For that reason, the pipeline has been built to make it easy to return to this step after you've produced the MultiQC report and inspected the quality statistics (below). To take an example, you may first run the pipeline through all steps, i.e. `yes` for all `trim_align_reads`, `call_variants`, `filter_variants`, and `run_multiqc` with default filters. Then you can switch off `trim_align_reads` and `call_variants` but re-run `filter_variants` and `run_multiqc` with different filtering settings (recall that all the settings you can change are exposed in the main SLURM script and you should not change anything elsewher) in the same directory to produce a re-filtered dataset (**without changing anything else**). To do so, simply change the `filtering_label` variable (to give a new name to your refiltered data) and the relevant filtering settings. Your newly re-filtered dataset will be found in a correspondingly labelled directory under the filtered genotypes directory and the MultiQC report will be updated to show (all) the re-filtered dataset alongside the unfiltered data. You can do this as many times as you need until you are content your filters are appropriate!
 
 ```mermaid
 flowchart TB

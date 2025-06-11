@@ -1,351 +1,269 @@
-# Variant calling pipeline
+# Sparrow genotyping pipeline
 
-Duplicated from https://github.com/markravinet/genotyping_pipeline_v2.git on Wednesday 11 Dec 2024.
+**Authors:** Mark Ravinet and Erik Sandertun Røed
 
-### Mark Ravinet 
-### 18/11/2024
+**Maintainer:** Erik Sandertun Røed
 
 ## Introduction
+Welcome to the guide for the Ecological & Evolutionary Genomics Group sparrow genotyping pipeline. The design philosophy behind this utility is that you will only have to submit a single script to convert raw reads into a filtered `vcf` file ready for your analyses. More than merely *simplifying* the process, the pipeline *standardises* genotyping within the group so that different projects produce and use compatible datasets. Just as important, the construction of the pipeline emphasises *reproducibility* to promote open science. Readers of our papers (and perhaps also authors) should be able to reproduce our results with minimal effort.
 
-Welcome to the readme and guide for the Sparrow Ecological & Evolutionary Genommics group variant calling pipeline. After many years of calling variants using a set of multiple slurm scripts, I decided to write a nextflow pipeline that vastly simplifies the process, meaning that you will only have to submit three scripts to go from raw reads to a final, filtered `vcf` ready for analysis.
+### The pipeline 
+There are four primary steps in the pipeline, and you can specify whether to run all in one go or perform them in a  stepwise order. Each of these is a different nextflow script but they are all controlled by a master slurm script - `genotyping_pipeline.slurm.sh`. So you only ever have to interact with this slurm script - not the nextflow scripts directly. For those who used previous iterations of this pipeline, we hope this greatly simplifies things. 
 
-The scripts are designed to require minimal input from a user but they will produce finished output, statistics and reports for what programs where used in the process. As well as simplifying the process, these scripts are designed to **standardise** the variant calling used within the group, i.e. to prevent different projects using different pipelines and leading to incompatible datasets. However, more importantly, the emphasis here is to improve **reproducibility** - i.e. promoting open science and making it possible for anyone interested to reproduce results in a straightforward way.
+The four nextflow scripts are: 
 
-There are three steps in the pipeline, each run using a specific nextflow script:
+1. `trim_align_reads`: Trims and optionally deduplicates and / or downsamples reads before aligning to a reference genome.
+2. `call_variants`: Calls SNP variants across and calculates statistics across the whole genome.
+3. `filter_variants`: Applies filters to the SNP variants from the previous step and calculates statistics.
+4. `multiqc`: Produces a report with interactive plots showing quality control statistics for outputs produced by the pipeline.
 
-1. `trim_map_realign` - trim reads for quality and adapter sequences, map to a reference genome and perform indel realignment.
-2. `call_variants` - call variants across genome windows, concatenate them together to produce per chromosome vcf files.
-3. `filter_variants` - filter vcfs for population structure and genome scan analysis.
+More details on each step and how to run them are provided below.
 
-In addition to these scripts, there are three helper scripts which are optional. These are:
+## Installation and quick-start
+This pipeline is developed primarily for in-house use on the NRIS Saga HPC, but should run on other compute resources and for other projects with minor modifications to its configuration files. Note that at present, we can only maintain support for the Saga version of the pipeline - i.e. that used by the group. If you want to use it elsewhere, you are welcome to but we are limited in how much we can help set this up. 
 
-1. `downsample_bams` - a nextflow script that will calculate the depth of a bam, see if it exceeds a threshold you set and if so, downsample it to match that. This is useful if you are combining samples with different read depths. 
-2. `create_genome_windows` - a shell script to split your genome of choice into windows for `call_variants` to run on. So you can split the genome into 10 Mb windows and call variants much more efficiently.
-3. `concat_vcfs` - concatenate the variant vcfs created by `filter_variants` into a single vcf for the entire genome
+### Prerequisites
+The pipeline requires a Linux HPC environment configured with the job management software SLURM, the container software Singularity (or Apptainer) and the environment management software Conda. If you are working on the NRIS Saga HPC, these softwares are pre-installed and the pipeline pre-configured to use them without manual intervention.
 
-## Installation
-
-The simplest way to install everything you need for these scripts to work is to use template `conda` environment. This means you first need to install and setup `conda`. 
-
-**For users working on the Saga infrastructure** you do not need to install `conda`. You can instead follow the guidelines [here](https://github.com/markravinet/markravinet.github.io/wiki/5_using_conda_Saga) to run the pipeline using the shared installed `conda` modules. 
-
-### Installing conda
-
-The full `conda` installation is not necessary. Instead you can use miniconda. Go here and copy the link address for the latest release for Linux 64-bit. Then use `wget` to download it like so:
-
+### Obtaining the pipeline
+The easiest (and the intended) way to obtain and run the pipeline is to clone this GitHub repository to a suitable HPC location (on the NIRS Saga HPC, this is *exclusively* your `$USERWORK` directory, as the pipeline can produce terabytes of working files):
 ```
-wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
+git clone https://github.com/EcoEvoGenomics/genotyping_pipeline
 ```
-
-From your home directory, simply run this script:
-
+On occasion we upgrade or modify the pipeline. As a rule this will happen on a separate branch to maintain consistency on the main branch. If you wish to use an in-development version of the pipeline you can obtain a specific branch, e.g. `experimental`:
 ```
-bash Miniconda3-latest-Linux-x86_64.sh
+git clone -b experimental https://github.com/EcoEvoGenomics/genotyping_pipeline
 ```
+This is all you need to do to install the software for use!
 
-Follow the prompts and this will install `conda`. Once you have done that, you will need to update it to ensure there are no issues.
+### Configuring a Nextflow Conda environment
+To maximise portability, especially for external users, most of the pipeline dependencies are managed automatically with containers obtained on-demand. But the software Nextflow manages this automation, so Nextflow itself must be manually installed in a Conda environment. Members of the Ecological and Evolutionary Genomics Group can and should use our pre-configured environment, which the pipeline is set to use by default. 
 
+Other users can replicate our environment with the included YAML file:
 ```
-conda update conda
+conda create --name nf -f genotyping_pipeline.conda.yaml 
 ```
+NB: If you are working on Saga as part of the group **YOU DO NOT NEED TO RUN THIS STEP**. 
 
-We are then read to set up the `conda` environment you need to run the scripts.
+### Running the pipeline
+In brief the three steps required to run the pipeline once you have cloned the repository are:
 
-### Using mamba
+1. Download your reads to a location where the pipeline can reach them. If you have e.g. stored your reads on the NRIS NIRD storage infrastructure, you should copy them to your `$USERWORK` on the NRIS Saga HPC.
+2. Prepare a comma-separated `.csv` file with sample information. See below.
+3. Submit the `genotyping_pipeline.slurm.sh` script, completing and modifying `SETTINGS (1 / 2) User input` as required. 
 
-Conda can be quite slow, so a way to speed it up is to use `mamba`. This is easy to install. You can do so like this:
+NB: For step 3, users of  HPC resources other than the NRIS Saga HPC will likely have to modify the `SETTINGS (2 / 2) Set up environment` section to ensure Slurm, Singularity, and Conda are set up appropriately. Apart from modifying the SLURM header you should not modify the script outside the `SETTINGS` blocks.
 
-```
-conda install -c conda-forge mamba
-```
+Additional details and examples are provided for each step below. If you are unfamiliar with the pipeline, please do read on!
 
-Once `mamba` is installed you are ready to configure the `conda` environment to use the pipeline.
+### The samples csv format
 
-### Configuring the conda environment
+The input `.csv` file should be formatted with one sample per row and the following **four** columns:
 
-In order to ensure you have all the tools needed to run the pipeline, you can configure the `conda` environment using the `nextflow.yml` provided here. This is also a reference of all the software versions used to run the code. It is very simple to do this, just use the following command:
-
-```
-mamba env create --name nf -f nextflow.yml 
-```
-
-This will create a `mamba`/`conda` environment called `nf` that contains all the software necessary to run the scripts with minimal manual configuration. 
-
-Finally in order to ensure `abra2` can access the libraries it needs to run, you will need to add the following line to your `bash_profile` or `bashrc`:
-
-```
- export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:~/miniconda3/lib
-```
-
-You might also need to increase the amount of memory that `abra2` has access to. In order to do this, you should use `nano` to edit the `~/miniconda3/envs/nf/share/abra2-2.23-1/abra2` so that the `JAVA_TOOL_OPTIONS` variable is increased like so:
-
-```
-JAVA_TOOL_OPTIONS="-Xmx8G"
-```
-
-### A quick note on Java based errors
-
-Although most of the tools for the pipeline should run without issue, you might get an error that some of the tools cannot run because there is no `java` environment. If this is the case, you need to either install `java` or load the `java` module on your cluster - the pipeline should then work without issue.
-
-## Step 1  - trimming, mapping and aligning
-
-This first script will take your raw reads and run them through [fastqc](https://www.bioinformatics.babraham.ac.uk/projects/fastqc/) for a quality assessment. It will then trim them for low-quality bases and remove any adapter sequences. It will then map them to a reference genome of your choice (default is the 2014 House sparrow reference). It also ensures that the samples are renamed to the correct name for all downstream analysis. Finally, the script will produce statistics on the mapping efficiency and depth of coverage of each mapped individual. Note that as of November 2024, the pipeline has been updated so that it only outputs [cram files](https://en.wikipedia.org/wiki/CRAM_(file_format)). 
-
-### The input csv format
-
-In order to run this script, you need to provide it with a csv file with the following columns:
-
-1. Original sample name (only necessary for older samples, otherwise this can just be the sample name)
-2. New sample name (i.e. UoN code) - if this is already the sample name in 1, then just repeat it here
+1. Sample name, e.g. `PDOM2024IND0001M` for a sparrow from our groups collection
+2. Sequencing lane for the sequence files in the format "LXXX" where "XXX" is a number with leading zeroes (e.g. L001). If you have only one set of files per sample, just use "L001".
 3. Forward read location - this should be the **full path** to the forward read
 4. Reverse read location - this should be the **full path** to the reverse read
-5. Adapter name - the name for the adapter sequences - this should be one of the set of options outlined below.
 
-**A quick note on sample names!** The script will split names based on underscores, so if your samples are called `FH_99` and `FH_100` for example, it will merge them all into a sample called `FH`. So to avoid this, you need to alter them so that they are called `FH99` and `FH100`
+As an example, your file should look like this but **without headers**:
 
-Adapters should be written exactly as one of the following options:
-- `Illumina_UD-PE`
-- `NexteraPE-PE`
-- `TruSeq2-PE`
-- `TruSeq3-PE-2`
-- `TruSeq3-PE`
-- `TruSeqUD-PE`
+| Sample ID | Lane | Path to R1 FASTQ.GZ file | Path to R2 FASTQ.GZ file |
+|------------------|------|-------------------------|-------------------------|
+| PDOM2024IND0001M | L001 | /path/to/1M_L001_R1.fastq.gz | /path/to/1M_L001_R2.fastq.gz |
+| PDOM2024IND0001M | L002 | /path/to/1M_L002_R1.fastq.gz | /path/to/1M_L002_R2.fastq.gz |
+| PDOM2024IND0002F | L001 | /path/to/2F_R1.fastq.gz | /path/to/2F_R2.fastq.gz |
+| ... | ... | ... | ... |
 
-**Note** If your individual has multiple forward and reverse reads, these should all be entered into a separate row for the csv (i.e. for each forward and reverse pair). This will happen when an individual is sequenced across multiple lanes for example. The script is built to account for this and you can give each line the same sample name - **however** the read locations must be different for each. 
+A short note on the lane codes - these are necessary to allow the pipeline to merge samples from across different lanes. You should check the sample catalogue and assess the number of lanes you require for each sample. The codes are essentially arbitrary (i.e. they could be L001, L002 or L1, L2) - all that is required is that reads from different lanes are explicitly stated as such, otherwise the pipeline will fail (or at least fail to merge the lanes). If in doubt about this, just ask! 
 
-An example of the file format is shown below - note that the true file **should not have headers**:
-| old name | new name | read1 path | read2 path | adapter |
-|------------------|------------------|-------------------------|-------------------------|------------|
-| old_sample1_name | new_sample1_name | /path/to/forward_read1/ | /path/to/reverse_read1/ | TruSeq3-PE |
-| old_sample2_name | new_sample2_name | /path/to/forward_read2/ | /path/to/reverse_read2/ | TruSeqUD-PE |
+## The pipeline in detail
+### Step 1: Read trimming and alignment
 
-### Running the script
+This first script will take your raw reads and run them through `fastp` for a quality assessment. It will then trim them for low-quality bases and remove any adapter sequences. If you choose the deduplication step, then this will be done using `seqkit`. Similarly if the downsampling option is turned on, then `seqkit` will perform this too. Once trimming is complete, the pipeline will then map grouped reads (i.e. across lanes) to a reference genome of your choice (default is the 2014 House sparrow reference). This step is now performed using an implementation of `bwa mem` within clara parabricks - a GPU paralellised genomics suite. This enables extremely fast and efficient alignment.  Finally, the script will produce statistics on the mapping efficiency and depth of coverage of each mapped individual.
 
-Once you have your input csv file ready, you can run the script. To do this, you just need to do the following:
-
-```
-nextflow run 1_trim_map_realign.nf --samples samples_test.csv
-```
-
-Note that if you run the script in this way, it will run in default mode and use the house sparrow reference genome. In order to alter that, you can add an additional option, `--ref` and specify the location of this alternative reference. Note that in order to do that, you **must** ensure that reference genome has been indexed by bwa prior to running the analysis. There is info on [how to do that here](https://speciationgenomics.github.io/mapping_reference/):
-
-```
-nextflow run 1_trim_map_realign.nf --samples samples_test.csv --ref /path/to/alt/ref_genome.fa
-```
-### Resuming scripts if there are issues
-
-On occassion your script might run into issues. For tips on how to resolve these, see the **Troubleshooting** section below. Once you have fixed this, you can actually restart the nextflow script from a specific point using the `-resume` command. For example:
-
-```
-nextflow run 1_trim_map_realign.nf --samples samples_test.csv -resume
-```
-
-Remember the script might not pick up exactly where it left off as it runs from preset checkpoints. However, it will generally be much faster doing this than starting from scratch.
-
-### Script outputs
-
-Once complete, the script will create two directories with outputs in:
-
-1. `align` - this contains the mapped, realigned and sorted cramfiles with their indexes for each individual you ran the script on.
-2. `stats` - this directory contains statistics from each of the cramfiles for their mapping success and depth of coverage. More information below.
-
-## Step 1a - Downsampling bams
-
-Occassionally, you might need to combine data from sequencing runs with different depths. If this is the case, you will need to downsample individuals sequenced at a higher depth when combining them all together as otherwise this will bias your analysis. For example, in a PCA with 10X indiviudals vs 30X individuals, you will find differences between them that are driven by this variation in sequencing depth. The script `1a_downsample_bams.nf` is designed to handle this and is very easy to run and use.
-
-All you need to do is provide it with a list of bam files, identical to that you would use for the `2_call_variants.nf` (see **Creating a list of bams** below). For example:
-
-```
-nextflow run 1a_downsample_bams.nf --bams bams.list --depth 10
-```
-
-You should also provide the `--depth` option. The script will then calculate the depth of each sample, see if it is greater than 10X and if so, it will downsample the individuals to this level of coverage using `samtools`. If you don't add a `--depth` option, the script will default to 10 anyway but you can set this to whatever you wish.
-
-Once it has run, the script will only write outputs for the bams which exceeed the specified depth. These downsampled bams and their indexes will be written to the `align` directory with the suffix `_ds.bam` and `_ds.bam.bai` respectively. You can then use these in your variant calling analysis.
-
-## Step 2 - Variant calling
-
-The second script in the pipeline will take a list of bamfiles and performs genotyping on all individuals. To do this, it uses `bcftools` and will call sites at every position in the genome (i.e. it calls invariant sites as well as variants). This is obviously a large job, especially on larger genomes. So to increase efficiency, the script parallelises across genome windows. The default is 10 Mb but you can set these to whatever size you wish. However, tweaking windows has to be done with a separate bash script (see below), not within the nextflow pipeline. After calling genotypes in windows, the script will take care of sorting and concatenating the windows together so that you are left with a vcf file for each chromosome, the mtDNA and also the unanchored scaffolds in your genome.
-
-**NB** as of November 2024, the pipeline has been adapted to use cramfiles instead of bamfiles as these are more efficient in terms of storage space. However, it is still possible to use the `2_call_variants.nf` script with bams if needed. Just point the script to the files and it will work.
-
-### Setting up genome windows
-
-In order to parallelise across genome windows, the script requires a list of said windows in a text file. These are easy to generate using the helper script `0_create_genome_windows.sh`. This simple bash script uses bedtools to split the genome into windows of whatever size you wish (I recommend 10,000,000 bases for most bird genomes) and then it will also create separate files to account for all the scaffolds.
-
-You need to run this script in the directory you are running the nextflow analysis in. You run it like so:
-
-```
-bash 0_create_genome_windows.sh ref_index window_size output_name
+```mermaid
+flowchart TB
+   subgraph "Inputs and user parameters"
+   v0["Samples CSV"]
+   v7["Downsample (Y/N)"]
+   v4["Deduplicate (Y/N)"]
+   v14["Reference genome"]
+   v15["Reference genome index"]
+   v18["Scaffold name"]
+   end
+   v2(["Parse sample files"])
+   v5(["Optional: Deduplicate reads (seqkit rmdup)"])
+   v8(["Optional: Downsample reads (seqkit sample)"])
+   v10(["Trim reads (fastp)"])
+   v12(["Group reads"])
+   v16(["Align reads (clara-parabricks)"])
+   v19(["Get alignment stats (samtools)"])
+   v0 --> v2
+   v2 --> v5
+   v5 --> v8
+   v8 --> v10
+   v10 --> v12
+   v12 --> v16
+   v14 --> v16
+   v15 --> v16
+   v16 --> v19
+   v18 --> v19
+   v14 --> v19
+   v15 --> v19
+   v4 --> v5
+   v7 --> v8
+   v10 --> v20
+   v10 --> v21
+   v16 --> v22
+   v16 --> v23
+   v16 --> v24
+   v19 --> v24
+   subgraph "Outputs"
+   v20["Trimmed reads (per lane)"]
+   v21["Read QC metrics (per lane)"]
+   v22["SAMPLE_ID.cram"]
+   v23["SAMPLE_ID.cram.crai"]
+   v24["Alignment QC metrics"]
+   end
 ```
 
-A more specific example, that will work for the house sparrow genome looks like this:
+#### Outputs
 
-```
-bash 0_create_genome_windows.sh /share/Passer/data/reference/house_sparrow_ref.fa.fai 10000000 sparrow_genome_windows.list
-```
+This part of the pipeline produces the following outputs:
 
-So option 1 is the path to the reference index, in `fai` format, option 2 is the window size (10 Mb here) and option 3 is the name of the output.
+- trimmed reads (per lane, not per sample)
+- Read QC metrics (per lane, not per sample)
+- Aligned cram file (`SAMPLE_ID.cram`)
+- Aligned cram file index (`SAMPLE_ID.cram.cai`)
+- Alignment QC statistics
 
-Running this script will produce a set of different files. The first will be text file with a list of all the windows, i.e. `sparrow_genome_windows.list` in the example above. The second will be 10 files called `scaffolds:00`, `scaffolds:01` and so on. The pipeline needs all these files to be present in the base directory you are running nextflow in. 
+### Step 2: Genotyping (variant calling)
 
-**NB this script is only really tested on the house sparrow genome** - if it does not work for your genome, you will need to edit it. 
+The second script in the pipeline will take aligned crams performs genotyping on all individuals against the specified reference genome. To do this, it uses `bcftools` and will call sites at every position in the genome (i.e. it calls invariant sites as well as variants). This is obviously a large job, especially on larger genomes. So to increase efficiency, the script parallelises across genome windows. The default is 10 Mb but you can set these to whatever size you wish in the slurm script. Previously you had to set windows outside of the pipeline but this step now does this for you automatically. It also takes into account ploidy of the mitochondrial genome. After calling genotypes in windows, the script will take care of sorting and concatenating the windows together so that you are left with a vcf file for each chromosome, the mtDNA and also the unanchored scaffolds in your genome. These are unfiltered and ready for the next step. It also generates some statistics for downstream checking. 
 
-### Creating a list of crams
 
-The other input this script needs is a list of cramfiles. This is very simple - it is just a list of paths of the files that you intend to analyse. If you generated these using `1_trim_map_realign.nf` then the names should already be standardised as `samplename_realigned.cram`. Provided your crams are named this way, then the calling script will also ensure that the sample names are written into the final vcf. Here is an example of what the file should look like:
-
-```
-/path/to/align/PDOMNOR8934547_realigned.cram
-/path/to/align/PDOMNOR8L19766_realigned.cram
-/path/to/align/PDOMNOR8L19786_realigned.cram
-/path/to/align/PDOMNOR8L52141_realigned.cram
-/path/to/align/PDOMNOR8L52830_realigned.cram
-```
-
-Note that these crams do not need top be in the same directory and they do not need to be in a directory called align. This means you can call a vcf from crams in multiple locations easily. 
-
-### Running the script
-
-Once you have your list of crams and genome windows file ready, you can run the script like this:
-
-```
-nextflow run 2_call_variants.nf --bams crams.list --windows sparrow_genome_windows.list
-```
-
-As above, you can use the `--ref` option to set the location of a specific reference genome. Furthermore, as with all the scripts, you can use the `-resume` option to rerun from a checkpoint if it fails for any reason.
-
-### Optional - specifying ploidy
-
-In some cases, you might need to specify the ploidy of the chromosomes or scaffolds you are calling in your analysis. A typical example of this is when calling SNPs in the mitochondrial genome (i.e. where ploidy is haploid). The pipeline has now been updated to incorporate this functionality but it is **optional**. This means that if you don't specify a ploidy file to `bcftools` then the pipeline will just assume everything is diploid. 
-
-The basic and easiest way to ensure mtDNA is called as haploid is to provide a file that looks like this in the case of the *Passer domesticus* genome:
-
-```
-mtDNA 1 16809 F 1
-mtDNA 1 16809 M 1
-
-```
-
-This ploidy file is space delimited with the chromosome identity, the start position, the end position, sex, and the ploidy (where 1 = haploid, 2 = diploid). There is more info (here)[https://samtools.github.io/bcftools/bcftools.html#call] on this format. With the example above, the pipeline will assume all other chromosomes are diploid.
-
-You can then run the pipeline exactly as before but this time with the additional `--ploidyFile` option, e.g:
-
-```
-nextflow run 2_call_variants.nf --bams bams.list --windows sparrow_genome_windows.list \
---ploidyFile my_ploidy_file.ploidy
-```
-
-### Script outputs
-
-The outputs for this script are much simpler than the previous step - it will create a directory called `vcf` and inside will be the gz compressed vcf files for each chromosome, the mtDNA and the genome unanchored scaffolds. These will be raw (i.e. unfiltered) and will contain calls for all variant and non-variant sites in the genome. The directory will also include the indexes for these vcfs.
-
-## Step 3 - filtering
-
-The final script takes control of filtering your vcf files and prepares them for downstream analysis. First it normalises them to remove any issues from concatenating across windows in the calling step. Then it applies custom filters using `vcftools` to create two sets of vcfs; one for population structure analyses (i.e. variants only) and one for genome scan analyses (i.e. variant and invariant sites). There is more information on the outputs below.
-
-### Running the script
-
-The filtering script is the easiest of the three main pipeline scripts to run. It does not require any input as it will automatically look for any vcfs which are gzipped, indexed and which are stored in a directory called `./vcf` in the base directory it is run in. This means it can simply be run with the default filtering options like so:
-
-```
-nextflow run 3_filter_variants.nf 
+```mermaid
+flowchart TB
+   subgraph "Inputs and user parameters"
+   v6["Genotyping window size"]
+   v22["Concatenate VCF (Y/N)"]
+   v2["Reference genome"]
+   v11["Aligned CRAMs"]
+   v4["Reference genome index"]
+   v7["Scaffold name"]
+   v0["Ploidy file"]
+   end
+   v8(["Define genotyping windows (bedtools)"])
+   v13(["Genotype (bcftools mpileup, bcftools call)"])
+   v14(["Concatenate chromosome VCF (bcftools concat, bcftools index)"])
+   v16(["Normalise VCF, remove spanning indels (bcftools norm, bcftools view)"])
+   v17(["Reheader VCF (bcftools reheader)"])
+   v19(["Get VCF stats (bcftools stats)"])
+   v21(["Collect genome-wide stats (bcftools plot-vcfstats)"])
+   v23(["Optional: Concatenate genome-wide VCF (bcftools concat, bcftools index)"])
+   v4 --> v8
+   v6 --> v8
+   v7 --> v8
+   v0 --> v13
+   v2 --> v13
+   v4 --> v13
+   v8 --> v13
+   v11 --> v13
+   v13 --> v14
+   v2 --> v16
+   v4 --> v16
+   v14 --> v16
+   v16 --> v17
+   v17 --> v19
+   v19 --> v21
+   v17 --> v23
+   v22 --> v23
+   v21 --> v26
+   v23 --> v24
+   v23 --> v25
+   v14 --> v27
+   subgraph "Outputs"
+   v24["unfiltered_variants.vcf.gz"]
+   v25["unfiltered_variants.vcf.gz.csi"]
+   v26["unfiltered_variants.vchk"]
+   v27["chroms/"]
+   end
 ```
 
-However, [as shown here](https://speciationgenomics.github.io/filtering_vcfs/), it is not a good idea to just run filters without checking whether they apply to your dataset. Instead you are able to tweak the filters with a number of options. These are simply provided to the script using option flags and are modified versions of the options for [vcftools](https://vcftools.github.io/examples.html)
+#### Outputs
 
-- `--miss` - set the missing data at a value between 0 and 1 (where 0 allows 100% missing data and 1 means no missing data); default is 0.8
-- `--q_site1` - site quality threshold (as a phred score) for the population structure vcfs - default is 30
-- `--q_site2` - site quality threshold (as a phred score) for the genome scan vcfs - default is 30
-- `--min_depth` - minimum mean depth of coverage for a variant across all samples - default is 5
-- `--max_depth` - maximum mean depth of coverage for a variant across all samples - default is 30
-- `--min_geno_depth` - minimum genotype depth per sample. If lower than this value, the genotype will be converted to a missing site - default is 5
-- `--max_geno_depth` - maximum genotype depth per sample. If lower than this value, the genotype will be converted to a missing site - default is 30
+This part of the pipeline produces the following outputs:
 
-You can provide all or some of these options to the script using these options. A fully worked example is below:
+- Statistics on unfiltered variants (`unfiltered_variants.vchk`)
+- Per-chromosome and scaffold unfiltered variant vcf (`chrXX_unfiltered_variants.vcf.gz`)
+- Concatenated unfiltered variant vcf (optional)
+- CSI index for any vcf produced. 
 
-```
-nextflow run 3_filter_variants.nf --miss 0.5 --q_site1 30 --q_site2 40 --min_depth 5 --max_depth 15 --min_geno_depth 5 --max_geno_depth 15
-```
+### Step 3: Variant filtering
 
-You do not need to provide all the options - for example, if you want to just alter the missing data threshold, the following will work.
+The third script takes control of filtering your vcf files and prepares them for downstream analysis. You need to provide it with the settings you require for filtering (via the main slurm script) and it will use unfilttered chromosome level vcfs to perform filtering. Filters are applied in windows and windows are concatenatted and then normalise to remove any errors. The script will produce both per chromosome vcfs and a whole-genome vcf for additional analysis if required. The script also produces statistics on the filtered variants which can be incorporated in the multiQC reports in the next and final step. 
 
-```
-nextflow run 3_filter_variants.nf --miss 0.5 
-```
+It is worth noting that filtering is not a black-box/set-and-forget/run-once process! The filters you apply matter, and not only should you think carefully about them, you may very well need to produce datasets with different filters for different downstream analyses (see https://doi.org/10.1038/s41576-024-00738-6). For that reason, the pipeline has been built to make it easy to return to this step after you've produced the MultiQC report and inspected the quality statistics (below). To take an example, you may first run the pipeline through all steps, i.e. `yes` for all `trim_align_reads`, `call_variants`, `filter_variants`, and `run_multiqc` with default filters. Then you can switch off `trim_align_reads` and `call_variants` but re-run `filter_variants` and `run_multiqc` with different filtering settings (recall that all the settings you can change are exposed in the main SLURM script and you should not change anything elsewher) in the same directory to produce a re-filtered dataset (**without changing anything else**). To do so, simply change the `filtering_label` variable (to give a new name to your refiltered data) and the relevant filtering settings. Your newly re-filtered dataset will be found in a correspondingly labelled directory under the filtered genotypes directory and the MultiQC report will be updated to show (all) the re-filtered dataset alongside the unfiltered data. You can do this as many times as you need until you are content your filters are appropriate!
 
-You can also now filter for individuals. This is optional, if you run `3_filter_variants.nf` without any options, it will just include all individuals in the vcf. However if you use `--keep`, the pipeline return a vcf with only those individuals listed in the input file. An example of how to run this is like so:
-
-```
-nextflow run 3_filter_variants.nf --keep /path/to/my_inds.txt
-```
-
-Here the file provided to the `--keep` option is the same as that used by [`vcftools`](https://vcftools.github.io/man_latest.html) - i.e. this should be a list of individuals like so:
-
-```
-Ind1
-Ind2
-Ind3
-```
-
-One thing that is very important if you use the `--keep` option. You **must** provide a full path to the file - i.e. `/path/to/my_inds.txt` - otherwise it will not filter for these individuals.
-
-### Script outputs
-
-The script will create a directory called `vcf_filtered`. Inside this vcf will be per chromosome (and scaffold) vcfs with two different suffixes.
-
-- `chrXX_norm_filtered_ps.vcf.gz` - this is the population structure analysis vcf - it contains variant biallelic SNPs only - ready for PCA, ADMIXTURE and so on.
-- `chrXX_norm_filtered_gs.vcf.gz` - this is the genome scan vcf - it contains variant and invariant sites - it is ready for both selection and introgression scans
-
-### Creating a variants whole genome vcf
-
-The `3_filter_variants.nf` script will produce outputs per chromosome. This is done for downstream efficiency but it is sometimes useful to have a whole genome vcf for variants - i.e. the `chrXX_norm_filtered_ps.vcf.gz` vcfs. To produce this, you can use the script `4_concat_vcfs.slurm` which will concatenate all the chromosomes together and normalise the output. This is a slurm script that can be submitted but it needs editing first. You should edit the three variables declared at the start of the script:
-
-- `VCF_FILE` - a text file with the paths of the vcfs to concatenate into a single vcf - this MUST be in order
-- `OUTPUT_VCF1` - the name of the output vcf prior to normalisation
-- `OUTPUT_VCF2` - the name of the output vcf following normalisation
-
-The `VCF_FILE` should look like this:
-
-```
-/path/to/my/vcfs/chr1_norm_filtered_ps.vcf.gz
-/path/to/my/vcfs/chr2_norm_filtered_ps.vcf.gz
-/path/to/my/vcfs/chr3_norm_filtered_ps.vcf.gz
-/path/to/my/vcfs/chr4_norm_filtered_ps.vcf.gz
-/path/to/my/vcfs/chr5_norm_filtered_ps.vcf.gz
+```mermaid
+flowchart TB
+   subgraph "Inputs and user parameters"
+   v5["Filtering settings"]
+   v0["Unfiltered chromosome VCFs"]
+   end
+   v1(["Filter VCF (vcftools, bcftools)"])
+   v3(["Get VCF stats (bcftools stats)"])
+   v6(["Collect genome-wide stats (bcftools plot-vcftstats)"])
+   v7(["Concatenate genome-wide VCF (bcftools concat, bcftools index)"])
+   v8(["Save filtering parameters to file"])
+   v0 --> v1
+   v1 --> v3
+   v3 --> v6
+   v1 --> v7
+   v5 --> v7
+   v5 --> v8
+   v5 --> v1
+   v8 --> v9
+   v7 --> v10
+   v7 --> v11
+   v6 --> v12
+   v1 --> v13
+   subgraph "Outputs per filters"
+   v9["vcftools_filters.tsv"]
+   v10["filtered_variants.vcf.gz"]
+   v11["filtered_variants.vcf.gz.csi"]
+   v12["filtered_variants.vchk"]
+   v13["chroms/"]
+   end
 ```
 
-The order is important here and should match the order of the chromosomes in the reference genome. 
+#### Outputs
 
-## Submitting the nextflow pipeline via slurm
+This part of the pipeline produces the following outputs:
 
-The nextflow scripts will take care of the individual scheduling of jobs, but you will need to submit a management job to the cluster using a standard slurm script. This script should be set to run with a relatively low memory (i.e. 4-8Gb), a single CPU and a relatively long time for the entire pipeline to run. For example, you could run it for a week. 
+- Statistics on filtered variants (`filtered_variants.vchk`)
+- Per-chromosome and scaffold filtered variant vcf (`chrXX_unfiltered_variants.vcf.gz`)
+- Concatenated filtered variant vcf (optional)
+- CSI index for any vcf produced
+- a tsv file summarising the filters applied 
 
-The actual control for each of the different jobs that the nextflow pipeline submits, you should look at the `nextflow.config` file. This is already to set up to use slurm. However, slurm job schedulers will differ between institutions. For the Nottingham Augusta HPC, the `nextflow.config` file will work straight out of the box as it inherits the queue and settings you submit in the master script. For SAGA, you need to edit the `nextflow.config` file to get it to work. You will need to add the `account` value for all of the processes like so, where `XXX` is the account you use on the cluster.
 
-```
-   withName: trimming{
-   clusterOptions = " --account=XXX --job-name=trim --time=12:00:00 --mem-per-cpu=20G --cpus-per-task=1"
-   }
-```
+### Step 4: Make a quality control report
 
-**NB if you want to test the pipeline locally** you need to change the name of the `nextflow.config` file so that it is not read by the pipeline automatically. For example, just do this:
+The final and simplest step of the pipeline allows you to create a quality control report. This will run after any step of the pipeline or when it is run in entirety in order to give you insight into the quality of reads, samples, mapping performance and variant calling. It uses [multiqc](https://docs.seqera.io/multiqc) which is very comprehensive and provides a useful overview. This takes time to learn how to read but is well worth paying extra attention to in order to ensure your analyis has worked!  
 
-```
-mv nextflow.config nextflow_config
-```
-
-Just remember that when you do go back to submitting the nextflow script, you must change this back so that the pipeline will resume the slurm execution. 
-
-**NB** For group members and users on Saga, you can use the `run_genotype_pipeline_saga.slurm` as a guideline. I have included it on this repo as a template for others too. 
-
-## Generating a quality control report
-
-One aspect of the pipeline is that it is designed to produce outputs that can be easily summarised in a simple quality control report. For this, I recommend using `multiqc`. Once the pipeline is finished (or at any of the intermediate main three steps). 
-
-All you need to do is be in the directory you have run the genotyping pipeline in and then run the following:
-
-```
-multiqc .
+```mermaid
+flowchart TB
+    subgraph "Inputs"
+    v2["Pipeline output directory"]
+    end
+    v3(["Run MultiQC"])
+    v2 --> v3
+    v3 --> v4
+    subgraph "Outputs"
+    v4["genotyping_pipeline_multiqc_report.html"]
+    end
 ```
 
+-----------------
+*This pipeline was initiated from a copy of https://github.com/markravinet/genotyping_pipeline_v2.git on Wednesday 11 Dec 2024.*

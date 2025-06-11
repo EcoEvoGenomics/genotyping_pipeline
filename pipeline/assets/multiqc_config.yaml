@@ -1,0 +1,94 @@
+title: "genotyping_pipeline"
+subtitle: "Sparrow Genotyping Pipeline"
+intro_text: "UiO Ecological and Evolutionary Genomics Group"
+show_analysis_time: true
+show_analysis_paths: false
+
+custom_logo: "sparrows.jpg"
+custom_logo_url: "https://github.com/EcoEvoGenomics"
+custom_logo_title: "Visit our GitHub: https://github.com/EcoEvoGenomics"
+
+highlight_patterns:
+  - "PBAC"
+  - "PDOM"
+  - "PHIS"
+  - "PITA"
+  - "PMON"
+
+highlight_colors:
+  - "#000080"
+  - "#1E90FF"
+  - "#8B0000"
+  - "#FFD700"
+  - "#008B00"
+
+table_columns_visible:
+  "Bcftools: Stats": false
+
+module_order:
+  - 'picard'
+  - 'fastp'
+  - 'samtools'
+  - 'bcftools'
+
+report_section_order:
+  fastp:
+    order: +1000
+
+remove_sections:
+  - bcftools-stats_indel_plot
+
+extra_fn_clean_exts:
+  - ".alignment"
+  - ".base_distribution_by_cycle"
+  - ".dedup"
+  - ".gcbias_detail"
+  - ".gcbias_summary"
+  - ".insert_size"
+  - ".mean_quality_by_cycle"
+  - ".quality_yield"
+  - ".qualityscore"
+
+fastp:
+  s_name_filenames: true
+
+table_sample_merge:
+  "(L001)": "_L001"
+  "(L002)": "_L002"
+  "(L003)": "_L003"
+  "(L004)": "_L004"
+  "(L005)": "_L005"
+  "(L006)": "_L006"
+  "(L007)": "_L007"
+  "(L008)": "_L008"
+  "(L009)": "_L009"
+  "(L010)": "_L010"
+  "(L011)": "_L011"
+  "(L012)": "_L012"
+  "(L013)": "_L013"
+  "(L014)": "_L014"
+  "(L015)": "_L015"
+  "(L016)": "_L016"
+  "(L017)": "_L017"
+  "(L018)": "_L018"
+  "(L019)": "_L019"
+  "(L020)": "_L020"
+
+picard_config:
+  s_name_filenames: true
+
+software_versions:
+  "Read pre-processing":
+    seqkit: "2.10.0"
+    fastp: "0.24.0"
+  "Read aligning":
+    clara-parabricks: "4.5.0-1"
+    samtools: "1.17"
+  "Variant calling":
+    bedtools: "2.30.0"
+    bcftools: "1.17"
+  "Variant filtering":
+    bcftools: "1.17"
+    vcftools: "0.1.16"
+
+disable_version_detection: true

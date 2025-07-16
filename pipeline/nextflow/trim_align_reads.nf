@@ -169,6 +169,7 @@ process align_reads {
     container "nvcr.io/nvidia/clara/clara-parabricks:4.5.0-1"
     containerOptions "--nv"
     time { 30.m * task.attempt }
+    memory { 16.GB + 7.5.GB * Math.ceil(grouped_reads.size() / 1024 ** 3) }
 
     errorStrategy "retry"
     maxRetries 3

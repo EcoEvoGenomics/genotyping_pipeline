@@ -121,7 +121,7 @@ process group_reads {
     tuple val(ID), path(grouped_reads, stageAs: "reads/*")
 
     output:
-    tuple val(ID), path(grouped_reads), file("${ID}_reads.list")
+    tuple val(ID), path(grouped_reads), file("${ID}_reads.list"), env("grouped_reads_total_size")
 
     script:
     """
@@ -158,6 +158,9 @@ process group_reads {
         >> ${ID}_reads.list
 
     done < lanes.list
+
+    # Calculate total size of grouped read files
+    grouped_reads_total_size=\$( du -sbL reads/ | awk '{ print \$1 }' )
     """
 }
 
@@ -168,8 +171,8 @@ process align_reads {
 
     container "nvcr.io/nvidia/clara/clara-parabricks:4.5.0-1"
     containerOptions "--nv"
-    memory { 16.GB + 7.5.GB * Math.ceil(grouped_reads.size() / 1024 ** 3) }
-    time { (15.m * task.attempt) + (5.m * Math.ceil(grouped_reads.size() / 1024 ** 3)) }
+    memory { 16.GB + 4.GB * Math.ceil(grouped_reads_input_size as Long / 1024 ** 3) }
+    time { (5.m * Math.ceil(grouped_reads_input_size as Long / 1024 ** 3)) * (1 + (0.25 * (task.attempt - 1))) }
 
     errorStrategy "retry"
     maxRetries 3
@@ -177,7 +180,7 @@ process align_reads {
     label "require_gpu"
 
     input:
-    tuple val(ID), path(grouped_reads, stageAs: "reads/*"), file(reads_list)
+    tuple val(ID), path(grouped_reads, stageAs: "reads/*"), file(reads_list), val(grouped_reads_input_size)
     path(reference_genome)
     path(reference_genome_index)
 

@@ -51,11 +51,11 @@ process parse_input {
 
     container "quay.io/biocontainers/seqkit:2.10.0--h9ee0642_0"
     cpus 2
-    memory 1.GB
-    time { 20.m * task.attempt }
+    memory { 8.MB * Math.ceil((R1.size() + R2.size()) / 1024 ** 3) * task.attempt }
+    time { 1.m * Math.ceil((R1.size() + R2.size()) / 1024 ** 3) * task.attempt }
 
     errorStrategy "retry"
-    maxRetries 2
+    maxRetries 3
 
     input:
     tuple val(ID), val(LANE), path(R1), path(R2)
@@ -82,11 +82,11 @@ process trim_reads {
 
     container "quay.io/biocontainers/fastp:0.24.0--heae3180_1"
     cpus 4
-    memory 4.GB
-    time { 30.m * task.attempt}
+    memory { 256.MB * Math.ceil((R1.size() + R2.size()) / 1024 ** 3) * task.attempt }
+    time { 1.m * Math.ceil((R1.size() + R2.size()) / 1024 ** 3) * task.attempt}
 
     errorStrategy "retry"
-    maxRetries 2
+    maxRetries 3
 
     input:
     tuple val(ID), val(LANE), file(R1), file(R2), path(qcmetrics, stageAs: './qc-metrics/')
@@ -111,11 +111,11 @@ process trim_reads {
 process group_reads {
     
     cpus 1
-    memory 256.MB
-    time { 10.m * task.attempt }
+    memory { 4.MB * task.attempt }
+    time { 10.s * task.attempt }
 
     errorStrategy "retry"
-    maxRetries 2
+    maxRetries 3
 
     input:
     tuple val(ID), path(grouped_reads, stageAs: "reads/*")
@@ -171,8 +171,8 @@ process align_reads {
 
     container "nvcr.io/nvidia/clara/clara-parabricks:4.5.0-1"
     containerOptions "--nv"
-    memory { 16.GB + 4.GB * Math.ceil(grouped_reads_input_size as Long / 1024 ** 3) }
-    time { (5.m * Math.ceil(grouped_reads_input_size as Long / 1024 ** 3)) * (1 + (0.25 * (task.attempt - 1))) }
+    memory { 8.GB + (4.GB * Math.ceil(grouped_reads_input_size as Long / 1024 ** 3) * (1 + (0.25 * (task.attempt - 1)))) }
+    time { 10.m + (1.m * Math.ceil(grouped_reads_input_size as Long / 1024 ** 3) * (1 + (0.25 * (task.attempt - 1)))) }
 
     errorStrategy "retry"
     maxRetries 3
@@ -224,8 +224,11 @@ process get_alignment_stats {
 
     container "quay.io/biocontainers/samtools:1.17--hd87286a_1"
     cpus 1
-    memory 1.GB
-    time 1.h
+    memory { 64.MB * Math.ceil(cram.size() / 1024 ** 3) * task.attempt }
+    time { 2.m * Math.ceil(cram.size() / 1024 ** 3) * task.attempt }
+
+    errorStrategy "retry"
+    maxRetries 3
 
     input:
     tuple \

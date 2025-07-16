@@ -33,10 +33,13 @@
     multiqc=yes
 
     # Settings for step trim_align_reads
+    # Note: Deduplicate reads removes reads with duplicate headers (bioinformatic duplicates)
     # Note: read_target only applies if downsample_reads=yes
+    # Note: 1024 is the SAM flag for PCR or optical duplicates. Set exclude_sam_flag to 0 exclude none.
     deduplicate_reads=no
     downsample_reads=no
     read_target=1000000
+    exclude_sam_flag=1024
 
     # Settings for step call_variants
     window_size=10000000
@@ -125,6 +128,7 @@ if [ $trim_align_reads = 'yes' ]; then
         --deduplicate $deduplicate_reads \
         --downsample $downsample_reads \
         --read_target $read_target \
+        --exclude_sam_flag $exclude_sam_flag \
         --ref_genome $ref_genome \
         --ref_index $ref_index \
         --ref_scaffold_name $ref_scaffold_name \

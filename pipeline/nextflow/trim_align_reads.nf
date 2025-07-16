@@ -41,7 +41,7 @@ workflow {
     | group_reads
     
     // Finally, pass all files of each sample together to the aligner:
-    def aligned_reads = align_reads(grouped_reads, file(params.ref_genome), file(params.ref_index))
+    def aligned_reads = align_reads(grouped_reads, file(params.ref_genome), file(params.ref_index), params.exclude_sam_flag)
     get_alignment_stats(aligned_reads, file(params.ref_genome), file(params.ref_index), params.ref_scaffold_name)
 
 }
@@ -183,6 +183,7 @@ process align_reads {
     tuple val(ID), path(grouped_reads, stageAs: "reads/*"), file(reads_list), val(grouped_reads_input_size)
     path(reference_genome)
     path(reference_genome_index)
+    val(exclude_sam_flag)
 
     output:
     tuple val(ID), path("${ID}.cram"), path("${ID}.cram.crai"), path('qc-metrics/*')
@@ -199,6 +200,7 @@ process align_reads {
     --out-bam ${ID}.cram \
     --out-duplicate-metrics qc-metrics/dedup.txt \
     --out-qc-metrics-dir qc-metrics \
+    --filter-flag ${exclude_sam_flag} \
     --tmp .
 
     # Obtain coverage statistics with Parabricks BAMMETRICS

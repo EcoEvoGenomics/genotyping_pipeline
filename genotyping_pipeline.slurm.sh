@@ -64,6 +64,9 @@
     # Path to a conda environment with Nextflow
     nextflow_envir_path=/cluster/projects/nn10082k/conda_group/nextflow
 
+    # Name of Nextflow configuration profile to use (see nextflow.config)
+    nextflow_profile="saga"
+
 ### --------------- End user input --------------- ###
 
 ### SETTINGS (2 / 2)
@@ -117,6 +120,7 @@ if [ $trim_align_reads = 'yes' ]; then
     nextflow -log ./.nextflow/nextflow.log \
         run ./pipeline/nextflow/trim_align_reads.nf \
         -with-report $trim_align_output_dir/workflow_report.html \
+        -profile $nextflow_profile \
         --samples $sample_csv \
         --deduplicate $deduplicate_reads \
         --downsample $downsample_reads \
@@ -133,6 +137,7 @@ if [ $call_variants = 'yes' ]; then
     nextflow -log ./.nextflow/nextflow.log \
         run ./pipeline/nextflow/call_variants.nf \
         -with-report $call_variants_output_dir/workflow_report.html \
+        -profile $nextflow_profile \
         --cram_dir $trim_align_output_dir \
         --window_size $window_size \
         --ref_genome $ref_genome \
@@ -149,6 +154,7 @@ if [ $filter_variants = 'yes' ]; then
     nextflow -log ./.nextflow/nextflow.log \
         run ./pipeline/nextflow/filter_variants.nf \
         -with-report $filter_variants_output_dir/workflow_report.html \
+        -profile $nextflow_profile \
         --vcf_dir $call_variants_output_dir/chroms \
         --filtering_label $filtering_label \
         --min_alleles $filtering_min_alleles \
@@ -167,6 +173,7 @@ if [ $multiqc = 'yes' ]; then
     mkmissingdir $multiqc_output_dir
     nextflow -log ./.nextflow/nextflow.log \
         run ./pipeline/nextflow/run_multiqc.nf \
+        -profile $nextflow_profile \
         --results_dir $output_dir \
         --publish_dir $multiqc_output_dir
 fi

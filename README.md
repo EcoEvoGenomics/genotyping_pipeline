@@ -74,7 +74,7 @@ As an example, your file should look like this but **without headers**:
 | PDOM2024IND0002F | L001 | /path/to/2F_R1.fastq.gz | /path/to/2F_R2.fastq.gz |
 | ... | ... | ... | ... |
 
-A short note on the lane codes - these are necessary to allow the pipeline to merge samples from across different lanes. You should check the sample catalogue and assess the number of lanes you require for each sample. The codes are essentially arbitrary (i.e. they could be L001, L002 or L1, L2) - all that is required is that reads from different lanes are explicitly stated as such, otherwise the pipeline will fail (or at least fail to merge the lanes). If in doubt about this, just ask! 
+A note on the lane codes (L001, L002, ...) - these are necessary to allow the pipeline to merge sequencing files from the same individual sequenced on different lanes. You should check the sample catalogue and assess the number of lanes you require for each sample. In *principle* (but **_read on_**), the codes are arbitrary and *could* be L001, L002, ... or L1, L2, ... or similar. **But the QC report will only be organised properly if you use the format L001, L002, and so on**. We note here that other formats are permissible, in case you happen to use another (e.g. by accident); the most important thing is that read files from different lanes are explicitly stated as such, otherwise the pipeline will fail to group reads from the same individual. If in doubt about this, just ask!
 
 ## The pipeline in detail
 ### Step 1: Read trimming and alignment

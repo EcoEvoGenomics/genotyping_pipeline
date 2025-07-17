@@ -42,7 +42,7 @@ workflow {
     
     // Finally, pass all files of each sample together to the aligner:
     def aligned_reads = align_reads(grouped_reads, file(params.ref_genome), file(params.ref_index))
-    get_alignment_stats(aligned_reads, file(params.ref_genome), file(params.ref_index), params.ref_scaffold_name)
+    postprocess_alignment(aligned_reads, file(params.ref_genome), file(params.ref_index), params.ref_scaffold_name, params.exclude_flags)
 
 }
 
@@ -167,8 +167,6 @@ process group_reads {
 // Step 3 - Align to reference genome using GPU
 process align_reads {
 
-    publishDir "${params.publish_dir}/${ID}", saveAs: { filename -> "$filename" }, mode: 'copy'
-
     container "nvcr.io/nvidia/clara/clara-parabricks:4.5.0-1"
     containerOptions "--nv"
     memory { 1.GB * Math.min(36, 8 + (4 * Math.ceil(grouped_reads_input_size as Long / 1024 ** 3))) * (1 + (0.25 * (task.attempt - 1))) }
@@ -185,7 +183,7 @@ process align_reads {
     path(reference_genome_index)
 
     output:
-    tuple val(ID), path("${ID}.cram"), path("${ID}.cram.crai"), path('qc-metrics/*')
+    tuple val(ID), path("${ID}_marked.cram"), path("${ID}_marked.cram.crai"), path('qc-metrics/*')
 
     script:
     """
@@ -196,7 +194,7 @@ process align_reads {
     pbrun fq2bam \
     --ref ${reference_genome} \
     --in-fq-list ${reads_list} \
-    --out-bam ${ID}.cram \
+    --out-bam ${ID}_marked.cram \
     --out-duplicate-metrics qc-metrics/dedup.txt \
     --out-qc-metrics-dir qc-metrics \
     --tmp .
@@ -204,7 +202,7 @@ process align_reads {
     # Obtain coverage statistics with Parabricks BAMMETRICS
     pbrun bammetrics \
     --ref ${reference_genome} \
-    --bam ${ID}.cram \
+    --bam ${ID}_marked.cram \
     --out-metrics-file qc-metrics/bammetrics.txt \
     --tmp-dir .
 
@@ -217,15 +215,15 @@ process align_reads {
     """
 }
 
-// Step 4 - Additional alignment statistics
-process get_alignment_stats {
+// Step 4 - Postprocess alignment
+process postprocess_alignment {
 
-    publishDir "${params.publish_dir}/${ID}/qc-metrics", saveAs: { filename -> "$filename" }, mode: 'copy'
+    publishDir "${params.publish_dir}/${ID}", saveAs: { filename -> "$filename" }, mode: 'copy'
 
     container "quay.io/biocontainers/samtools:1.17--hd87286a_1"
     cpus 1
-    memory { 64.MB * Math.ceil(cram.size() / 1024 ** 3) * task.attempt }
-    time { 2.m * Math.ceil(cram.size() / 1024 ** 3) * task.attempt }
+    memory { 1.GB * Math.ceil(cram.size() / 1024 ** 3) * task.attempt }
+    time { 1.h * Math.ceil(cram.size() / 1024 ** 3) * task.attempt }
 
     errorStrategy "retry"
     maxRetries 3
@@ -239,14 +237,16 @@ process get_alignment_stats {
     path(ref_genome)
     path(ref_index)
     val(ref_scaffold_name)
+    val(exclude_flags)
 
     output:
-    file("${ID}.tsv")
-    file("${ID}.flagstat")
+    tuple val(ID), path("${ID}.cram"), path("${ID}.cram.crai"), path('qc-metrics/*')
 
     script:
     """
-    samtools coverage --reference ${ref_genome} ${cram} | grep -v ${ref_scaffold_name} > ${ID}.tsv
-    samtools flagstat ${cram} > ${ID}.flagstat
+    samtools view -@ ${task.cpus} --excl-flags ${exclude_flags} ${cram} > ${ID}.cram
+    samtools index -@ ${task.cpus} ${ID}.cram
+    samtools coverage --reference ${ref_genome} ${ID}.cram | grep -v ${ref_scaffold_name} > qc-metrics/${ID}.tsv
+    samtools stats ${ID}.cram > qc-metrics/${ID}.cramstats
     """
 }

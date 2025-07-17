@@ -221,7 +221,7 @@ process postprocess_alignment {
     publishDir "${params.publish_dir}/${ID}", saveAs: { filename -> "$filename" }, mode: 'copy'
 
     container "quay.io/biocontainers/samtools:1.17--hd87286a_1"
-    cpus 1
+    cpus 2
     memory { 1.GB * Math.ceil(cram.size() / 1024 ** 3) * task.attempt }
     time { 1.h * Math.ceil(cram.size() / 1024 ** 3) * task.attempt }
 

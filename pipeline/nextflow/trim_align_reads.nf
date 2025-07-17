@@ -244,7 +244,7 @@ process postprocess_alignment {
 
     script:
     """
-    samtools view -@ ${task.cpus} --excl-flags ${exclude_flags} ${cram} > ${ID}.cram
+    samtools view -@ ${task.cpus} --reference ${ref_genome} --cram --excl-flags ${exclude_flags} ${cram} > ${ID}.cram
     samtools index -@ ${task.cpus} ${ID}.cram
     samtools coverage --reference ${ref_genome} ${ID}.cram | grep -v ${ref_scaffold_name} > qc-metrics/${ID}.tsv
     samtools stats ${ID}.cram > qc-metrics/${ID}.cramstats

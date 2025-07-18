@@ -3,7 +3,7 @@
 // CEES Ecological and evolutionary genomics group - genotyping pipeline
 // https://github.com/EcoEvoGenomics/genotyping_pipeline
 //
-// Workflow: Preprocess reads
+// Workflow: Trim and align reads
 //
 // Originally developed by Mark Ravinet
 // Co-developed and maintained by Erik Sandertun Røed
@@ -109,6 +109,7 @@ process trim_reads {
     """
 }
 
+// Step 3.1 Group read files belonging to same individual (L001, L002, etc.)
 process group_reads {
     
     cpus 1
@@ -165,7 +166,7 @@ process group_reads {
     """
 }
 
-// Step 3 - Align to reference genome using GPU
+// Step 3.2 - Align to reference genome using GPU and obtain stats pre-removal of marked duplicates
 process align_reads {
 
     container "nvcr.io/nvidia/clara/clara-parabricks:4.5.0-1"
@@ -216,7 +217,7 @@ process align_reads {
     """
 }
 
-// Step 4 - Postprocess alignment
+// Step 4 - Remove duplicates marked in the previous process
 process remove_marked_duplicates {
 
     publishDir "${params.publish_dir}/${ID}", saveAs: { filename -> "$filename" }, mode: 'copy'
@@ -224,7 +225,7 @@ process remove_marked_duplicates {
     container "quay.io/biocontainers/samtools:1.17--hd87286a_1"
     cpus 1
     memory { 128.MB * Math.ceil(cram.size() / 1024 ** 3) * task.attempt }
-    time { 5.m * Math.ceil(cram.size() / 1024 ** 3) * task.attempt }
+    time { 3.m * Math.ceil(cram.size() / 1024 ** 3) * task.attempt }
 
     errorStrategy "retry"
     maxRetries 3
@@ -245,7 +246,7 @@ process remove_marked_duplicates {
     """
 }
 
-// Step 4 - Postprocess alignment
+// Step 4 - Obtain stats for final alignment
 process get_final_alignment_stats {
 
     publishDir "${params.publish_dir}/${ID}/qc-metrics", saveAs: { filename -> "$filename" }, mode: 'copy'

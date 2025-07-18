@@ -3,7 +3,7 @@
 // CEES Ecological and evolutionary genomics group - genotyping pipeline
 // https://github.com/EcoEvoGenomics/genotyping_pipeline
 //
-// Workflow: Preprocess reads
+// Workflow: Trim and align reads
 //
 // Originally developed by Mark Ravinet
 // Co-developed and maintained by Erik Sandertun Røed
@@ -42,7 +42,8 @@ workflow {
     
     // Finally, pass all files of each sample together to the aligner:
     def aligned_reads = align_reads(grouped_reads, file(params.ref_genome), file(params.ref_index))
-    get_alignment_stats(aligned_reads, file(params.ref_genome), file(params.ref_index), params.ref_scaffold_name)
+    def deduplicated_alignments = remove_marked_duplicates(aligned_reads, file(params.ref_genome), file(params.ref_index), params.exclude_flags)
+    get_final_alignment_stats(deduplicated_alignments, file(params.ref_genome), file(params.ref_index), params.ref_scaffold_name)
 
 }
 
@@ -51,11 +52,11 @@ process parse_input {
 
     container "quay.io/biocontainers/seqkit:2.10.0--h9ee0642_0"
     cpus 2
-    memory 1.GB
-    time { 20.m * task.attempt }
+    memory { 12.MB * Math.ceil((R1.size() + R2.size()) / 1024 ** 3) * task.attempt }
+    time { 1.m * Math.ceil((R1.size() + R2.size()) / 1024 ** 3) * task.attempt }
 
     errorStrategy "retry"
-    maxRetries 2
+    maxRetries 3
 
     input:
     tuple val(ID), val(LANE), path(R1), path(R2)
@@ -82,11 +83,11 @@ process trim_reads {
 
     container "quay.io/biocontainers/fastp:0.24.0--heae3180_1"
     cpus 4
-    memory 4.GB
-    time { 30.m * task.attempt}
+    memory { 256.MB * Math.ceil((R1.size() + R2.size()) / 1024 ** 3) * task.attempt }
+    time { 1.m * Math.ceil((R1.size() + R2.size()) / 1024 ** 3) * task.attempt}
 
     errorStrategy "retry"
-    maxRetries 2
+    maxRetries 3
 
     input:
     tuple val(ID), val(LANE), file(R1), file(R2), path(qcmetrics, stageAs: './qc-metrics/')
@@ -108,20 +109,21 @@ process trim_reads {
     """
 }
 
+// Step 3.1 Group read files belonging to same individual (L001, L002, etc.)
 process group_reads {
     
     cpus 1
-    memory 256.MB
-    time { 10.m * task.attempt }
+    memory { 4.MB * task.attempt }
+    time { 10.s * task.attempt }
 
     errorStrategy "retry"
-    maxRetries 2
+    maxRetries 3
 
     input:
     tuple val(ID), path(grouped_reads, stageAs: "reads/*")
 
     output:
-    tuple val(ID), path(grouped_reads), file("${ID}_reads.list")
+    tuple val(ID), path(grouped_reads), file("${ID}_reads.list"), env("grouped_reads_total_size")
 
     script:
     """
@@ -158,17 +160,19 @@ process group_reads {
         >> ${ID}_reads.list
 
     done < lanes.list
+
+    # Calculate total size of grouped read files
+    grouped_reads_total_size=\$( du -sbL reads/ | awk '{ print \$1 }' )
     """
 }
 
-// Step 3 - Align to reference genome using GPU
+// Step 3.2 - Align to reference genome using GPU and obtain stats pre-removal of marked duplicates
 process align_reads {
-
-    publishDir "${params.publish_dir}/${ID}", saveAs: { filename -> "$filename" }, mode: 'copy'
 
     container "nvcr.io/nvidia/clara/clara-parabricks:4.5.0-1"
     containerOptions "--nv"
-    time { 30.m * task.attempt }
+    memory { 1.GB * Math.max(36, 8 + (4 * Math.ceil(grouped_reads_input_size as Long / 1024 ** 3))) * (1 + (0.25 * (task.attempt - 1))) }
+    time { 1.m * Math.max(15, 10 + (1 * Math.ceil(grouped_reads_input_size as Long / 1024 ** 3))) * (1 + (0.25 * (task.attempt - 1))) }
 
     errorStrategy "retry"
     maxRetries 3
@@ -176,12 +180,12 @@ process align_reads {
     label "require_gpu"
 
     input:
-    tuple val(ID), path(grouped_reads, stageAs: "reads/*"), file(reads_list)
+    tuple val(ID), path(grouped_reads, stageAs: "reads/*"), file(reads_list), val(grouped_reads_input_size)
     path(reference_genome)
     path(reference_genome_index)
 
     output:
-    tuple val(ID), path("${ID}.cram"), path("${ID}.cram.crai"), path('qc-metrics/*')
+    tuple val(ID), path("${ID}_marked.cram"), path("${ID}_marked.cram.crai"), path('qc-metrics/*')
 
     script:
     """
@@ -192,16 +196,15 @@ process align_reads {
     pbrun fq2bam \
     --ref ${reference_genome} \
     --in-fq-list ${reads_list} \
-    --out-bam ${ID}.cram \
+    --out-bam ${ID}_marked.cram \
     --out-duplicate-metrics qc-metrics/dedup.txt \
     --out-qc-metrics-dir qc-metrics \
-    --gpuwrite \
     --tmp .
 
     # Obtain coverage statistics with Parabricks BAMMETRICS
     pbrun bammetrics \
     --ref ${reference_genome} \
-    --bam ${ID}.cram \
+    --bam ${ID}_marked.cram \
     --out-metrics-file qc-metrics/bammetrics.txt \
     --tmp-dir .
 
@@ -214,33 +217,61 @@ process align_reads {
     """
 }
 
-// Step 4 - Additional alignment statistics
-process get_alignment_stats {
+// Step 4 - Remove duplicates marked in the previous process
+process remove_marked_duplicates {
+
+    publishDir "${params.publish_dir}/${ID}", saveAs: { filename -> "$filename" }, mode: 'copy'
+
+    container "quay.io/biocontainers/samtools:1.17--hd87286a_1"
+    cpus 1
+    memory { 128.MB * Math.ceil(cram.size() / 1024 ** 3) * task.attempt }
+    time { 3.m * Math.ceil(cram.size() / 1024 ** 3) * task.attempt }
+
+    errorStrategy "retry"
+    maxRetries 3
+
+    input:
+    tuple val(ID), file(cram), file(index), path(qcmetrics, stageAs: "qc-metrics/*")
+    path(ref_genome)
+    path(ref_index)
+    val(exclude_flags)
+
+    output:
+    tuple val(ID), path("${ID}.cram"), path("${ID}.cram.crai"), path('qc-metrics/*', includeInputs: true)
+
+    script:
+    """
+    samtools view -@ ${task.cpus} --reference ${ref_genome} --cram --excl-flags ${exclude_flags} ${cram} > ${ID}.cram
+    samtools index -@ ${task.cpus} ${ID}.cram
+    """
+}
+
+// Step 4 - Obtain stats for final alignment
+process get_final_alignment_stats {
 
     publishDir "${params.publish_dir}/${ID}/qc-metrics", saveAs: { filename -> "$filename" }, mode: 'copy'
 
     container "quay.io/biocontainers/samtools:1.17--hd87286a_1"
     cpus 1
-    memory 1.GB
-    time 1.h
+    memory { 128.MB * Math.ceil(cram.size() / 1024 ** 3) * task.attempt }
+    time { 6.m * Math.ceil(cram.size() / 1024 ** 3) * task.attempt }
+
+    errorStrategy "retry"
+    maxRetries 3
 
     input:
-    tuple \
-    val(ID), \
-    file(cram), \
-    file(index), \
-    file(qcmetrics)
+    tuple val(ID), file(cram), file(index), file(qcmetrics)
     path(ref_genome)
     path(ref_index)
     val(ref_scaffold_name)
 
     output:
     file("${ID}.tsv")
-    file("${ID}.flagstat")
+    file("${ID}.cramstats")
 
     script:
     """
-    samtools coverage --reference ${ref_genome} ${cram} | grep -v ${ref_scaffold_name} > ${ID}.tsv
-    samtools flagstat ${cram} > ${ID}.flagstat
+    samtools coverage --reference ${ref_genome} ${ID}.cram | grep -v ${ref_scaffold_name} > ${ID}.tsv
+    samtools stats --ref-seq ${ref_genome} ${ID}.cram > ${ID}.cramstats
     """
 }

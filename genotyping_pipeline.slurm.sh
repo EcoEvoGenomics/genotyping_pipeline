@@ -34,9 +34,11 @@
 
     # Settings for step trim_align_reads
     # Note: read_target only applies if downsample_reads=yes
+    # Note: flag 0x400 is for optical and PCR duplicates
     deduplicate_reads=no
     downsample_reads=no
     read_target=1000000
+    exclude_flags=0x400
 
     # Settings for step call_variants
     window_size=10000000
@@ -63,6 +65,9 @@
     
     # Path to a conda environment with Nextflow
     nextflow_envir_path=/cluster/projects/nn10082k/conda_group/nextflow
+
+    # Name of Nextflow configuration profile to use (see nextflow.config)
+    nextflow_profile="saga"
 
 ### --------------- End user input --------------- ###
 
@@ -117,10 +122,12 @@ if [ $trim_align_reads = 'yes' ]; then
     nextflow -log ./.nextflow/nextflow.log \
         run ./pipeline/nextflow/trim_align_reads.nf \
         -with-report $trim_align_output_dir/workflow_report.html \
+        -profile $nextflow_profile \
         --samples $sample_csv \
         --deduplicate $deduplicate_reads \
         --downsample $downsample_reads \
         --read_target $read_target \
+        --exclude_flags $exclude_flags \
         --ref_genome $ref_genome \
         --ref_index $ref_index \
         --ref_scaffold_name $ref_scaffold_name \
@@ -133,6 +140,7 @@ if [ $call_variants = 'yes' ]; then
     nextflow -log ./.nextflow/nextflow.log \
         run ./pipeline/nextflow/call_variants.nf \
         -with-report $call_variants_output_dir/workflow_report.html \
+        -profile $nextflow_profile \
         --cram_dir $trim_align_output_dir \
         --window_size $window_size \
         --ref_genome $ref_genome \
@@ -149,6 +157,7 @@ if [ $filter_variants = 'yes' ]; then
     nextflow -log ./.nextflow/nextflow.log \
         run ./pipeline/nextflow/filter_variants.nf \
         -with-report $filter_variants_output_dir/workflow_report.html \
+        -profile $nextflow_profile \
         --vcf_dir $call_variants_output_dir/chroms \
         --filtering_label $filtering_label \
         --min_alleles $filtering_min_alleles \
@@ -167,6 +176,7 @@ if [ $multiqc = 'yes' ]; then
     mkmissingdir $multiqc_output_dir
     nextflow -log ./.nextflow/nextflow.log \
         run ./pipeline/nextflow/run_multiqc.nf \
+        -profile $nextflow_profile \
         --results_dir $output_dir \
         --publish_dir $multiqc_output_dir
 fi

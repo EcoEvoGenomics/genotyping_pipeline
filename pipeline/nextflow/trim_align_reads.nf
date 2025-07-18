@@ -42,7 +42,8 @@ workflow {
     
     // Finally, pass all files of each sample together to the aligner:
     def aligned_reads = align_reads(grouped_reads, file(params.ref_genome), file(params.ref_index))
-    postprocess_alignment(aligned_reads, file(params.ref_genome), file(params.ref_index), params.ref_scaffold_name, params.exclude_flags)
+    def deduplicated_alignments = remove_marked_duplicates(aligned_reads, file(params.ref_genome), file(params.ref_index), params.exclude_flags)
+    get_final_alignment_stats(deduplicated_alignments, file(params.ref_genome), file(params.ref_index), params.ref_scaffold_name)
 
 }
 
@@ -216,14 +217,14 @@ process align_reads {
 }
 
 // Step 4 - Postprocess alignment
-process postprocess_alignment {
+process remove_marked_duplicates {
 
     publishDir "${params.publish_dir}/${ID}", saveAs: { filename -> "$filename" }, mode: 'copy'
 
     container "quay.io/biocontainers/samtools:1.17--hd87286a_1"
-    cpus 2
-    memory { 1.GB * Math.ceil(cram.size() / 1024 ** 3) * task.attempt }
-    time { 1.h * Math.ceil(cram.size() / 1024 ** 3) * task.attempt }
+    cpus 1
+    memory { 128.MB * Math.ceil(cram.size() / 1024 ** 3) * task.attempt }
+    time { 5.m * Math.ceil(cram.size() / 1024 ** 3) * task.attempt }
 
     errorStrategy "retry"
     maxRetries 3
@@ -232,17 +233,44 @@ process postprocess_alignment {
     tuple val(ID), file(cram), file(index), path(qcmetrics, stageAs: "qc-metrics/*")
     path(ref_genome)
     path(ref_index)
-    val(ref_scaffold_name)
     val(exclude_flags)
 
     output:
-    tuple val(ID), path("${ID}.cram"), path("${ID}.cram.crai"), path('qc-metrics/*')
+    tuple val(ID), path("${ID}.cram"), path("${ID}.cram.crai"), path('qc-metrics/*', followLinks: true)
 
     script:
     """
     samtools view -@ ${task.cpus} --reference ${ref_genome} --cram --excl-flags ${exclude_flags} ${cram} > ${ID}.cram
     samtools index -@ ${task.cpus} ${ID}.cram
-    samtools coverage --reference ${ref_genome} ${ID}.cram | grep -v ${ref_scaffold_name} > qc-metrics/${ID}.tsv
-    samtools stats ${ID}.cram > qc-metrics/${ID}.cramstats
+    """
+}
+
+// Step 4 - Postprocess alignment
+process get_final_alignment_stats {
+
+    publishDir "${params.publish_dir}/${ID}/qc-metrics", saveAs: { filename -> "$filename" }, mode: 'copy'
+
+    container "quay.io/biocontainers/samtools:1.17--hd87286a_1"
+    cpus 1
+    memory { 64.MB * Math.ceil(cram.size() / 1024 ** 3) * task.attempt }
+    time { 2.m * Math.ceil(cram.size() / 1024 ** 3) * task.attempt }
+
+    errorStrategy "retry"
+    maxRetries 3
+
+    input:
+    tuple val(ID), file(cram), file(index), file(qcmetrics)
+    path(ref_genome)
+    path(ref_index)
+    val(ref_scaffold_name)
+
+    output:
+    file("${ID}.tsv")
+    file("${ID}.cramstats")
+
+    script:
+    """
+    samtools coverage --reference ${ref_genome} ${ID}.cram | grep -v ${ref_scaffold_name} > ${ID}.tsv
+    samtools stats --ref-seq ${ref_genome} ${ID}.cram > ${ID}.cramstats
     """
 }

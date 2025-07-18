@@ -36,10 +36,10 @@ workflow {
 
     // Then, trim with fastp and get stats again
     def trimmed_reads = trim_reads(input_reads)
-    get_trimmed_reads_stats(trimmed_reads, "trimmed")
+    get_trimmed_reads_stats(trimmed_reads.keys_and_reads, "trimmed")
 
     // Now, group separate file pairs (lanes) for each sample and make read groups
-    def grouped_reads = trimmed_reads[0] \
+    def grouped_reads = trimmed_reads.reads_only \
     | flatten
     | map { file -> 
         def id   = file.name.toString().tokenize("_").get(0)
@@ -75,7 +75,8 @@ process trim_reads {
     tuple val(ID), val(LANE), path(R1), path(R2)
 
     output:
-    tuple path("${ID}_${LANE}_R1.fastq.gz"), path("${ID}_${LANE}_R2.fastq.gz")
+    tuple val(ID), val(LANE), path("${ID}_${LANE}_R1.fastq.gz"), path("${ID}_${LANE}_R2.fastq.gz"), emit: keys_and_reads
+    tuple path("${ID}_${LANE}_R1.fastq.gz"), path("${ID}_${LANE}_R2.fastq.gz"), emit: reads_only
 
     script:
     """

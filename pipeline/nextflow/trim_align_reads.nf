@@ -252,8 +252,8 @@ process get_final_alignment_stats {
 
     container "quay.io/biocontainers/samtools:1.17--hd87286a_1"
     cpus 1
-    memory { 64.MB * Math.ceil(cram.size() / 1024 ** 3) * task.attempt }
-    time { 2.m * Math.ceil(cram.size() / 1024 ** 3) * task.attempt }
+    memory { 128.MB * Math.ceil(cram.size() / 1024 ** 3) * task.attempt }
+    time { 6.m * Math.ceil(cram.size() / 1024 ** 3) * task.attempt }
 
     errorStrategy "retry"
     maxRetries 3

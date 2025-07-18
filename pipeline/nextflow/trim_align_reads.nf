@@ -9,6 +9,8 @@
 // Co-developed and maintained by Erik Sandertun Røed
 
 include { downsample_reads; deduplicate_reads } from "./qc_utils.nf"
+include { get_reads_stats as get_untrimmed_reads_stats } from "./qc_utils.nf"
+include { get_reads_stats as get_trimmed_reads_stats } from "./qc_utils.nf"
 include { get_alignment_stats as get_unfiltered_alignment_stats } from "./qc_utils.nf"
 include { get_alignment_stats as get_filtered_alignment_stats } from "./qc_utils.nf"
 
@@ -20,19 +22,23 @@ workflow {
         .multiMap { cols -> input_reads: [cols[0], cols[1], cols[2], cols[3]] }
         .set { samples }
 
-    // First parse input reads:
-    def parsed_reads = parse_input(samples.input_reads)
+    // First parse input reads and get stats
+    def input_reads = samples.input_reads
+    get_untrimmed_reads_stats(input_reads, "untrimmed")
+
+    // Optional read processing
     if (params.deduplicate == 'yes') {
-        parsed_reads = deduplicate_reads(parsed_reads)
+        input_reads = deduplicate_reads(input_reads)
     }
     if (params.downsample == 'yes') {
-        parsed_reads = downsample_reads(parsed_reads)
+        input_reads = downsample_reads(input_reads)
     }
 
-    // Then, trim with fastp ...
-    def trimmed_reads = trim_reads(parsed_reads)
+    // Then, trim with fastp and get stats again
+    def trimmed_reads = trim_reads(input_reads)
+    get_trimmed_reads_stats(trimmed_reads, "trimmed")
 
-    // Now, group separate file pairs (lanes) for each sample and make read groups:
+    // Now, group separate file pairs (lanes) for each sample and make read groups
     def grouped_reads = trimmed_reads[0] \
     | flatten
     | map { file -> 
@@ -44,44 +50,15 @@ workflow {
     
     // Pass all files of each sample together to the aligner, align with marking of duplicates, and get intermediate stats
     def unfiltered_alignments = align_reads(grouped_reads, file(params.ref_genome), file(params.ref_index))
-    get_unfiltered_alignment_stats(unfiltered_alignments, file(params.ref_genome), file(params.ref_index), params.ref_scaffold_name, "_unfiltered")
+    get_unfiltered_alignment_stats(unfiltered_alignments, file(params.ref_genome), file(params.ref_index), params.ref_scaffold_name, "unfiltered")
 
     // Then remove duplicates and get final stats
     def filtered_alignments = filter_alignments(unfiltered_alignments, file(params.ref_genome), file(params.ref_index), params.exclude_flags)
-    get_filtered_alignment_stats(filtered_alignments, file(params.ref_genome), file(params.ref_index), params.ref_scaffold_name, "_filtered")
+    get_filtered_alignment_stats(filtered_alignments, file(params.ref_genome), file(params.ref_index), params.ref_scaffold_name, "filtered")
 
 }
 
-// Step 1 - Parse input reads for a sample
-process parse_input {
-
-    container "quay.io/biocontainers/seqkit:2.10.0--h9ee0642_0"
-    cpus 2
-    memory { 12.MB * Math.ceil((R1.size() + R2.size()) / 1024 ** 3) * task.attempt }
-    time { 1.m * Math.ceil((R1.size() + R2.size()) / 1024 ** 3) * task.attempt }
-
-    errorStrategy "retry"
-    maxRetries 3
-
-    input:
-    tuple val(ID), val(LANE), path(R1), path(R2)
-
-    output:
-    tuple val(ID), val(LANE), path(R1), path(R2), path('qc-metrics/*')
-
-    script:
-    """
-    mkdir qc-metrics
-    seqkit stats -j ${task.cpus} -To qc-metrics/unprocessed.tsv *.fastq.gz
-    printf '%s\\t%s\\n' \
-        'ID_LANE' '${ID}_${LANE}' \
-        'deduplicate' '${params.deduplicate}' \
-        'downsample' '${params.downsample}' \
-        > qc-metrics/settings.tsv
-    """
-}
-
-// Step 2 - Read trim_reads
+// Step 1 - Read trimming
 process trim_reads {
 
     publishDir "${params.publish_dir}/${ID}/${LANE}", saveAs: { filename -> "$filename" }, mode: 'copy'
@@ -95,11 +72,10 @@ process trim_reads {
     maxRetries 3
 
     input:
-    tuple val(ID), val(LANE), file(R1), file(R2), path(qcmetrics, stageAs: './qc-metrics/')
+    tuple val(ID), val(LANE), file(R1), file(R2)
 
     output:
     tuple file("${ID}_${LANE}_R1.fastq.gz"), file("${ID}_${LANE}_R2.fastq.gz")
-    path("qc-metrics/*")
 
     script:
     """
@@ -107,10 +83,7 @@ process trim_reads {
     --in1 ${R1} \
     --in2 ${R2} \
     --out1 ${ID}_${LANE}_R1.fastq.gz \
-    --out2 ${ID}_${LANE}_R2.fastq.gz \
-    --report_title "${ID}_${LANE}" \
-    --html qc-metrics/${ID}_${LANE}.html \
-    --json qc-metrics/${ID}_${LANE}.json
+    --out2 ${ID}_${LANE}_R2.fastq.gz
     """
 }
 

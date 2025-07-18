@@ -236,7 +236,7 @@ process remove_marked_duplicates {
     val(exclude_flags)
 
     output:
-    tuple val(ID), path("${ID}.cram"), path("${ID}.cram.crai"), path('qc-metrics/*', followLinks: true)
+    tuple val(ID), path("${ID}.cram"), path("${ID}.cram.crai"), path('qc-metrics/*', includeInputs: true)
 
     script:
     """

@@ -26,14 +26,30 @@ table_columns_visible:
   "Bcftools: Stats": false
 
 module_order:
+  - 'fastqc':
+      name: "Reads (Raw)"
+      anchor: "fastqc_raw"
+      path-filters:
+        - "*_raw_fastqc.zip"
+  - 'fastqc':
+      name: "Reads (Trimmed)"
+      anchor: "fastqc_trimmed"
+      path-filters:
+        - "*_trimmed_fastqc.zip"
   - 'picard'
-  - 'fastp'
-  - 'samtools'
+  - 'samtools':
+      name: "Alignments (Unfiltered)"
+      anchor: "samtools_unfiltered"
+      path-filters:
+        - "*_unfiltered.tsv"
+        - "*_unfiltered.cramstats"
+  - 'samtools':
+      name: "Alignments (Filtered)"
+      anchor: "samtools_filtered"
+      path-filters:
+        - "*_filtered.tsv"
+        - "*_filtered.cramstats"
   - 'bcftools'
-
-report_section_order:
-  fastp:
-    order: +1000
 
 remove_sections:
   - bcftools-stats_indel_plot
@@ -48,9 +64,6 @@ extra_fn_clean_exts:
   - ".mean_quality_by_cycle"
   - ".quality_yield"
   - ".qualityscore"
-
-fastp:
-  s_name_filenames: true
 
 table_sample_merge:
   "(L001)": "_L001"
@@ -81,6 +94,7 @@ software_versions:
   "Read pre-processing":
     seqkit: "2.10.0"
     fastp: "0.24.0"
+    fastqc: "0.12.1"
   "Read aligning":
     clara-parabricks: "4.5.0-1"
     samtools: "1.17"

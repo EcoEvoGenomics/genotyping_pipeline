@@ -202,16 +202,8 @@ process align_reads {
     --ref ${reference_genome} \
     --in-fq-list ${reads_list} \
     --out-bam ${ID}_marked.cram \
-    --out-duplicate-metrics qc-metrics/dedup.txt \
     --out-qc-metrics-dir qc-metrics \
     --tmp .
-
-    # Obtain coverage statistics with Parabricks BAMMETRICS
-    pbrun bammetrics \
-    --ref ${reference_genome} \
-    --bam ${ID}_marked.cram \
-    --out-metrics-file qc-metrics/bammetrics.txt \
-    --tmp-dir .
 
     # Parse QC files
     rm qc-metrics/*.pdf

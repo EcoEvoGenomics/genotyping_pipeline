@@ -72,10 +72,10 @@ process trim_reads {
     maxRetries 3
 
     input:
-    tuple val(ID), val(LANE), file(R1), file(R2)
+    tuple val(ID), val(LANE), path(R1), path(R2)
 
     output:
-    tuple file("${ID}_${LANE}_R1.fastq.gz"), file("${ID}_${LANE}_R2.fastq.gz")
+    tuple path("${ID}_${LANE}_R1.fastq.gz"), path("${ID}_${LANE}_R2.fastq.gz")
 
     script:
     """
@@ -101,7 +101,7 @@ process group_reads {
     tuple val(ID), path(grouped_reads, stageAs: "reads/*")
 
     output:
-    tuple val(ID), path(grouped_reads), file("${ID}_reads.list"), env("grouped_reads_total_size")
+    tuple val(ID), path(grouped_reads), path("${ID}_reads.list"), env("grouped_reads_total_size")
 
     script:
     """
@@ -158,7 +158,7 @@ process align_reads {
     label "require_gpu"
 
     input:
-    tuple val(ID), path(grouped_reads, stageAs: "reads/*"), file(reads_list), val(grouped_reads_input_size)
+    tuple val(ID), path(grouped_reads, stageAs: "reads/*"), path(reads_list), val(grouped_reads_input_size)
     path(reference_genome)
     path(reference_genome_index)
 
@@ -201,7 +201,7 @@ process filter_alignments {
     maxRetries 3
 
     input:
-    tuple val(ID), file(cram), file(index), path(qcmetrics, stageAs: "qc-metrics/*")
+    tuple val(ID), path(cram), path(index), path(qcmetrics, stageAs: "qc-metrics/*")
     path(ref_genome)
     path(ref_index)
     val(exclude_flags)

@@ -8,12 +8,12 @@ process get_reads_stats {
     time 1.h
 
     input:
-    tuple val(ID), val(LANE), file(R1), file(R2)
+    tuple val(ID), val(LANE), path(R1), path(R2)
     val(processing_stage)
 
     output:
-    file("${R1}${processing_stage}.fastqc.zip")
-    file("${R2}${processing_stage}.fastqc.zip")
+    path("${R1}${processing_stage}.fastqc.zip")
+    path("${R2}${processing_stage}.fastqc.zip")
 
     script:
     """
@@ -33,10 +33,10 @@ process deduplicate_reads {
     time 1.h
     
     input:
-    tuple val(ID), val(LANE), file(R1), file(R2)
+    tuple val(ID), val(LANE), path(R1), path(R2)
 
     output:
-    tuple val(ID), val(LANE), file("${R1.simpleName}.fastq.gz"), file("${R2.simpleName}.fastq.gz")
+    tuple val(ID), val(LANE), path("${R1.simpleName}.fastq.gz"), path("${R2.simpleName}.fastq.gz")
 
     script:
     """
@@ -55,10 +55,10 @@ process downsample_reads {
     time 1.h
 
     input:
-    tuple val(ID), val(LANE), file(R1), file(R2)
+    tuple val(ID), val(LANE), path(R1), path(R2)
     
     output:
-    tuple val(ID), val(LANE), file("${R1.simpleName}.fastq.gz"), file("${R2.simpleName}.fastq.gz")
+    tuple val(ID), val(LANE), path("${R1.simpleName}.fastq.gz"), path("${R2.simpleName}.fastq.gz")
 
     script:
     """
@@ -82,15 +82,15 @@ process get_alignment_stats {
     maxRetries 3
 
     input:
-    tuple val(ID), file(cram), file(index), file(qcmetrics)
+    tuple val(ID), path(cram), path(index), path(qcmetrics)
     path(ref_genome)
     path(ref_index)
     val(ref_scaffold_name)
     val(processing_stage)
 
     output:
-    file("${ID}_${processing_stage}.tsv")
-    file("${ID}_${processing_stage}.cramstats")
+    path("${ID}_${processing_stage}.tsv")
+    path("${ID}_${processing_stage}.cramstats")
 
     script:
     """

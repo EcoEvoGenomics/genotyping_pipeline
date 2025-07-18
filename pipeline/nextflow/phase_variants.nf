@@ -96,12 +96,12 @@ process ligate_chr {
     publishDir 'vcf_phased', saveAs: { filename -> "$filename" }, mode: 'copy'
 
     input:
-    tuple val(key), file(vcfs)
+    tuple val(key), path(vcfs)
 
     output:
     tuple \
-      file ("${key}_phased.bcf"), \
-      file ("${key}_phased.bcf.csi") 
+      path ("${key}_phased.bcf"), \
+      path ("${key}_phased.bcf.csi") 
 
     """
     # sort vcfs (and remove indexes)

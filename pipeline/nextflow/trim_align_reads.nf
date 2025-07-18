@@ -229,11 +229,7 @@ process postprocess_alignment {
     maxRetries 3
 
     input:
-    tuple \
-    val(ID), \
-    file(cram), \
-    file(index), \
-    file(qcmetrics)
+    tuple val(ID), file(cram), file(index), file(qcmetrics, stageAs: "./qcmetrics/")
     path(ref_genome)
     path(ref_index)
     val(ref_scaffold_name)

@@ -28,7 +28,18 @@ table_columns_visible:
 module_order:
   - 'picard'
   - 'fastp'
-  - 'samtools'
+  - 'samtools':
+      name: "SAMtools (pre-filtering)"
+      anchor: "samtools_unfiltered"
+      path-filters:
+        - "*_unfiltered.tsv"
+        - "*_unfiltered.cramstats"
+  - 'samtools':
+      name: "SAMtools (post-filtering)"
+      anchor: "samtools_filtered"
+      path-filters:
+        - "*_filtered.tsv"
+        - "*_filtered.cramstats"
   - 'bcftools'
 
 report_section_order:

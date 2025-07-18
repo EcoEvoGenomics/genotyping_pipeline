@@ -43,3 +43,33 @@ process downsample_reads {
     seqkit stats -j ${task.cpus} -To qc-metrics/downsampling.tsv *.fastq.gz
     """
 }
+
+process get_alignment_stats {
+
+    publishDir "${params.publish_dir}/${ID}/qc-metrics", saveAs: { filename -> "$filename" }, mode: 'copy'
+
+    container "quay.io/biocontainers/samtools:1.17--hd87286a_1"
+    cpus 1
+    memory { 128.MB * Math.ceil(cram.size() / 1024 ** 3) * task.attempt }
+    time { 6.m * Math.ceil(cram.size() / 1024 ** 3) * task.attempt }
+
+    errorStrategy "retry"
+    maxRetries 3
+
+    input:
+    tuple val(ID), file(cram), file(index), file(qcmetrics)
+    path(ref_genome)
+    path(ref_index)
+    val(ref_scaffold_name)
+    val(processing_stage)
+
+    output:
+    file("${ID}${processing_stage}.tsv")
+    file("${ID}${processing_stage}.cramstats")
+
+    script:
+    """
+    samtools coverage --reference ${ref_genome} ${ID}.cram | grep -v ${ref_scaffold_name} > ${ID}${processing_stage}.tsv
+    samtools stats --ref-seq ${ref_genome} ${ID}.cram > ${ID}${processing_stage}.cramstats
+    """
+}

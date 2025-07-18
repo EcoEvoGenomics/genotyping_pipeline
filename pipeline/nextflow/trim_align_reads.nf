@@ -8,7 +8,9 @@
 // Originally developed by Mark Ravinet
 // Co-developed and maintained by Erik Sandertun Røed
 
-include { downsample_reads; deduplicate_reads } from "./optional.nf"
+include { downsample_reads; deduplicate_reads } from "./qc_utils.nf"
+include { get_alignment_stats as get_unfiltered_alignment_stats } from "./qc_utils.nf"
+include { get_alignment_stats as get_filtered_alignment_stats } from "./qc_utils.nf"
 
 workflow {
     
@@ -40,10 +42,13 @@ workflow {
     | groupTuple(by: 0, sort: true, remainder: true) \
     | group_reads
     
-    // Finally, pass all files of each sample together to the aligner:
-    def aligned_reads = align_reads(grouped_reads, file(params.ref_genome), file(params.ref_index))
-    def deduplicated_alignments = remove_marked_duplicates(aligned_reads, file(params.ref_genome), file(params.ref_index), params.exclude_flags)
-    get_final_alignment_stats(deduplicated_alignments, file(params.ref_genome), file(params.ref_index), params.ref_scaffold_name)
+    // Pass all files of each sample together to the aligner, align with marking of duplicates, and get intermediate stats
+    def unfiltered_alignments = align_reads(grouped_reads, file(params.ref_genome), file(params.ref_index))
+    get_unfiltered_alignment_stats(unfiltered_alignments, file(params.ref_genome), file(params.ref_index), params.ref_scaffold_name, "_unfiltered")
+
+    // Then remove duplicates and get final stats
+    def filtered_alignments = filter_alignments(unfiltered_alignments, file(params.ref_genome), file(params.ref_index), params.exclude_flags)
+    get_filtered_alignment_stats(filtered_alignments, file(params.ref_genome), file(params.ref_index), params.ref_scaffold_name, "_filtered")
 
 }
 
@@ -217,8 +222,8 @@ process align_reads {
     """
 }
 
-// Step 4 - Remove duplicates marked in the previous process
-process remove_marked_duplicates {
+// Step 4 - Filter alignments by excluding select SAM flags
+process filter_alignments {
 
     publishDir "${params.publish_dir}/${ID}", saveAs: { filename -> "$filename" }, mode: 'copy'
 
@@ -243,35 +248,5 @@ process remove_marked_duplicates {
     """
     samtools view -@ ${task.cpus} --reference ${ref_genome} --cram --excl-flags ${exclude_flags} ${cram} > ${ID}.cram
     samtools index -@ ${task.cpus} ${ID}.cram
-    """
-}
-
-// Step 4 - Obtain stats for final alignment
-process get_final_alignment_stats {
-
-    publishDir "${params.publish_dir}/${ID}/qc-metrics", saveAs: { filename -> "$filename" }, mode: 'copy'
-
-    container "quay.io/biocontainers/samtools:1.17--hd87286a_1"
-    cpus 1
-    memory { 128.MB * Math.ceil(cram.size() / 1024 ** 3) * task.attempt }
-    time { 6.m * Math.ceil(cram.size() / 1024 ** 3) * task.attempt }
-
-    errorStrategy "retry"
-    maxRetries 3
-
-    input:
-    tuple val(ID), file(cram), file(index), file(qcmetrics)
-    path(ref_genome)
-    path(ref_index)
-    val(ref_scaffold_name)
-
-    output:
-    file("${ID}.tsv")
-    file("${ID}.cramstats")
-
-    script:
-    """
-    samtools coverage --reference ${ref_genome} ${ID}.cram | grep -v ${ref_scaffold_name} > ${ID}.tsv
-    samtools stats --ref-seq ${ref_genome} ${ID}.cram > ${ID}.cramstats
     """
 }

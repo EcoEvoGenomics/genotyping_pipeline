@@ -4,8 +4,8 @@ process get_reads_stats {
 
     container "quay.io/biocontainers/fastqc:0.12.1--hdfd78af_0"
     cpus 2
-    memory 4.GB
-    time 1.h
+    memory { 128.MB * Math.ceil((R1.size() + R2.size()) / 1024 ** 3) }
+    time { 3.m * Math.ceil((R1.size() + R2.size()) / 1024 ** 3) }
 
     input:
     tuple val(ID), val(LANE), path(R1), path(R2)

@@ -15,15 +15,17 @@ process get_reads_stats {
     val(processing_stage)
 
     output:
-    path("${ID}_${LANE}_R1_${processing_stage}.fastqc.zip")
-    path("${ID}_${LANE}_R2_${processing_stage}.fastqc.zip")
+    path("${ID}_${LANE}_R1_${processing_stage}_fastqc.zip")
+    path("${ID}_${LANE}_R2_${processing_stage}_fastqc.zip")
 
     script:
     """
-    zcat ${R1} | fastqc -o ./ stdin:${R1}.fastq.gz
-    zcat ${R2} | fastqc -o ./ stdin:${R2}.fastq.gz
-    mv ${R1}_fastqc.zip ${ID}_${LANE}_R1_${processing_stage}.fastqc.zip
-    mv ${R2}_fastqc.zip ${ID}_${LANE}_R2_${processing_stage}.fastqc.zip
+    mv ${R1} ${ID}_${LANE}_R1_${processing_stage}.fastq.gz
+    mv ${R2} ${ID}_${LANE}_R2_${processing_stage}.fastq.gz
+    zcat ${ID}_${LANE}_R1_${processing_stage}.fastq.gz | fastqc -o ./ stdin:${ID}_${LANE}_R1_${processing_stage}.fastq.gz
+    zcat ${ID}_${LANE}_R2_${processing_stage}.fastq.gz | fastqc -o ./ stdin:${ID}_${LANE}_R2_${processing_stage}.fastq.gz
+    mv ${ID}_${LANE}_R1_${processing_stage}_fastqc.zip ${ID}_${LANE}_R1_${processing_stage}_fastqc.zip
+    mv ${ID}_${LANE}_R2_${processing_stage}_fastqc.zip ${ID}_${LANE}_R2_${processing_stage}_fastqc.zip
     """
 
 }
@@ -62,7 +64,7 @@ process downsample_reads {
 
     errorStrategy "retry"
     maxRetries 3
-    
+
     input:
     tuple val(ID), val(LANE), path(R1), path(R2)
     

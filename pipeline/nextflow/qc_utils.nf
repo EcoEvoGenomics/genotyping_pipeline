@@ -4,8 +4,11 @@ process get_reads_stats {
 
     container "quay.io/biocontainers/fastqc:0.12.1--hdfd78af_0"
     cpus 2
-    memory { 128.MB * Math.ceil((R1.size() + R2.size()) / 1024 ** 3) }
-    time { 3.m * Math.ceil((R1.size() + R2.size()) / 1024 ** 3) }
+    memory { 128.MB * Math.ceil((R1.size() + R2.size()) / 1024 ** 3) * task.attempt }
+    time { 3.m * Math.ceil((R1.size() + R2.size()) / 1024 ** 3) * task.attempt }
+
+    errorStrategy "retry"
+    maxRetries 3
 
     input:
     tuple val(ID), val(LANE), path(R1), path(R2)
@@ -29,9 +32,12 @@ process deduplicate_reads {
 
     container "quay.io/biocontainers/seqkit:2.10.0--h9ee0642_0"
     cpus 2
-    memory 4.GB
-    time 1.h
+    memory { 256.MB * Math.ceil((R1.size() + R2.size()) / 1024 ** 3) * task.attempt }
+    time { 3.m * Math.ceil((R1.size() + R2.size()) / 1024 ** 3) * task.attempt }
     
+    errorStrategy "retry"
+    maxRetries 3
+
     input:
     tuple val(ID), val(LANE), path(R1), path(R2)
 
@@ -51,9 +57,12 @@ process downsample_reads {
     
     container "quay.io/biocontainers/seqkit:2.10.0--h9ee0642_0"
     cpus 2
-    memory { 1.GB * Math.ceil(Math.max(R1.size(), R2.size()) / 1024 ** 3) }
-    time 1.h
+    memory { 256.MB * Math.ceil((R1.size() + R2.size()) / 1024 ** 3) * task.attempt }
+    time { 3.m * Math.ceil((R1.size() + R2.size()) / 1024 ** 3) * task.attempt }
 
+    errorStrategy "retry"
+    maxRetries 3
+    
     input:
     tuple val(ID), val(LANE), path(R1), path(R2)
     

@@ -12,15 +12,15 @@ process get_reads_stats {
     val(processing_stage)
 
     output:
-    path("${R1}${processing_stage}.fastqc.zip")
-    path("${R2}${processing_stage}.fastqc.zip")
+    path("${ID}_${LANE}_R1_${processing_stage}.fastqc.zip")
+    path("${ID}_${LANE}_R2_${processing_stage}.fastqc.zip")
 
     script:
     """
     zcat ${R1} | fastqc -o ./ stdin:${R1}.fastq.gz
     zcat ${R2} | fastqc -o ./ stdin:${R2}.fastq.gz
-    mv ${R1}_fastqc.zip ${ID}_${LANE}_R1${processing_stage}.fastqc.zip
-    mv ${R2}_fastqc.zip ${ID}_${LANE}_R2${processing_stage}.fastqc.zip
+    mv ${R1}_fastqc.zip ${ID}_${LANE}_R1_${processing_stage}.fastqc.zip
+    mv ${R2}_fastqc.zip ${ID}_${LANE}_R2_${processing_stage}.fastqc.zip
     """
 
 }
@@ -94,7 +94,7 @@ process get_alignment_stats {
 
     script:
     """
-    samtools coverage --reference ${ref_genome} ${ID}.cram | grep -v ${ref_scaffold_name} > ${ID}_${processing_stage}.tsv
-    samtools stats --ref-seq ${ref_genome} ${ID}.cram > ${ID}_${processing_stage}.cramstats
+    samtools coverage --reference ${ref_genome} ${cram} | grep -v ${ref_scaffold_name} > ${ID}_${processing_stage}.tsv
+    samtools stats --ref-seq ${ref_genome} ${cram} > ${ID}_${processing_stage}.cramstats
     """
 }

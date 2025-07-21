@@ -83,8 +83,8 @@ process trim_reads {
 
     container "quay.io/biocontainers/fastp:0.24.0--heae3180_1"
     cpus 4
-    memory { 256.MB * Math.ceil((R1.size() + R2.size()) / 1024 ** 3) * task.attempt }
-    time { 1.m * Math.ceil((R1.size() + R2.size()) / 1024 ** 3) * task.attempt}
+    memory { 1.MB * Math.max(1024 , 256 * Math.ceil((R1.size() + R2.size())) / 1024 ** 3) * task.attempt }
+    time { 1.m * Math.max(10 , 1 * Math.ceil((R1.size() + R2.size())) / 1024 ** 3) * task.attempt }
 
     errorStrategy "retry"
     maxRetries 3

@@ -23,35 +23,84 @@ highlight_colors:
   - "#008B00"
 
 table_columns_visible:
+  "Picard (Unfiltered Alignments): InsertSizeMetrics": false
+  "Picard (Unfiltered Alignments): QualityYieldMetrics": false
+  "SAMtools (Unfiltered Alignments): stats": false
+  "SAMtools (Unfiltered Alignments): coverage": false
+  samtools_filtered_alignments_stats-insert_size_average: true
+  samtools_filtered_alignments_stats-reads_MQ0_percent: true
   "Bcftools: Stats": false
 
+table_columns_placement:
+  general_stats_table:
+    fastqc_raw_reads-percent_duplicates: 1000
+    fastqc_raw_reads-percent_gc: 1001
+    fastqc_raw_reads-total_sequences: 1002
+    fastqc_trimmed_reads-percent_duplicates: 1003
+    fastqc_trimmed_reads-percent_gc: 1004
+    fastqc_trimmed_reads-total_sequences: 1005
+    samtools_filtered_alignments_stats-raw_total_sequences: 1006
+    samtools_filtered_alignments_stats-reads_mapped: 1007
+    samtools_filtered_alignments_stats-reads_mapped_percent: 1008
+    samtools_filtered_alignments_stats-reads_MQ0_percent: 1009
+    samtools_filtered_alignments_stats-reads_properly_paired_percent: 1010
+    samtools_filtered_alignments_coverage-meandepth: 1011
+    samtools_filtered_alignments_stats-insert_size_average: 1012
+    samtools_filtered_alignments_stats-error_rate: 1013
+    samtools_filtered_alignments_stats-non_primary_alignments: 1014
+
+table_columns_name:
+  fastqc_raw_reads-percent_duplicates: "Dups (Raw)"
+  fastqc_raw_reads-percent_gc: "%GC (Raw)"
+  fastqc_raw_reads-total_sequences: "Reads (Raw)"
+  fastqc_trimmed_reads-percent_duplicates: "Dups (Trimmed)"
+  fastqc_trimmed_reads-percent_gc: "%GC (Trimmed)"
+  fastqc_trimmed_reads-total_sequences: "Reads (Trimmed)"
+  samtools_filtered_alignments_stats-raw_total_sequences: "Reads (Filtered CRAM)"
+  samtools_filtered_alignments_stats-reads_mapped: "Reads (Mapped)"
+
 module_order:
-  - 'fastqc':
-      name: "Reads (Raw)"
+  - "fastqc":
+      name: "FastQC (Raw Reads)"
       anchor: "fastqc_raw"
-      path-filters:
+      path_filters:
         - "*_raw_fastqc.zip"
-  - 'fastqc':
-      name: "Reads (Trimmed)"
+  - "fastqc":
+      name: "FastQC (Trimmed Reads)"
       anchor: "fastqc_trimmed"
-      path-filters:
+      path_filters:
         - "*_trimmed_fastqc.zip"
-  - 'picard'
-  - 'samtools':
-      name: "Alignments (Unfiltered)"
+  - "picard":
+      name: "Picard (Unfiltered Alignments)"
+  - "samtools":
+      name: "SAMtools (Unfiltered Alignments)"
       anchor: "samtools_unfiltered"
-      path-filters:
+      path_filters:
         - "*_unfiltered.tsv"
         - "*_unfiltered.cramstats"
-  - 'samtools':
-      name: "Alignments (Filtered)"
+  - "samtools":
+      name: "SAMtools (Filtered Alignments)"
       anchor: "samtools_filtered"
-      path-filters:
+      path_filters:
         - "*_filtered.tsv"
         - "*_filtered.cramstats"
-  - 'bcftools'
+  - "bcftools"
+
+report_section_order:
+  fastqc_raw_fastqc_status_checks:
+    order: -9999
+  fastqc_trimmed_fastqc_status_checks:
+    order: -9999
 
 remove_sections:
+  - fastqc_raw_fastqc_sequence_counts
+  - fastqc_trimmed_fastqc_sequence_counts
+  - picard-alignmentsummary
+  - picard_alignment_readlength
+  - samtools_unfiltered_samtools-stats-alignment
+  - samtools_unfiltered_samtools-coverage-table-section
+  - samtools_filtered_samtools-stats-alignment
+  - samtools_filtered_samtools-coverage-table-section
   - bcftools-stats_indel_plot
 
 extra_fn_clean_exts:
@@ -66,35 +115,53 @@ extra_fn_clean_exts:
   - ".qualityscore"
 
 table_sample_merge:
-  "(L001)": "_L001"
-  "(L002)": "_L002"
-  "(L003)": "_L003"
-  "(L004)": "_L004"
-  "(L005)": "_L005"
-  "(L006)": "_L006"
-  "(L007)": "_L007"
-  "(L008)": "_L008"
-  "(L009)": "_L009"
-  "(L010)": "_L010"
-  "(L011)": "_L011"
-  "(L012)": "_L012"
-  "(L013)": "_L013"
-  "(L014)": "_L014"
-  "(L015)": "_L015"
-  "(L016)": "_L016"
-  "(L017)": "_L017"
-  "(L018)": "_L018"
-  "(L019)": "_L019"
-  "(L020)": "_L020"
+  "(L001 R1 Raw)": "_L001_R1_raw"
+  "(L001 R2 Raw)": "_L001_R2_raw"
+  "(L001 R1 Trimmed)": "_L001_R1"
+  "(L001 R2 Trimmed)": "_L001_R2"
+  "(L002 R1 Raw)": "_L002_R1_raw"
+  "(L002 R2 Raw)": "_L002_R2_raw"
+  "(L002 R1 Trimmed)": "_L002_R1"
+  "(L002 R2 Trimmed)": "_L002_R2"
+  "(L003 R1 Raw)": "_L003_R1_raw"
+  "(L003 R2 Raw)": "_L003_R2_raw"
+  "(L003 R1 Trimmed)": "_L003_R1"
+  "(L003 R2 Trimmed)": "_L003_R2"
+  "(L004 R1 Raw)": "_L004_R1_raw"
+  "(L004 R2 Raw)": "_L004_R2_raw"
+  "(L004 R1 Trimmed)": "_L004_R1"
+  "(L004 R2 Trimmed)": "_L004_R2"
+  "(L005 R1 Raw)": "_L005_R1_raw"
+  "(L005 R2 Raw)": "_L005_R2_raw"
+  "(L005 R1 Trimmed)": "_L005_R1"
+  "(L005 R2 Trimmed)": "_L005_R2"
+  "(L006 R1 Raw)": "_L006_R1_raw"
+  "(L006 R2 Raw)": "_L006_R2_raw"
+  "(L006 R1 Trimmed)": "_L006_R1"
+  "(L006 R2 Trimmed)": "_L006_R2"
+  "(L007 R1 Raw)": "_L007_R1_raw"
+  "(L007 R2 Raw)": "_L007_R2_raw"
+  "(L007 R1 Trimmed)": "_L007_R1"
+  "(L007 R2 Trimmed)": "_L007_R2"
+  "(L008 R1 Raw)": "_L008_R1_raw"
+  "(L008 R2 Raw)": "_L008_R2_raw"
+  "(L008 R1 Trimmed)": "_L008_R1"
+  "(L008 R2 Trimmed)": "_L008_R2"
+  "(L009 R1 Raw)": "_L009_R1_raw"
+  "(L009 R2 Raw)": "_L009_R2_raw"
+  "(L009 R1 Trimmed)": "_L009_R1"
+  "(L009 R2 Trimmed)": "_L009_R2"
+  "(Alignment)": "_unfiltered"
+  "(Alignment Filtered)": "_filtered"
 
 picard_config:
   s_name_filenames: true
 
 software_versions:
   "Read pre-processing":
+    fastqc: "0.12.1"
     seqkit: "2.10.0"
     fastp: "0.24.0"
-    fastqc: "0.12.1"
   "Read aligning":
     clara-parabricks: "4.5.0-1"
     samtools: "1.17"

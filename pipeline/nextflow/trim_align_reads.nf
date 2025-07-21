@@ -52,8 +52,8 @@ process parse_input {
 
     container "quay.io/biocontainers/seqkit:2.10.0--h9ee0642_0"
     cpus 2
-    memory { 12.MB * Math.ceil((R1.size() + R2.size()) / 1024 ** 3) * task.attempt }
-    time { 1.m * Math.ceil((R1.size() + R2.size()) / 1024 ** 3) * task.attempt }
+    memory { 1.MB * Math.max(128 , 12 * Math.ceil((R1.size() + R2.size())) / 1024 ** 3) * task.attempt }
+    time { 1.m * Math.max(10 , 1 * Math.ceil((R1.size() + R2.size())) / 1024 ** 3) * task.attempt }
 
     errorStrategy "retry"
     maxRetries 3

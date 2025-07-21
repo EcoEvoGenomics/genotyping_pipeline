@@ -52,8 +52,8 @@ process parse_input {
 
     container "quay.io/biocontainers/seqkit:2.10.0--h9ee0642_0"
     cpus 2
-    memory { 12.MB * Math.ceil((R1.size() + R2.size()) / 1024 ** 3) * task.attempt }
-    time { 1.m * Math.ceil((R1.size() + R2.size()) / 1024 ** 3) * task.attempt }
+    memory { 1.MB * Math.max(128 , 12 * Math.ceil((R1.size() + R2.size())) / 1024 ** 3) * task.attempt }
+    time { 1.m * Math.max(10 , 1 * Math.ceil((R1.size() + R2.size())) / 1024 ** 3) * task.attempt }
 
     errorStrategy "retry"
     maxRetries 3
@@ -83,8 +83,8 @@ process trim_reads {
 
     container "quay.io/biocontainers/fastp:0.24.0--heae3180_1"
     cpus 4
-    memory { 256.MB * Math.ceil((R1.size() + R2.size()) / 1024 ** 3) * task.attempt }
-    time { 1.m * Math.ceil((R1.size() + R2.size()) / 1024 ** 3) * task.attempt}
+    memory { 1.MB * Math.max(1024 , 256 * Math.ceil((R1.size() + R2.size())) / 1024 ** 3) * task.attempt }
+    time { 1.m * Math.max(10 , 1 * Math.ceil((R1.size() + R2.size())) / 1024 ** 3) * task.attempt }
 
     errorStrategy "retry"
     maxRetries 3
@@ -224,8 +224,8 @@ process remove_marked_duplicates {
 
     container "quay.io/biocontainers/samtools:1.17--hd87286a_1"
     cpus 1
-    memory { 128.MB * Math.ceil(cram.size() / 1024 ** 3) * task.attempt }
-    time { 3.m * Math.ceil(cram.size() / 1024 ** 3) * task.attempt }
+    memory { 1.MB * Math.max(1024, 128 * Math.ceil(cram.size() / 1024 ** 3)) * task.attempt }
+    time { 1.m * Math.max(15, 3 * Math.ceil(cram.size() / 1024 ** 3)) * task.attempt }
 
     errorStrategy "retry"
     maxRetries 3
@@ -253,8 +253,8 @@ process get_final_alignment_stats {
 
     container "quay.io/biocontainers/samtools:1.17--hd87286a_1"
     cpus 1
-    memory { 128.MB * Math.ceil(cram.size() / 1024 ** 3) * task.attempt }
-    time { 6.m * Math.ceil(cram.size() / 1024 ** 3) * task.attempt }
+    memory { 1.MB * Math.max(1024, 128 * Math.ceil(cram.size() / 1024 ** 3)) * task.attempt }
+    time { 1.m * Math.max(20, 6 * Math.ceil(cram.size() / 1024 ** 3)) * task.attempt }
 
     errorStrategy "retry"
     maxRetries 3

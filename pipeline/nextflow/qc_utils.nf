@@ -96,6 +96,7 @@ process qc_alignment {
     tuple val(ID), path(cram), path(index), path(qcmetrics)
     path(ref_genome)
     path(ref_index)
+    val(ref_scaffold_name)
     val(processing_stage)
 
     output:
@@ -104,7 +105,7 @@ process qc_alignment {
 
     script:
     """
-    samtools coverage --reference ${ref_genome} ${cram} > ${ID}_${processing_stage}.tsv
+    samtools coverage --reference ${ref_genome} ${cram} | grep -v ${ref_scaffold_name} > ${ID}_${processing_stage}.tsv
     samtools stats --ref-seq ${ref_genome} ${cram} > ${ID}_${processing_stage}.cramstats
     """
 }

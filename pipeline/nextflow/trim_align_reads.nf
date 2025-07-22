@@ -8,30 +8,35 @@
 // Originally developed by Mark Ravinet
 // Co-developed and maintained by Erik Sandertun Røed
 
-include { downsample_reads; deduplicate_reads } from "./optional.nf"
+include { downsample_reads; deduplicate_reads } from "./qc_utils.nf"
+include { qc_reads as qc_raw_reads } from "./qc_utils.nf"
+include { qc_reads as qc_trimmed_reads } from "./qc_utils.nf"
+include { qc_alignment as qc_unfiltered_alignment } from "./qc_utils.nf"
+include { qc_alignment as qc_filtered_alignment } from "./qc_utils.nf"
 
 workflow {
     
-    // Input 'samples' is .CSV with columns for ID, LANE, F_READ_PATH, R_READ_PATH
+    // Take input .CSV with columns ID, LANE, F_READ_PATH, R_READ_PATH
     Channel.fromPath(params.samples)
         .splitCsv()
         .multiMap { cols -> input_reads: [cols[0], cols[1], cols[2], cols[3]] }
         .set { samples }
+    
+    def input_reads = samples.input_reads
+    qc_raw_reads(input_reads, "raw")
 
-    // First parse input reads:
-    def parsed_reads = parse_input(samples.input_reads)
     if (params.deduplicate == 'yes') {
-        parsed_reads = deduplicate_reads(parsed_reads)
+        input_reads = deduplicate_reads(input_reads)
     }
     if (params.downsample == 'yes') {
-        parsed_reads = downsample_reads(parsed_reads)
+        input_reads = downsample_reads(input_reads)
     }
 
-    // Then, trim with fastp ...
-    def trimmed_reads = trim_reads(parsed_reads)
+    def trimmed_reads = trim_reads(input_reads)
+    qc_trimmed_reads(trimmed_reads.keys_and_reads, "trimmed")
 
-    // Now, group separate file pairs (lanes) for each sample and make read groups:
-    def grouped_reads = trimmed_reads[0] \
+    // Group separate file pairs (lanes) for each sample and make read groups
+    def grouped_reads = trimmed_reads.reads_only \
     | flatten
     | map { file -> 
         def id   = file.name.toString().tokenize("_").get(0)
@@ -40,43 +45,15 @@ workflow {
     | groupTuple(by: 0, sort: true, remainder: true) \
     | group_reads
     
-    // Finally, pass all files of each sample together to the aligner:
-    def aligned_reads = align_reads(grouped_reads, file(params.ref_genome), file(params.ref_index))
-    def deduplicated_alignments = remove_marked_duplicates(aligned_reads, file(params.ref_genome), file(params.ref_index), params.exclude_flags)
-    get_final_alignment_stats(deduplicated_alignments, file(params.ref_genome), file(params.ref_index), params.ref_scaffold_name)
+    def unfiltered_alignments = align_reads(grouped_reads, file(params.ref_genome), file(params.ref_index))
+    qc_unfiltered_alignment(unfiltered_alignments, file(params.ref_genome), file(params.ref_index), params.ref_scaffold_name, "unfiltered")
+
+    def filtered_alignments = filter_alignment_flags(unfiltered_alignments, file(params.ref_genome), file(params.ref_index), params.exclude_flags)
+    qc_filtered_alignment(filtered_alignments, file(params.ref_genome), file(params.ref_index), params.ref_scaffold_name, "filtered")
 
 }
 
-// Step 1 - Parse input reads for a sample
-process parse_input {
-
-    container "quay.io/biocontainers/seqkit:2.10.0--h9ee0642_0"
-    cpus 2
-    memory { 1.MB * Math.max(128 , 12 * Math.ceil((R1.size() + R2.size()) / 1024 ** 3)) * task.attempt }
-    time { 1.m * Math.max(10 , 1 * Math.ceil((R1.size() + R2.size()) / 1024 ** 3)) * task.attempt }
-
-    errorStrategy "retry"
-    maxRetries 3
-
-    input:
-    tuple val(ID), val(LANE), path(R1), path(R2)
-
-    output:
-    tuple val(ID), val(LANE), path(R1), path(R2), path('qc-metrics/*')
-
-    script:
-    """
-    mkdir qc-metrics
-    seqkit stats -j ${task.cpus} -To qc-metrics/unprocessed.tsv *.fastq.gz
-    printf '%s\\t%s\\n' \
-        'ID_LANE' '${ID}_${LANE}' \
-        'deduplicate' '${params.deduplicate}' \
-        'downsample' '${params.downsample}' \
-        > qc-metrics/settings.tsv
-    """
-}
-
-// Step 2 - Read trim_reads
+// Step 1 - Read trimming
 process trim_reads {
 
     publishDir "${params.publish_dir}/${ID}/${LANE}", saveAs: { filename -> "$filename" }, mode: 'copy'
@@ -90,11 +67,11 @@ process trim_reads {
     maxRetries 3
 
     input:
-    tuple val(ID), val(LANE), file(R1), file(R2), path(qcmetrics, stageAs: './qc-metrics/')
+    tuple val(ID), val(LANE), path(R1), path(R2)
 
     output:
-    tuple file("${ID}_${LANE}_R1.fastq.gz"), file("${ID}_${LANE}_R2.fastq.gz")
-    path("qc-metrics/*")
+    tuple val(ID), val(LANE), path("${ID}_${LANE}_R1.fastq.gz"), path("${ID}_${LANE}_R2.fastq.gz"), emit: keys_and_reads
+    tuple path("${ID}_${LANE}_R1.fastq.gz"), path("${ID}_${LANE}_R2.fastq.gz"), emit: reads_only
 
     script:
     """
@@ -102,10 +79,7 @@ process trim_reads {
     --in1 ${R1} \
     --in2 ${R2} \
     --out1 ${ID}_${LANE}_R1.fastq.gz \
-    --out2 ${ID}_${LANE}_R2.fastq.gz \
-    --report_title "${ID}_${LANE}" \
-    --html qc-metrics/${ID}_${LANE}.html \
-    --json qc-metrics/${ID}_${LANE}.json
+    --out2 ${ID}_${LANE}_R2.fastq.gz
     """
 }
 
@@ -123,7 +97,7 @@ process group_reads {
     tuple val(ID), path(grouped_reads, stageAs: "reads/*")
 
     output:
-    tuple val(ID), path(grouped_reads), file("${ID}_reads.list"), env("grouped_reads_total_size")
+    tuple val(ID), path(grouped_reads), path("${ID}_reads.list"), env("grouped_reads_total_size")
 
     script:
     """
@@ -180,7 +154,7 @@ process align_reads {
     label "require_gpu"
 
     input:
-    tuple val(ID), path(grouped_reads, stageAs: "reads/*"), file(reads_list), val(grouped_reads_input_size)
+    tuple val(ID), path(grouped_reads, stageAs: "reads/*"), path(reads_list), val(grouped_reads_input_size)
     path(reference_genome)
     path(reference_genome_index)
 
@@ -197,16 +171,8 @@ process align_reads {
     --ref ${reference_genome} \
     --in-fq-list ${reads_list} \
     --out-bam ${ID}_marked.cram \
-    --out-duplicate-metrics qc-metrics/dedup.txt \
     --out-qc-metrics-dir qc-metrics \
     --tmp .
-
-    # Obtain coverage statistics with Parabricks BAMMETRICS
-    pbrun bammetrics \
-    --ref ${reference_genome} \
-    --bam ${ID}_marked.cram \
-    --out-metrics-file qc-metrics/bammetrics.txt \
-    --tmp-dir .
 
     # Parse QC files
     rm qc-metrics/*.pdf
@@ -217,8 +183,8 @@ process align_reads {
     """
 }
 
-// Step 4 - Remove duplicates marked in the previous process
-process remove_marked_duplicates {
+// Step 4 - Filter alignments by excluding select SAM flags
+process filter_alignment_flags {
 
     publishDir "${params.publish_dir}/${ID}", saveAs: { filename -> "$filename" }, mode: 'copy'
 
@@ -231,7 +197,7 @@ process remove_marked_duplicates {
     maxRetries 3
 
     input:
-    tuple val(ID), file(cram), file(index), path(qcmetrics, stageAs: "qc-metrics/*")
+    tuple val(ID), path(cram), path(index), path(qcmetrics, stageAs: "qc-metrics/*")
     path(ref_genome)
     path(ref_index)
     val(exclude_flags)
@@ -243,35 +209,5 @@ process remove_marked_duplicates {
     """
     samtools view -@ ${task.cpus} --reference ${ref_genome} --cram --excl-flags ${exclude_flags} ${cram} > ${ID}.cram
     samtools index -@ ${task.cpus} ${ID}.cram
-    """
-}
-
-// Step 4 - Obtain stats for final alignment
-process get_final_alignment_stats {
-
-    publishDir "${params.publish_dir}/${ID}/qc-metrics", saveAs: { filename -> "$filename" }, mode: 'copy'
-
-    container "quay.io/biocontainers/samtools:1.17--hd87286a_1"
-    cpus 1
-    memory { 1.MB * Math.max(1024, 128 * Math.ceil(cram.size() / 1024 ** 3)) * task.attempt }
-    time { 1.m * Math.max(20, 6 * Math.ceil(cram.size() / 1024 ** 3)) * task.attempt }
-
-    errorStrategy "retry"
-    maxRetries 3
-
-    input:
-    tuple val(ID), file(cram), file(index), file(qcmetrics)
-    path(ref_genome)
-    path(ref_index)
-    val(ref_scaffold_name)
-
-    output:
-    file("${ID}.tsv")
-    file("${ID}.cramstats")
-
-    script:
-    """
-    samtools coverage --reference ${ref_genome} ${ID}.cram | grep -v ${ref_scaffold_name} > ${ID}.tsv
-    samtools stats --ref-seq ${ref_genome} ${ID}.cram > ${ID}.cramstats
     """
 }

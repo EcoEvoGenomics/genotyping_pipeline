@@ -176,7 +176,7 @@ process concatenate_windows {
     tuple val(key), path(window_vcfs_in_key)
 
     output:
-    tuple val(key), file("${key}.vcf.gz"), file("${key}.vcf.gz.csi")
+    tuple val(key), path("${key}.vcf.gz"), path("${key}.vcf.gz.csi")
 
     script:
     """
@@ -195,12 +195,12 @@ process normalise_vcf {
     time 6.h
 
     input:
-    tuple val(key), file('input.vcf.gz'), file('input.vcf.gz.csi')
+    tuple val(key), path('input.vcf.gz'), path('input.vcf.gz.csi')
     path(ref_genome)
     path(ref_index)
     
     output:
-    tuple val(key), file("${key}.vcf.gz"), file("${key}.vcf.gz.csi")
+    tuple val(key), path("${key}.vcf.gz"), path("${key}.vcf.gz.csi")
 
     script:
     """
@@ -226,10 +226,10 @@ process reheader_vcf {
     publishDir "${params.publish_dir}/chroms/${key}", saveAs: { filename -> "$filename" }, mode: 'copy'
 
     input:
-    tuple val(key), file('input.vcf.gz'), file('input.vcf.gz.csi')
+    tuple val(key), path('input.vcf.gz'), path('input.vcf.gz.csi')
     
     output:
-    tuple file("${key}.vcf.gz"), file("${key}.vcf.gz.csi")
+    tuple path("${key}.vcf.gz"), path("${key}.vcf.gz.csi")
 
     script:
     """
@@ -248,10 +248,10 @@ process summarise_vcf {
     time 2.h
 
     input:
-    tuple file(vcf), file(csi)
+    tuple path(vcf), path(csi)
 
     output:
-    file("${vcf.simpleName}.vchk")
+    path("${vcf.simpleName}.vchk")
 
     script:
     """
@@ -275,7 +275,7 @@ process concatenate_vchks {
     val(collection_name)
 
     output:
-    file("${collection_name}.vchk")
+    path("${collection_name}.vchk")
 
     script:
     """
@@ -303,8 +303,8 @@ process concatenate_vcfs {
     val(collection_name)
 
     output:
-    file("${collection_name}.vcf.gz")
-    file("${collection_name}.vcf.gz.csi")
+    path("${collection_name}.vcf.gz")
+    path("${collection_name}.vcf.gz.csi")
 
     script:
     """

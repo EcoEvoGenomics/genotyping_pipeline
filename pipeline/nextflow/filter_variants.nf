@@ -53,8 +53,8 @@ process filter_vcf {
 
   output:
   tuple \
-  file("${key}_${params.filtering_label}.vcf.gz"), \
-  file("${key}_${params.filtering_label}.vcf.gz.csi")
+  path("${key}_${params.filtering_label}.vcf.gz"), \
+  path("${key}_${params.filtering_label}.vcf.gz.csi")
 
   script:
   """
@@ -111,7 +111,7 @@ process save_filters_to_file {
   time 5.m
 
   output:
-  file("vcftools_${params.filtering_label}.tsv")
+  path("vcftools_${params.filtering_label}.tsv")
 
   script:
   """

@@ -31,6 +31,7 @@
     trim_align_reads=yes
     call_variants=yes
     filter_variants=yes
+    phase_variants=yes
     multiqc=yes
 
     # SET OPTIONS FOR TRIM AND ALIGN STEP
@@ -42,7 +43,7 @@
     exclude_flags=0x400
 
     # SET OPTIONS FOR CALL VARIANTS STEP
-    window_size=10000000
+    genotyping_window_size=10000000
     concatenate_unfiltered_vcfs=no
 
     # SET OPTIONS FOR FILTER VARIANTS STEP
@@ -58,9 +59,13 @@
     filtering_minQ=30
     filtering_keep=""
 
+    # SET OPTIONS FOR PHASE VARIANTS STEP
+    phasing_window_size=10000000
+
     # PROVIDE DETAILS OF REFERENCE GENOME
     ref_genome=/cluster/projects/nn10082k/ref/house_sparrow_genome_assembly-18-11-14_masked.fa
     ref_index=/cluster/projects/nn10082k/ref/house_sparrow_genome_assembly-18-11-14_masked.fa.fai
+    ref_recombination_map_dir=/cluster/projects/nn10082k/recombination_maps
     ref_scaffold_name="scaffold"
     ref_ploidy_file=./pipeline/assets/default.ploidy
 
@@ -105,6 +110,7 @@ output_dir=${repository_path}/output
 trim_align_output_dir=${output_dir}/01-aligned_reads
 call_variants_output_dir=${output_dir}/02-variants_unfiltered
 filter_variants_output_dir=${output_dir}/03-variants_filtered/${filtering_label}
+phase_variants_output_dir=${output_dir}/03-variants_filtered/${filtering_label}/phased
 multiqc_output_dir=${output_dir}/04-multiqc
 mkmissingdir $output_dir
 
@@ -133,7 +139,7 @@ if [ $call_variants = "yes" ]; then
         -with-report $call_variants_output_dir/workflow_report.html \
         -profile $nextflow_profile \
         --cram_dir $trim_align_output_dir \
-        --window_size $window_size \
+        --window_size $genotyping_window_size \
         --ref_genome $ref_genome \
         --ref_index $ref_index \
         --ref_scaffold_name $ref_scaffold_name \
@@ -163,7 +169,23 @@ if [ $filter_variants = "yes" ]; then
         --publish_dir $filter_variants_output_dir
 fi
 
-if [ $multiqc = 'yes' ]; then
+if [ $phase_variants = "yes" ]; then
+    chkprevious "Step: phase_variants" $filter_variants_output_dir
+    mkmissingdir $phase_variants_output_dir
+    nextflow -log ./.nextflow/nextflow.log \
+        run ./pipeline/nextflow/phase_variants.nf \
+        -with-report $phase_variants_output_dir/workflow_report.html \
+        -profile $nextflow_profile \
+        --unphased_vcf ${filter_variants_output_dir}/variants_${filtering_label}.vcf.gz \
+        --unphased_csi ${filter_variants_output_dir}/variants_${filtering_label}.vcf.gz.csi \
+        --ref_index $ref_index \
+        --ref_scaffold_name $ref_scaffold_name \
+        --window_size $phasing_window_size \
+        --ref_recombination_map_dir $ref_recombination_map_dir \
+        --publish_dir $phase_variants_output_dir
+fi
+
+if [ $multiqc = "yes" ]; then
     mkmissingdir $multiqc_output_dir
     nextflow -log ./.nextflow/nextflow.log \
         run ./pipeline/nextflow/run_multiqc.nf \

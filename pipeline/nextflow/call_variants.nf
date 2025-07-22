@@ -218,12 +218,12 @@ process normalise_vcf {
 // Step 4 - Reheader VCF and output to per-chromosome directories
 process reheader_vcf {
 
+    publishDir "${params.publish_dir}/chroms/${key}", saveAs: { filename -> "$filename" }, mode: 'copy'
+
     container "quay.io/biocontainers/bcftools:1.17--h3cc50cf_1"
     cpus 2
     memory 1.GB
     time 1.h
-
-    publishDir "${params.publish_dir}/chroms/${key}", saveAs: { filename -> "$filename" }, mode: 'copy'
 
     input:
     tuple val(key), path('input.vcf.gz'), path('input.vcf.gz.csi')

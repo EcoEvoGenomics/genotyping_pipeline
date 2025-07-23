@@ -24,7 +24,8 @@ workflow{
         return tuple(key, file)
     } \
     | groupTuple( by:0, sort:true ) \
-    | ligate_phased
+    | ligate_phased \
+    | convert_bcf_to_vcf
 
 }
 
@@ -90,4 +91,27 @@ process ligate_phased {
     for i in \$sorted_bcfs; do echo \$i >> chunks.txt ; done
     SHAPEIT5_ligate --input chunks.txt --output ${key}.bcf --index --thread ${task.cpus}
     """
+}
+
+process convert_bcf_to_vcf {
+
+    publishDir "${params.publish_dir}/${key}", saveAs: { filename -> "$filename" }, mode: 'copy'
+
+    container "quay.io/biocontainers/bcftools:1.17--h3cc50cf_1"
+    cpus 2
+    memory 1.GB
+    time 2.h
+
+    input:
+    tuple val(key), path(bcf), path(csi)
+
+    output:
+    tuple val(key), path("${key}.vcf.gz"), path("${key}.vcf.gz.csi")
+
+    script:
+    """
+    bcftools view --output-type z --output ${key}.vcf.gz ${bcf}
+    bcftools index --threads ${task.cpus} ${key}.vcf.gz
+    """
+
 }

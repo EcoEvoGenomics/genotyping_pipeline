@@ -31,14 +31,14 @@ process run_multiqc {
     path(sparrows_logo)
 
     output:
-    path('genotyping_pipeline_multiqc_report.html')
+    path('multiqc_report.html')
 
     script:
     """
-    mkdir multiqc_outputs
     multiqc \
     --config ${multiqc_config} \
     --force \
     ${results_dir}
+    mv *multiqc_report.html multiqc_report.html
     """
 }

@@ -23,6 +23,7 @@ highlight_colors:
   - "#008B00"
 
 table_columns_visible:
+  fastqc_trimmed_reads-median_sequence_length: false
   "Picard (Unfiltered Alignments): InsertSizeMetrics": false
   "Picard (Unfiltered Alignments): QualityYieldMetrics": false
   "SAMtools (Unfiltered Alignments): stats": false
@@ -171,5 +172,7 @@ software_versions:
   "Variant filtering":
     bcftools: "1.17"
     vcftools: "0.1.16"
+  "Variant phasing":
+    SHAPEIT5: "5.1.1"
 
 disable_version_detection: true

@@ -32,7 +32,7 @@ workflow{
 process phase_common_variants {
     
     container "quay.io/biocontainers/shapeit5:5.1.1--hb60d31d_0"
-    cpus 4
+    cpus 2
     memory { 1.GB + (1.GB * Math.log(Math.ceil(unphased_vcf.size() / 1024 ** 3))) * task.attempt }
     time { 1.m * Math.ceil(unphased_vcf.size() / 1024 ** 3) * task.attempt }
 
@@ -72,7 +72,7 @@ process ligate_phased {
     publishDir "${params.publish_dir}/${key}", saveAs: { filename -> "$filename" }, mode: 'copy'
 
     container "quay.io/biocontainers/shapeit5:5.1.1--hb60d31d_0"
-    cpus 4
+    cpus 1
     memory { 1.GB * task.attempt }
     time { 30.m * task.attempt }
 
@@ -98,9 +98,9 @@ process convert_bcf_to_vcf {
     publishDir "${params.publish_dir}/${key}", saveAs: { filename -> "$filename" }, mode: 'copy'
 
     container "quay.io/biocontainers/bcftools:1.17--h3cc50cf_1"
-    cpus 2
-    memory 1.GB
-    time 2.h
+    cpus 1
+    memory { 1.GB * task.attempt }
+    time { 30.m * task.attempt }
 
     input:
     tuple val(key), path(bcf), path(csi)

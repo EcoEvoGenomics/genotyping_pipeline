@@ -27,12 +27,11 @@
     nextflow_profile="saga"
 
     # SELECT STEPS TO RUN
-    # Note: Must be run in order, but filter_variants through multiqc can be repeated with different settings
+    # Note: Must be run in order, but filter_variants and phase_variants can be repeated with different settings
     trim_align_reads=yes
     call_variants=yes
     filter_variants=yes
     phase_variants=yes
-    multiqc=yes
 
     # SET OPTIONS FOR TRIM AND ALIGN STEP
     # Note: The read_target only applies if downsample_reads=yes
@@ -111,7 +110,6 @@ trim_align_output_dir=${output_dir}/01-aligned_reads
 call_variants_output_dir=${output_dir}/02-variants_unfiltered
 filter_variants_output_dir=${output_dir}/03-variants_filtered/${filtering_label}
 phase_variants_output_dir=${output_dir}/03-variants_filtered/${filtering_label}/phased
-multiqc_output_dir=${output_dir}/04-multiqc
 mkmissingdir $output_dir
 
 if [ $trim_align_reads = "yes" ]; then
@@ -185,13 +183,10 @@ if [ $phase_variants = "yes" ]; then
         --publish_dir $phase_variants_output_dir
 fi
 
-if [ $multiqc = "yes" ]; then
-    mkmissingdir $multiqc_output_dir
-    nextflow -log ./.nextflow/nextflow.log \
-        run ./pipeline/nextflow/run_multiqc.nf \
-        -profile $nextflow_profile \
-        --results_dir $output_dir \
-        --publish_dir $multiqc_output_dir
-fi
+nextflow -log ./.nextflow/nextflow.log \
+    run ./pipeline/nextflow/run_multiqc.nf \
+    -profile $nextflow_profile \
+    --results_dir $output_dir \
+    --publish_dir $output_dir
 
 # End work

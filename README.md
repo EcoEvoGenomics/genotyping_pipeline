@@ -27,7 +27,7 @@ The Nextflow pipeline is configured to run on a Linux HPC environment with the j
 ### Installing Nextflow with Conda
 To maximise portability, especially for external users, most of the pipeline dependencies are managed automatically with containers obtained on-demand. But the software Nextflow manages this automation, so Nextflow itself must be manually installed - for instance in a Conda environment. External users are welcome to replicate the Conda environment we use for Nextflow with the included YAML file:
 ```
-conda create --name nf -f genotyping_pipeline.conda.yaml 
+conda create --name nf -f nextflow-25.04.6.conda.yaml 
 ```
 **NB:** If you are working on Saga as part of the group **YOU DO NOT NEED TO RUN THIS STEP**. Members of the Ecological and Evolutionary Genomics Group *can* and *should* use our pre-configured environment, which the pipeline is set to use by default. 
 

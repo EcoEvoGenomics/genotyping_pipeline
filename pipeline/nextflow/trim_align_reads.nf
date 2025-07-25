@@ -60,8 +60,18 @@ process trim_reads {
 
     container "quay.io/biocontainers/fastp:0.24.0--heae3180_1"
     cpus 4
-    memory { 1.MB * Math.max(1024 , 256 * Math.ceil((R1.size() + R2.size()) / 1024 ** 3)) * task.attempt }
-    time { 1.m * Math.max(10 , 1 * Math.ceil((R1.size() + R2.size()) / 1024 ** 3)) * task.attempt }
+    memory { task.attempt > 1
+        // Double if insufficient in previous attempt - otherwise aim for real peak usage + 50 % from previous
+        ? (task.exitStatus == 137 ? task.previousTrace.memory * 2 : task.previousTrace.peak_rss * 1.5)
+        // Initial guess
+        : 1.MB * Math.max(2048 , 512 * Math.ceil((R1.size() + R2.size()) / 1024 ** 3))
+    }
+    time { task.attempt > 1 
+        // Double if insufficient in previous attempt, otherwise keep previous allocation
+        ? (task.exitStatus == 140 ? task.previousTrace.time * 1.5 : task.previousTrace.time )
+        // Initial guess
+        : 1.m * Math.max(10 , 1.5 * Math.ceil((R1.size() + R2.size()) / 1024 ** 3))
+    }
 
     errorStrategy "retry"
     maxRetries 3
@@ -87,8 +97,8 @@ process trim_reads {
 process group_reads {
     
     cpus 1
-    memory { 4.MB * task.attempt }
-    time { 10.s * task.attempt }
+    memory { 8.MB * task.attempt }
+    time { 30.s * task.attempt }
 
     errorStrategy "retry"
     maxRetries 3
@@ -145,8 +155,18 @@ process align_reads {
 
     container "nvcr.io/nvidia/clara/clara-parabricks:4.5.0-1"
     containerOptions "--nv"
-    memory { 1.GB * Math.max(36, 8 + (4 * Math.ceil(grouped_reads_input_size as Long / 1024 ** 3))) * (1 + (0.25 * (task.attempt - 1))) }
-    time { 1.m * Math.max(15, 10 + (1 * Math.ceil(grouped_reads_input_size as Long / 1024 ** 3))) * (1 + (0.25 * (task.attempt - 1))) }
+    memory { task.attempt > 1
+        // Double if last attempt failed for other reason than time
+        ? (task.exitStatus != 140 ? task.previousTrace.memory * 2 : task.previousTrace.memory)
+        // Initial guess
+        : 1.GB * Math.max(56, 12 + (4 * Math.ceil(grouped_reads_input_size as Long / 1024 ** 3)))
+    }
+    time { task.attempt > 1 
+        // Double if insufficient in previous attempt, otherwise increase previous allocation 25 %
+        ? (task.exitStatus == 140 ? task.previousTrace.time * 2 : task.previousTrace.time * 1.25 )
+        // Initial guess
+        : 1.m * Math.max(15, 10 + (2 * Math.ceil(grouped_reads_input_size as Long / 1024 ** 3)))
+    }
 
     errorStrategy "retry"
     maxRetries 3
@@ -190,7 +210,7 @@ process filter_alignment_flags {
 
     container "quay.io/biocontainers/samtools:1.17--hd87286a_1"
     cpus 1
-    memory { 1.MB * Math.max(1024, 128 * Math.ceil(cram.size() / 1024 ** 3)) * task.attempt }
+    memory { 1.MB * Math.max(512, 128 * Math.ceil(cram.size() / 1024 ** 3)) * task.attempt }
     time { 1.m * Math.max(15, 3 * Math.ceil(cram.size() / 1024 ** 3)) * task.attempt }
 
     errorStrategy "retry"

@@ -81,7 +81,7 @@
     module --quiet purge
     module load Miniconda3/22.11.1-1
     source ${EBROOTMINICONDA3}/bin/activate
-    conda activate /cluster/projects/nn10082k/conda_group/nextflow
+    conda activate /cluster/projects/nn10082k/conda_group/Nextflow25.04.6
 
 ### ------------ End set up environment ---------- ###
 

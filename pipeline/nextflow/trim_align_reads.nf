@@ -159,13 +159,13 @@ process align_reads {
         // Double if last attempt failed for other reason than time
         ? (task.exitStatus != 140 ? task.previousTrace.memory * 2 : task.previousTrace.memory)
         // Initial guess
-        : 1.GB * Math.max(56, 12 + (4 * Math.ceil(grouped_reads_input_size as Long / 1024 ** 3)))
+        : 1.GB * Math.max(64, 16 + (4 * Math.ceil(grouped_reads_input_size as Long / 1024 ** 3)))
     }
     time { task.attempt > 1 
         // Double if insufficient in previous attempt, otherwise increase previous allocation 25 %
         ? (task.exitStatus == 140 ? task.previousTrace.time * 2 : task.previousTrace.time * 1.25 )
         // Initial guess
-        : 1.m * Math.max(15, 10 + (2 * Math.ceil(grouped_reads_input_size as Long / 1024 ** 3)))
+        : 1.m * Math.max(32, 16 + (2 * Math.ceil(grouped_reads_input_size as Long / 1024 ** 3)))
     }
 
     errorStrategy "retry"

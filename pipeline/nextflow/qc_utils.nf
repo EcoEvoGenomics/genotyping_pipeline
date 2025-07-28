@@ -59,7 +59,7 @@ process downsample_reads {
     
     container "quay.io/biocontainers/seqkit:2.10.0--h9ee0642_0"
     cpus 2
-    memory { 256.MB * Math.ceil((R1.size() + R2.size()) / 1024 ** 3) * task.attempt }
+    memory { 1.GB * Math.ceil((R1.size() + R2.size()) / 1024 ** 3) * task.attempt }
     time { 3.m * Math.ceil((R1.size() + R2.size()) / 1024 ** 3) * task.attempt }
 
     errorStrategy "retry"

@@ -73,8 +73,8 @@ process downsample_reads {
 
     script:
     """
-    seqkit ID --two-pass -n ${params.read_target} -o ${R1.simpleName}_downsampled.fastq.gz ${R1}
-    seqkit ID --two-pass -n ${params.read_target} -o ${R2.simpleName}_downsampled.fastq.gz ${R2}
+    seqkit sample --two-pass -n ${params.read_target} -o ${R1.simpleName}_downsampled.fastq.gz ${R1}
+    seqkit sample --two-pass -n ${params.read_target} -o ${R2.simpleName}_downsampled.fastq.gz ${R2}
     mv ${R1.simpleName}_downsampled.fastq.gz ${R1.simpleName}.fastq.gz
     mv ${R2.simpleName}_downsampled.fastq.gz ${R2.simpleName}.fastq.gz
     """

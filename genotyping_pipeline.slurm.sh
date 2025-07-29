@@ -34,7 +34,7 @@
     phase_variants=yes
 
     # SET OPTIONS FOR TRIM AND ALIGN STEP
-    # Note: The read_target only applies if downsample_reads=yes
+    # Note: The read_target is applied separately to R1 and R2 (if downsample_reads=yes)
     # Note: The default flag, 0x400, is for optical and PCR duplicates
     deduplicate_reads=no
     downsample_reads=no

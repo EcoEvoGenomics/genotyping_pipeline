@@ -35,9 +35,10 @@ workflow{
     | groupTuple( by:0, sort:true ) \
     | concatenate_windows
 
-    // Normalise and reheader chromosome VCFs
+    // Normalise, reheader, and sort samples in per chromosome VCFs
     chromosome_vcfs = normalise_vcf(chromosome_vcfs, ref_genome, ref_index) \
-    | reheader_vcf
+    | reheader_vcf \
+    | sort_vcf_samples
 
     // Run bcftools stats on each VCF 
     def chromosome_vchks = chromosome_vcfs \
@@ -218,8 +219,6 @@ process normalise_vcf {
 // Step 4 - Reheader VCF and output to per-chromosome directories
 process reheader_vcf {
 
-    publishDir "${params.publish_dir}/chroms/${key}", saveAs: { filename -> "$filename" }, mode: 'copy'
-
     container "quay.io/biocontainers/bcftools:1.17--h3cc50cf_1"
     cpus 2
     memory 1.GB
@@ -229,7 +228,7 @@ process reheader_vcf {
     tuple val(key), path('input.vcf.gz'), path('input.vcf.gz.csi')
     
     output:
-    tuple path("${key}.vcf.gz"), path("${key}.vcf.gz.csi")
+    tuple val(key), path("${key}.vcf.gz"), path("${key}.vcf.gz.csi")
 
     script:
     """
@@ -239,7 +238,31 @@ process reheader_vcf {
     """
 }
 
-// Step 5 - Get summary stats for each per-chromosome VCF
+// Step 5 - Sort the samples in each per-chromosome VCF
+process sort_vcf_samples {
+
+    publishDir "${params.publish_dir}/chroms/${key}", saveAs: { filename -> "$filename" }, mode: 'copy'
+
+    container "quay.io/biocontainers/bcftools:1.17--h3cc50cf_1"
+    cpus 2
+    memory 1.GB
+    time 2.h
+
+    input:
+    tuple val(key), path('input.vcf.gz'), path('input.vcf.gz.csi')
+
+    output:
+    tuple path("${key}.vcf.gz"), path("${key}.vcf.gz.csi")
+
+    script:
+    """
+    bcftools query -l input.vcf.gz | sort -V > sorted_samples.list
+    bcftools view --samples-file sorted_samples.list -o ${key}.vcf.gz input.vcf.gz
+    bcftools index --threads ${task.cpus} ${key}.vcf.gz
+    """
+}
+
+// Step 6A - Get summary stats for each per-chromosome VCF
 process summarise_vcf {
 
     container "quay.io/biocontainers/bcftools:1.17--h3cc50cf_1"
@@ -260,7 +283,7 @@ process summarise_vcf {
     """
 }
 
-// Step 6A - Collect VCHKs and output combined file for MultiQC
+// Step 6B - Collect VCHKs and output combined file for MultiQC
 process concatenate_vchks {
 
     publishDir "${params.publish_dir}", saveAs: { filename -> "$filename" }, mode: 'copy'
@@ -288,7 +311,7 @@ process concatenate_vchks {
     """
 }
 
-// Step 6B (Optional) - Collect VCFs and output combined file
+// (Optional) - Collect VCFs and output combined file
 process concatenate_vcfs {
     
     publishDir "${params.publish_dir}", saveAs: { filename -> "$filename" }, mode: 'copy'

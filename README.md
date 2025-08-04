@@ -157,6 +157,7 @@ flowchart TB
    v14(["Concatenate chromosome VCF (bcftools concat, bcftools index)"])
    v16(["Normalise VCF, remove spanning indels (bcftools norm, bcftools view)"])
    v17(["Reheader VCF (bcftools reheader)"])
+   v18(["Sort VCF samples (bcftools query, bcftools view)"])
    v19(["Get VCF stats (bcftools stats)"])
    v21(["Collect genome-wide stats (bcftools plot-vcfstats)"])
    v23(["Optional: Concatenate genome-wide VCF (bcftools concat, bcftools index)"])
@@ -173,14 +174,15 @@ flowchart TB
    v4 --> v16
    v14 --> v16
    v16 --> v17
-   v17 --> v19
+   v17 --> v18
+   v18 --> v19
    v19 --> v21
-   v17 --> v23
+   v18 --> v23
    v22 --> v23
    v21 --> v26
    v23 --> v24
    v23 --> v25
-   v14 --> v27
+   v18 --> v27
    subgraph "Outputs"
    v24["unfiltered_variants.vcf.gz"]
    v25["unfiltered_variants.vcf.gz.csi"]

@@ -49,7 +49,7 @@ workflow{
 
     // If concatenated VCF wanted, output
     if (params.concatenate_vcf == 'yes') {
-        concatenate_vcfs(chromosome_vcfs.flatten().collect(), 'variants_unfiltered')
+        concatenate_vcfs(chromosome_vcfs.flatten().collect(), ref_index, params.ref_scaffold_name, 'variants_unfiltered')
     }
 }
 
@@ -317,12 +317,14 @@ process concatenate_vcfs {
     publishDir "${params.publish_dir}", saveAs: { filename -> "$filename" }, mode: 'copy'
 
     container "quay.io/biocontainers/bcftools:1.17--h3cc50cf_1"
-    cpus 2
-    memory 1.GB
-    time 2.h
+    cpus 4
+    memory 4.GB
+    time 4.h
     
     input:
     path(collected_vcfs), stageAs: "staged_vcfs/*"
+    path(ref_index)
+    path(ref_scaffold_name)
     val(collection_name)
 
     output:
@@ -331,8 +333,9 @@ process concatenate_vcfs {
 
     script:
     """
-    # CONCATENATE VCFs (CHECK IF AN ADDITIONAL NORM STEP IS NECESSARY)
-    bcftools concat --threads ${task.cpus} -n -O z -o ${collection_name}.vcf.gz staged_vcfs/*.vcf.gz
+    cat ${ref_index} | grep -v ${ref_scaffold_name} | awk '{print "./staged_vcfs/" \$1 ".vcf.gz"}' > reference_sorted_vcfs.list
+    echo "./staged_vcfs/scaffolds.vcf.gz" >> reference_sorted_vcfs.list
+    bcftools concat --threads ${task.cpus} --file-list reference_sorted_vcfs.list --naive --output-type z --output ${collection_name}.vcf.gz
     bcftools index --threads ${task.cpus} ${collection_name}.vcf.gz
     """
 }

@@ -138,8 +138,9 @@ This part of the pipeline produces the following outputs:
 
 ### Step 2: Variant calling
 
-The second script in the pipeline will take aligned crams performs variant calling (genotyping) on all individuals against the specified reference genome. To do this, it uses `bcftools` and will call sites at every position in the genome (i.e. it calls invariant sites as well as variants). This is obviously a large job, especially on larger genomes. So to increase efficiency, the script parallelises across genome windows. The default is 10 Mb but you can set these to whatever size you wish in the slurm script. Previously you had to set windows outside of the pipeline but this step now does this for you automatically. It also takes into account ploidy of the mitochondrial genome. After calling genotypes in windows, the script will take care of sorting and concatenating the windows together so that you are left with a vcf file for each chromosome, the mtDNA and also the unanchored scaffolds in your genome. These are unfiltered and ready for the next step. It also generates some statistics for downstream checking. 
+The second script in the pipeline will take aligned crams performs variant calling (genotyping) on all individuals against the specified reference genome. To do this, it uses `bcftools` and will call sites at every position in the genome (i.e. it calls invariant sites as well as variants). This is obviously a large job, especially on larger genomes. So to increase efficiency, the script parallelises across genome windows. The default is 10 Mb but you can set these to whatever size you wish in the slurm script. Previously you had to set windows outside of the pipeline but this step now does this for you automatically. It also takes into account ploidy of the mitochondrial genome. After calling genotypes in windows, the script will take care of sorting and concatenating the windows together so that you are left with a vcf file for each chromosome, the mtDNA and also the unanchored scaffolds in your genome. These are unfiltered and ready for the next step. It also generates some statistics for downstream checking.
 
+Optionally, you can enable concatenation of the chromosomal VCFs into one whole-genome VCF. If so, the pipeline will automatically consult the reference genome index in order to concatenate the chromosomes in the correct order. All (non-chromosome) scaffolds are always placed at the end. **Note:** you are unlikely to need an unfiltered whole-genome VCF, and it will be very large. The same concatenation process is always run in the next step of the pipeline (variant filtering) so you will get a whole-genome concatenated *filtered* VCF.
 
 ```mermaid
 flowchart TB
@@ -162,8 +163,10 @@ flowchart TB
    v21(["Collect genome-wide stats (bcftools plot-vcfstats)"])
    v23(["Optional: Concatenate genome-wide VCF (bcftools concat, bcftools index)"])
    v4 --> v8
+   v4 --> v23
    v6 --> v8
    v7 --> v8
+   v7 --> v23
    v0 --> v13
    v2 --> v13
    v4 --> v13
@@ -200,7 +203,7 @@ This part of the pipeline produces the following outputs:
 
 ### Step 3: Variant filtering
 
-The third script takes control of filtering your vcf files and prepares them for downstream analysis. You need to provide it with the settings you require for filtering (via the main slurm script) and it will use unfiltered chromosome level vcfs to perform filtering. Filters are applied in windows and windows are concatenated and then normalise to remove any errors. The script will produce both per chromosome vcfs and a whole-genome vcf for additional analysis if required. The script also produces statistics on the filtered variants which can be incorporated in the multiQC reports in the next and final step. 
+The third script takes control of filtering your vcf files and prepares them for downstream analysis. You need to provide it with the settings you require for filtering (via the main slurm script) and it will use unfiltered chromosome level VCFs to perform filtering. Filters are applied in windows and windows are concatenated and then normalise to remove any errors. The script will produce both per chromosome VCFs and a whole-genome VCF for additional analysis if required. The pipeline automatically concatenates the per chromosome VCFs in the order specificed by the reference genome index and places all scaffolds at the end. The script also produces statistics on the filtered variants which can be incorporated in the multiQC reports in the next and final step. 
 
 It is worth noting that filtering is not a black-box/set-and-forget/run-once process! The filters you apply matter, and not only should you think carefully about them, you may very well need to produce datasets with different filters for different downstream analyses (see https://doi.org/10.1038/s41576-024-00738-6). For that reason, the pipeline has been built to make it easy to return to this step after you've produced the MultiQC report and inspected the quality statistics (below). To take an example, you may first run the pipeline through all steps, i.e. `yes` for all `trim_align_reads`, `call_variants`, `filter_variants` (and `phase_variants`) with default filters. Then you can switch off `trim_align_reads` and `call_variants` but re-run `filter_variants` (and, again, `phase_variants`) with different filtering settings (recall that all the settings you can change are exposed in the main SLURM script and you should not change anything elsewher) in the same directory to produce a re-filtered dataset (**without changing anything else**). To do so, simply change the `filtering_label` variable (to give a new name to your refiltered data) and the relevant filtering settings. Your newly re-filtered dataset will be found in a correspondingly labelled directory under the filtered genotypes directory and the MultiQC report will be updated to show (all) the re-filtered dataset alongside the unfiltered data. You can do this as many times as you need until you are content your filters are appropriate!
 
@@ -209,6 +212,8 @@ flowchart TB
    subgraph "Inputs and user parameters"
    v5["Filtering settings"]
    v0["Unfiltered chromosome VCFs"]
+   v4["Reference genome index"]
+   v14["Scaffold name"]
    end
    v1(["Filter VCF (vcftools, bcftools)"])
    v3(["Get VCF stats (bcftools stats)"])
@@ -223,6 +228,8 @@ flowchart TB
    v5 --> v8
    v5 --> v1
    v8 --> v9
+   v4 --> v7
+   v14 --> v7
    v7 --> v10
    v7 --> v11
    v6 --> v12

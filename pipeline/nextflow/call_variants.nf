@@ -35,9 +35,10 @@ workflow{
     | groupTuple( by:0, sort:true ) \
     | concatenate_windows
 
-    // Normalise and reheader chromosome VCFs
+    // Normalise, reheader, and sort samples in per chromosome VCFs
     chromosome_vcfs = normalise_vcf(chromosome_vcfs, ref_genome, ref_index) \
-    | reheader_vcf
+    | reheader_vcf \
+    | sort_vcf_samples
 
     // Run bcftools stats on each VCF 
     def chromosome_vchks = chromosome_vcfs \
@@ -48,7 +49,7 @@ workflow{
 
     // If concatenated VCF wanted, output
     if (params.concatenate_vcf == 'yes') {
-        concatenate_vcfs(chromosome_vcfs.flatten().collect(), 'variants_unfiltered')
+        concatenate_vcfs(chromosome_vcfs.flatten().collect(), ref_index, params.ref_scaffold_name, 'variants_unfiltered')
     }
 }
 
@@ -136,10 +137,10 @@ process genotype_windows {
     container "quay.io/biocontainers/bcftools:1.17--h3cc50cf_1"
     cpus 4
     memory { 2.GB * task.attempt }
-    time 6.h
+    time { 4.h * task.attempt }
 
-    errorStrategy 'retry'
-    maxRetries 5
+    errorStrategy "retry"
+    maxRetries 3
 
     input:
     path(crams)
@@ -169,8 +170,11 @@ process concatenate_windows {
 
     container "quay.io/biocontainers/bcftools:1.17--h3cc50cf_1"
     cpus 2
-    memory 1.GB
-    time 2.h
+    memory { 2.GB * task.attempt }
+    time { 2.h * task.attempt }
+
+    errorStrategy "retry"
+    maxRetries 3
 
     input:
     tuple val(key), path(window_vcfs_in_key)
@@ -191,8 +195,11 @@ process normalise_vcf {
 
     container "quay.io/biocontainers/bcftools:1.17--h3cc50cf_1"
     cpus 2
-    memory 1.GB
-    time 6.h
+    memory { 2.GB * task.attempt }
+    time { 4.h * task.attempt }
+
+    errorStrategy "retry"
+    maxRetries 3
 
     input:
     tuple val(key), path('input.vcf.gz'), path('input.vcf.gz.csi')
@@ -218,18 +225,19 @@ process normalise_vcf {
 // Step 4 - Reheader VCF and output to per-chromosome directories
 process reheader_vcf {
 
-    publishDir "${params.publish_dir}/chroms/${key}", saveAs: { filename -> "$filename" }, mode: 'copy'
-
     container "quay.io/biocontainers/bcftools:1.17--h3cc50cf_1"
     cpus 2
-    memory 1.GB
-    time 1.h
+    memory { 2.GB * task.attempt }
+    time { 2.h * task.attempt }
+
+    errorStrategy "retry"
+    maxRetries 3
 
     input:
     tuple val(key), path('input.vcf.gz'), path('input.vcf.gz.csi')
     
     output:
-    tuple path("${key}.vcf.gz"), path("${key}.vcf.gz.csi")
+    tuple val(key), path("${key}.vcf.gz"), path("${key}.vcf.gz.csi")
 
     script:
     """
@@ -239,13 +247,43 @@ process reheader_vcf {
     """
 }
 
-// Step 5 - Get summary stats for each per-chromosome VCF
+// Step 5 - Sort the samples in each per-chromosome VCF
+process sort_vcf_samples {
+
+    publishDir "${params.publish_dir}/chroms/${key}", saveAs: { filename -> "$filename" }, mode: 'copy'
+
+    container "quay.io/biocontainers/bcftools:1.17--h3cc50cf_1"
+    cpus 2
+    memory { 2.GB * task.attempt }
+    time { 2.h * task.attempt }
+
+    errorStrategy "retry"
+    maxRetries 3
+
+    input:
+    tuple val(key), path('input.vcf.gz'), path('input.vcf.gz.csi')
+
+    output:
+    tuple path("${key}.vcf.gz"), path("${key}.vcf.gz.csi")
+
+    script:
+    """
+    bcftools query -l input.vcf.gz | sort -V > sorted_samples.list
+    bcftools view --samples-file sorted_samples.list -o ${key}.vcf.gz input.vcf.gz
+    bcftools index --threads ${task.cpus} ${key}.vcf.gz
+    """
+}
+
+// Step 6A - Get summary stats for each per-chromosome VCF
 process summarise_vcf {
 
     container "quay.io/biocontainers/bcftools:1.17--h3cc50cf_1"
     cpus 2
-    memory 1.GB
-    time 2.h
+    memory { 2.GB * task.attempt }
+    time { 2.h * task.attempt }
+
+    errorStrategy "retry"
+    maxRetries 3
 
     input:
     tuple path(vcf), path(csi)
@@ -260,15 +298,18 @@ process summarise_vcf {
     """
 }
 
-// Step 6A - Collect VCHKs and output combined file for MultiQC
+// Step 6B - Collect VCHKs and output combined file for MultiQC
 process concatenate_vchks {
 
     publishDir "${params.publish_dir}", saveAs: { filename -> "$filename" }, mode: 'copy'
 
     container "quay.io/biocontainers/bcftools:1.17--h3cc50cf_1"
     cpus 1
-    memory 1.GB
-    time 1.h
+    memory { 2.GB * task.attempt }
+    time { 2.h * task.attempt }
+
+    errorStrategy "retry"
+    maxRetries 3
 
     input:
     path(collected_vchks), stageAs: "staged_vchks/*"
@@ -288,18 +329,23 @@ process concatenate_vchks {
     """
 }
 
-// Step 6B (Optional) - Collect VCFs and output combined file
+// (Optional) - Collect VCFs and output combined file
 process concatenate_vcfs {
     
     publishDir "${params.publish_dir}", saveAs: { filename -> "$filename" }, mode: 'copy'
 
     container "quay.io/biocontainers/bcftools:1.17--h3cc50cf_1"
-    cpus 2
-    memory 1.GB
-    time 2.h
+    cpus 4
+    memory { 4.GB * task.attempt }
+    time { 4.h * task.attempt }
+
+    errorStrategy "retry"
+    maxRetries 3
     
     input:
     path(collected_vcfs), stageAs: "staged_vcfs/*"
+    path(ref_index)
+    path(ref_scaffold_name)
     val(collection_name)
 
     output:
@@ -308,8 +354,9 @@ process concatenate_vcfs {
 
     script:
     """
-    # CONCATENATE VCFs (CHECK IF AN ADDITIONAL NORM STEP IS NECESSARY)
-    bcftools concat --threads ${task.cpus} -n -O z -o ${collection_name}.vcf.gz staged_vcfs/*.vcf.gz
+    cat ${ref_index} | grep -v ${ref_scaffold_name} | awk '{print "./staged_vcfs/" \$1 ".vcf.gz"}' > reference_sorted_vcfs.list
+    echo "./staged_vcfs/scaffolds.vcf.gz" >> reference_sorted_vcfs.list
+    bcftools concat --threads ${task.cpus} --file-list reference_sorted_vcfs.list --naive --output-type z --output ${collection_name}.vcf.gz
     bcftools index --threads ${task.cpus} ${collection_name}.vcf.gz
     """
 }

@@ -155,21 +155,23 @@ process align_reads {
 
     container "nvcr.io/nvidia/clara/clara-parabricks:4.5.0-1"
     containerOptions "--nv"
-    memory { task.attempt > 1
-        // Double if last attempt failed for other reason than time
-        ? (task.exitStatus != 140 ? task.previousTrace.memory * 2 : task.previousTrace.memory)
-        // Initial guess
-        : 1.GB * Math.max(64, 16 + (4 * Math.ceil(grouped_reads_input_size as Long / 1024 ** 3)))
+    memory {
+        task.attempt == task.maxRetries + 1
+        ? 256.GB
+        : task.attempt > 1
+            ? (task.exitStatus != 140 ? task.previousTrace.memory * 2 : task.previousTrace.memory)
+            : 1.GB * Math.max(64, (6 * Math.ceil(grouped_reads_input_size as Long / 1024 ** 3)))
     }
-    time { task.attempt > 1 
-        // Double if insufficient in previous attempt, otherwise increase previous allocation 25 %
-        ? (task.exitStatus == 140 ? task.previousTrace.time * 2 : task.previousTrace.time * 1.25 )
-        // Initial guess
-        : 1.m * Math.max(32, 16 + (2 * Math.ceil(grouped_reads_input_size as Long / 1024 ** 3)))
+    time {
+        task.attempt == task.maxRetries + 1
+        ? 12.h
+        : task.attempt > 1 
+            ? (task.exitStatus == 140 ? task.previousTrace.time * 2 : task.previousTrace.time)
+            : 1.m * Math.max(45, (6 * Math.ceil(grouped_reads_input_size as Long / 1024 ** 3)))
     }
 
     errorStrategy "retry"
-    maxRetries 3
+    maxRetries 2
 
     label "require_gpu"
 

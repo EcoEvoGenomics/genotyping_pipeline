@@ -30,7 +30,7 @@ workflow{
 
   // Concatenate and output chromosome-level VCFs and VCHKs
   concatenate_vchks(filtered_chromosome_vchks.collect(), "variants_${params.filtering_label}")
-  concatenate_vcfs(filtered_chromosome_vcfs.flatten().collect(), "variants_${params.filtering_label}")
+  concatenate_vcfs(filtered_chromosome_vcfs.flatten().collect(), params.ref_index, params.ref_scaffold_name, "variants_${params.filtering_label}")
 
   // Separately:
   save_filters_to_file()
@@ -45,8 +45,11 @@ process filter_vcf {
   // Container: https://wave.seqera.io/view/builds/bd-39fc8ab24f49f2d6_1
   container "community.wave.seqera.io/library/bcftools_vcftools:39fc8ab24f49f2d6"
   cpus 2
-  memory 1.GB
-  time 2.h
+  memory { 2.GB * task.attempt }
+  time { 2.h * task.attempt }
+  
+  errorStrategy "retry"
+  maxRetries 3
   
   input:
   tuple val(key), path('input.vcf.gz'), path('input.vcf.gz.csi') 

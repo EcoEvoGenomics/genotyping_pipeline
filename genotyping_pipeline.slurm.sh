@@ -154,6 +154,8 @@ if [ $filter_variants = "yes" ]; then
         -with-report $filter_variants_output_dir/workflow_report.html \
         -profile $nextflow_profile \
         --vcf_dir $call_variants_output_dir/chroms \
+        --ref_index $ref_index \
+        --ref_scaffold_name $ref_scaffold_name \
         --filtering_label $filtering_label \
         --min_alleles $filtering_min_alleles \
         --max_alleles $filtering_max_alleles \

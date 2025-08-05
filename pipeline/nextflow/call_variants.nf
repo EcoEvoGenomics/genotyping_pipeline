@@ -45,11 +45,11 @@ workflow{
     | summarise_vcf
 
     // Concatenate and output VCHKs
-    concatenate_vchks(chromosome_vchks.collect(), 'variants_unfiltered')
+    concatenate_vchks(chromosome_vchks.collect(), "variants_unfiltered")
 
     // If concatenated VCF wanted, output
-    if (params.concatenate_vcf == 'yes') {
-        concatenate_vcfs(chromosome_vcfs.flatten().collect(), ref_index, params.ref_scaffold_name, 'variants_unfiltered')
+    if (params.concatenate_vcf == "yes") {
+        concatenate_vcfs(chromosome_vcfs.flatten().collect(), ref_index, "", params.ref_scaffold_name, "variants_unfiltered")
     }
 }
 
@@ -345,7 +345,8 @@ process concatenate_vcfs {
     input:
     path(collected_vcfs), stageAs: "staged_vcfs/*"
     path(ref_index)
-    path(ref_scaffold_name)
+    val(vcf_suffix)
+    val(ref_scaffold_name)
     val(collection_name)
 
     output:
@@ -354,8 +355,8 @@ process concatenate_vcfs {
 
     script:
     """
-    cat ${ref_index} | grep -v ${ref_scaffold_name} | awk '{print "./staged_vcfs/" \$1 ".vcf.gz"}' > reference_sorted_vcfs.list
-    echo "./staged_vcfs/scaffolds.vcf.gz" >> reference_sorted_vcfs.list
+    cat ${ref_index} | grep -v ${ref_scaffold_name} | awk '{print "./staged_vcfs/" \$1 "${vcf_suffix}.vcf.gz"}' > reference_sorted_vcfs.list
+    echo "./staged_vcfs/scaffolds${vcf_suffix}.vcf.gz" >> reference_sorted_vcfs.list
     bcftools concat --threads ${task.cpus} --file-list reference_sorted_vcfs.list --naive --output-type z --output ${collection_name}.vcf.gz
     bcftools index --threads ${task.cpus} ${collection_name}.vcf.gz
     """

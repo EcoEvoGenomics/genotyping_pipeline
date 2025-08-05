@@ -47,7 +47,9 @@ In brief the three steps required to run the pipeline once you have cloned the r
 
 1. Download your reads to a location where the pipeline can reach them. If you have e.g. stored your reads on the NRIS NIRD storage infrastructure, you should copy them to your `$USERWORK` on the NRIS Saga HPC.
 2. Prepare a comma-separated `.csv` file with sample information. See below.
-3. Submit the `genotyping_pipeline.slurm.sh` script, completing and modifying `SETTINGS (1 / 2) User input` as required. 
+3. Submit the `genotyping_pipeline.slurm.sh` script, completing and modifying `SETTINGS (1 / 2) User input` as required.
+
+If for any reason the pipeline encounters an error and stops (e.g. due to a faulty read file), you may simply remove the offending sample from the input `.csv` and resubmit the same script (potentially disabling steps that ran to completion, although errors are most likely to occur at the onset, in the first step, when each sample is processed separately). This is because the pipeline caches working files (in a directory called `work`) and by default will recognise processes it has already completed, even if the pipeline should exit with an error.
 
 NB: For step 3, users of  HPC resources other than the NRIS Saga HPC will likely have to modify the `SETTINGS (2 / 2) Set up environment` section to ensure Slurm, Singularity, and Conda are set up appropriately. Apart from modifying the SLURM header you should not modify the script outside the `SETTINGS` blocks.
 

@@ -118,6 +118,7 @@ if [ $trim_align_reads = "yes" ]; then
         run ./pipeline/nextflow/trim_align_reads.nf \
         -with-report $trim_align_output_dir/workflow_report.html \
         -profile $nextflow_profile \
+        -resume \
         --samples $sample_csv \
         --deduplicate $deduplicate_reads \
         --downsample $downsample_reads \
@@ -136,6 +137,7 @@ if [ $call_variants = "yes" ]; then
         run ./pipeline/nextflow/call_variants.nf \
         -with-report $call_variants_output_dir/workflow_report.html \
         -profile $nextflow_profile \
+        -resume \
         --cram_dir $trim_align_output_dir \
         --window_size $genotyping_window_size \
         --ref_genome $ref_genome \
@@ -153,6 +155,7 @@ if [ $filter_variants = "yes" ]; then
         run ./pipeline/nextflow/filter_variants.nf \
         -with-report $filter_variants_output_dir/workflow_report.html \
         -profile $nextflow_profile \
+        -resume \
         --vcf_dir $call_variants_output_dir/chroms \
         --ref_index $ref_index \
         --ref_scaffold_name $ref_scaffold_name \
@@ -176,6 +179,7 @@ if [ $phase_variants = "yes" ]; then
         run ./pipeline/nextflow/phase_variants.nf \
         -with-report $phase_variants_output_dir/workflow_report.html \
         -profile $nextflow_profile \
+        -resume \
         --unphased_vcf ${filter_variants_output_dir}/variants_${filtering_label}.vcf.gz \
         --unphased_csi ${filter_variants_output_dir}/variants_${filtering_label}.vcf.gz.csi \
         --ref_index $ref_index \

@@ -137,10 +137,10 @@ process genotype_windows {
     container "quay.io/biocontainers/bcftools:1.17--h3cc50cf_1"
     cpus 4
     memory { 2.GB * task.attempt }
-    time 6.h
+    time { 4.h * task.attempt }
 
-    errorStrategy 'retry'
-    maxRetries 5
+    errorStrategy "retry"
+    maxRetries 3
 
     input:
     path(crams)
@@ -170,8 +170,11 @@ process concatenate_windows {
 
     container "quay.io/biocontainers/bcftools:1.17--h3cc50cf_1"
     cpus 2
-    memory 1.GB
-    time 2.h
+    memory { 2.GB * task.attempt }
+    time { 2.h * task.attempt }
+
+    errorStrategy "retry"
+    maxRetries 3
 
     input:
     tuple val(key), path(window_vcfs_in_key)
@@ -192,8 +195,11 @@ process normalise_vcf {
 
     container "quay.io/biocontainers/bcftools:1.17--h3cc50cf_1"
     cpus 2
-    memory 1.GB
-    time 6.h
+    memory { 2.GB * task.attempt }
+    time { 4.h * task.attempt }
+
+    errorStrategy "retry"
+    maxRetries 3
 
     input:
     tuple val(key), path('input.vcf.gz'), path('input.vcf.gz.csi')
@@ -221,8 +227,11 @@ process reheader_vcf {
 
     container "quay.io/biocontainers/bcftools:1.17--h3cc50cf_1"
     cpus 2
-    memory 1.GB
-    time 1.h
+    memory { 2.GB * task.attempt }
+    time { 2.h * task.attempt }
+
+    errorStrategy "retry"
+    maxRetries 3
 
     input:
     tuple val(key), path('input.vcf.gz'), path('input.vcf.gz.csi')
@@ -245,8 +254,11 @@ process sort_vcf_samples {
 
     container "quay.io/biocontainers/bcftools:1.17--h3cc50cf_1"
     cpus 2
-    memory 1.GB
-    time 2.h
+    memory { 2.GB * task.attempt }
+    time { 2.h * task.attempt }
+
+    errorStrategy "retry"
+    maxRetries 3
 
     input:
     tuple val(key), path('input.vcf.gz'), path('input.vcf.gz.csi')
@@ -267,8 +279,11 @@ process summarise_vcf {
 
     container "quay.io/biocontainers/bcftools:1.17--h3cc50cf_1"
     cpus 2
-    memory 1.GB
-    time 2.h
+    memory { 2.GB * task.attempt }
+    time { 2.h * task.attempt }
+
+    errorStrategy "retry"
+    maxRetries 3
 
     input:
     tuple path(vcf), path(csi)
@@ -290,8 +305,11 @@ process concatenate_vchks {
 
     container "quay.io/biocontainers/bcftools:1.17--h3cc50cf_1"
     cpus 1
-    memory 1.GB
-    time 1.h
+    memory { 2.GB * task.attempt }
+    time { 2.h * task.attempt }
+
+    errorStrategy "retry"
+    maxRetries 3
 
     input:
     path(collected_vchks), stageAs: "staged_vchks/*"
@@ -318,8 +336,11 @@ process concatenate_vcfs {
 
     container "quay.io/biocontainers/bcftools:1.17--h3cc50cf_1"
     cpus 4
-    memory 4.GB
-    time 4.h
+    memory { 4.GB * task.attempt }
+    time { 4.h * task.attempt }
+
+    errorStrategy "retry"
+    maxRetries 3
     
     input:
     path(collected_vcfs), stageAs: "staged_vcfs/*"

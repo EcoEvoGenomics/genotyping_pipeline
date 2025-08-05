@@ -33,8 +33,8 @@ process phase_common_variants {
     
     container "quay.io/biocontainers/shapeit5:5.1.1--hb60d31d_0"
     cpus 2
-    memory { 1.GB + (1.GB * Math.log(Math.ceil(unphased_vcf.size() / 1024 ** 3))) * task.attempt }
-    time { 1.m * Math.ceil(unphased_vcf.size() / 1024 ** 3) * task.attempt }
+    memory { 2.GB + (1.GB * Math.log(Math.ceil(unphased_vcf.size() / 1024 ** 3))) * task.attempt }
+    time { 2.m * Math.ceil(unphased_vcf.size() / 1024 ** 3) * task.attempt }
 
     // SHAPEIT5 exits with an error if there are no variants in the window. If so, ignore the window.
     errorStrategy { task.exitStatus in 137..140 ? "retry" : "ignore" }
@@ -73,8 +73,8 @@ process ligate_phased {
 
     container "quay.io/biocontainers/shapeit5:5.1.1--hb60d31d_0"
     cpus 1
-    memory { 1.GB * task.attempt }
-    time { 30.m * task.attempt }
+    memory { 2.GB * task.attempt }
+    time { 2.h * task.attempt }
 
     errorStrategy "retry"
     maxRetries 3
@@ -99,8 +99,11 @@ process convert_bcf_to_vcf {
 
     container "quay.io/biocontainers/bcftools:1.17--h3cc50cf_1"
     cpus 1
-    memory { 1.GB * task.attempt }
-    time { 30.m * task.attempt }
+    memory { 2.GB * task.attempt }
+    time { 2.h * task.attempt }
+
+    errorStrategy "retry"
+    maxRetries 3
 
     input:
     tuple val(key), path(bcf), path(csi)

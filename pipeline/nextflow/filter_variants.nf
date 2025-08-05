@@ -45,8 +45,11 @@ process filter_vcf {
   // Container: https://wave.seqera.io/view/builds/bd-39fc8ab24f49f2d6_1
   container "community.wave.seqera.io/library/bcftools_vcftools:39fc8ab24f49f2d6"
   cpus 2
-  memory 1.GB
-  time 2.h
+  memory { 2.GB * task.attempt }
+  time { 2.h * task.attempt }
+  
+  errorStrategy "retry"
+  maxRetries 3
   
   input:
   tuple val(key), path('input.vcf.gz'), path('input.vcf.gz.csi') 

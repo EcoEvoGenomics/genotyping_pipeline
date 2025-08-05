@@ -30,7 +30,7 @@ workflow{
 
   // Concatenate and output chromosome-level VCFs and VCHKs
   concatenate_vchks(filtered_chromosome_vchks.collect(), "variants_${params.filtering_label}")
-  concatenate_vcfs(filtered_chromosome_vcfs.flatten().collect(), params.ref_index, params.ref_scaffold_name, "variants_${params.filtering_label}")
+  concatenate_vcfs(filtered_chromosome_vcfs.flatten().collect(), params.ref_index, "_${params.filtering_label}", params.ref_scaffold_name, "variants_${params.filtering_label}")
 
   // Separately:
   save_filters_to_file()

@@ -21,13 +21,14 @@ workflow{
     def windows_dir = define_windows.out.windows_dir
     def window_list = define_windows.out.windows.map{path -> file(path.toString())}.readLines()
     
-    // Prepare a Channel of input CRAM paths
+    // Prepare a Channel with an input CRAM path list
     def crams = Channel.fromPath("${params.cram_dir}/**.cram")
     .map { cram -> "${cram.toString()}\n" }
     .collectFile()
+    sorted_crams = sort_cramlist(crams)
 
     // Genotype CRAMs in windows and concatenate windows into per-chromsome VCFs
-    def chromosome_vcfs = genotype_windows(crams, ref_ploidy, ref_genome, ref_index, windows_dir, window_list) \
+    def chromosome_vcfs = genotype_window(sorted_crams, ref_ploidy, ref_genome, ref_index, windows_dir, window_list) \
     | map { file ->
         def key = file.baseName.toString().tokenize(':').get(0)
         return tuple(key, file)
@@ -37,8 +38,7 @@ workflow{
 
     // Normalise, reheader, and sort samples in per chromosome VCFs
     chromosome_vcfs = normalise_vcf(chromosome_vcfs, ref_genome, ref_index) \
-    | reheader_vcf \
-    | sort_vcf_samples
+    | reheader_vcf
 
     // Run bcftools stats on each VCF 
     def chromosome_vchks = chromosome_vcfs \
@@ -131,8 +131,27 @@ process define_windows {
     """
 }
 
+// Step 0 - Sort CRAM list
+process sort_cramlist {
+
+    cpus 1
+    memory 1.GB
+    time 5.m
+
+    input:
+    path(crams)
+
+    output:
+    path("crams_sorted.list")
+
+    script:
+    """
+    sort -V ${crams} > crams_sorted.list
+    """
+}
+
 // Step 1 - Genotyping
-process genotype_windows {
+process genotype_window {
 
     container "quay.io/biocontainers/bcftools:1.17--h3cc50cf_1"
     cpus 4
@@ -225,6 +244,8 @@ process normalise_vcf {
 // Step 4 - Reheader VCF and output to per-chromosome directories
 process reheader_vcf {
 
+    publishDir "${params.publish_dir}/chroms/${key}", saveAs: { filename -> "$filename" }, mode: 'copy'
+
     container "quay.io/biocontainers/bcftools:1.17--h3cc50cf_1"
     cpus 2
     memory { 2.GB * task.attempt }
@@ -247,34 +268,7 @@ process reheader_vcf {
     """
 }
 
-// Step 5 - Sort the samples in each per-chromosome VCF
-process sort_vcf_samples {
-
-    publishDir "${params.publish_dir}/chroms/${key}", saveAs: { filename -> "$filename" }, mode: 'copy'
-
-    container "quay.io/biocontainers/bcftools:1.17--h3cc50cf_1"
-    cpus 2
-    memory { 2.GB * task.attempt }
-    time { 2.h * task.attempt }
-
-    errorStrategy "retry"
-    maxRetries 3
-
-    input:
-    tuple val(key), path('input.vcf.gz'), path('input.vcf.gz.csi')
-
-    output:
-    tuple path("${key}.vcf.gz"), path("${key}.vcf.gz.csi")
-
-    script:
-    """
-    bcftools query -l input.vcf.gz | sort -V > sorted_samples.list
-    bcftools view --samples-file sorted_samples.list -o ${key}.vcf.gz input.vcf.gz
-    bcftools index --threads ${task.cpus} ${key}.vcf.gz
-    """
-}
-
-// Step 6A - Get summary stats for each per-chromosome VCF
+// Step 5A - Get summary stats for each per-chromosome VCF
 process summarise_vcf {
 
     container "quay.io/biocontainers/bcftools:1.17--h3cc50cf_1"
@@ -298,7 +292,7 @@ process summarise_vcf {
     """
 }
 
-// Step 6B - Collect VCHKs and output combined file for MultiQC
+// Step 5B - Collect VCHKs and output combined file for MultiQC
 process concatenate_vchks {
 
     publishDir "${params.publish_dir}", saveAs: { filename -> "$filename" }, mode: 'copy'

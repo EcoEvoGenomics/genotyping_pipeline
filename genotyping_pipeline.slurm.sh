@@ -111,6 +111,12 @@ filter_variants_output_dir=${output_dir}/03-variants_filtered/${filtering_label}
 phase_variants_output_dir=${output_dir}/03-variants_filtered/${filtering_label}/phased
 mkmissingdir $output_dir
 
+nextflow -log ./.nextflow/nextflow.log \
+    run ./pipeline/nextflow/check_inputs.nf \
+    -profile $nextflow_profile \
+    -resume \
+    --ref_index $ref_index
+
 if [ $trim_align_reads = "yes" ]; then
     mkmissingdir $trim_align_output_dir
     nextflow -log ./.nextflow/nextflow.log \

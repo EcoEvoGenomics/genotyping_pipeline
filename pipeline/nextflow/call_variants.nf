@@ -29,6 +29,7 @@ workflow{
     def cram_bucketsize = 75
     def cram_count = input_crams.map { crams -> crams.size() as Integer }
     def cram_bucketcount = cram_count.map { n -> (n + cram_bucketsize - 1) / cram_bucketsize }
+    def window_size = cram_bucketcount.map { bc -> (genotyping_window_base_size / bc) as Integer }
 
     // Genome windows are scaled down from a base size given number of CRAMs
     define_windows(ref_index, window_size, params.ref_scaffold_name)
@@ -161,6 +162,8 @@ process sort_cramlist {
 // Step 1 - Genotyping
 process genotype_window {
 
+    label "require_pipefail"
+
     container "quay.io/biocontainers/bcftools:1.17--h3cc50cf_1"
     cpus { 1 }
     memory { 4.GB * task.attempt }
@@ -182,12 +185,19 @@ process genotype_window {
 
     script:
     """
-    if [[ "${window}" == "scaffold"* ]]; then
-        bcftools mpileup --threads ${task.cpus} -d 8000 --ignore-RG -R ./genome_windows/${window} -a AD,DP,SP -Ou -f ${ref_genome} -b ${crams} \
-        | bcftools call --threads ${task.cpus} --ploidy-file ${ploidy_file} -f GQ,GP -mO z -o ${window}.vcf.gz
-    else
+    # CALL NONSCAFFOLD WINDOWS AND SCAFFOLD WINDOWS SEPARATELY
+    call_nonscaffold() {
         bcftools mpileup --threads ${task.cpus} -d 8000 --ignore-RG -r ${window} -a AD,DP,SP -Ou -f ${ref_genome} -b ${crams} \
         | bcftools call --threads ${task.cpus} --ploidy-file ${ploidy_file} -f GQ,GP -mO z -o ${window}.vcf.gz
+    }
+    call_scaffold() {
+        bcftools mpileup --threads ${task.cpus} -d 8000 --ignore-RG -R ./genome_windows/${window} -a AD,DP,SP -Ou -f ${ref_genome} -b ${crams} \
+        | bcftools call --threads ${task.cpus} --ploidy-file ${ploidy_file} -f GQ,GP -mO z -o ${window}.vcf.gz
+    }
+    if [[ "${window}" == "scaffold"* ]]; then
+        call_scaffold
+    else
+        call_nonscaffold
     fi
     """
 }

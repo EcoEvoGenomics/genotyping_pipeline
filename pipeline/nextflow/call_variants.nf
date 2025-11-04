@@ -11,24 +11,32 @@
 // Workflow
 workflow{    
 
-    // Input files
+    // Reference files are passed as parameters
     def ref_ploidy = file(params.ref_ploidy_file)
     def ref_genome = file(params.ref_genome)
     def ref_index = file(params.ref_index)
+    
+    // The CRAMs are parsed to variant calling as a sorted list of paths
+    def input_crams = Channel.fromPath("${params.cram_dir}/**.cram").toList()
+    def cram_list_file = input_crams \
+    | flatMap { cram -> cram } \
+    | map { cram -> cram.toString() + "\n" } \
+    | collectFile()
+    sorted_cram_list_file = sort_cramlist(cram_list_file)
 
-    // Prepare Channels for the genome windows
-    define_windows(ref_index, params.window_size, params.ref_scaffold_name)
+    // The number of CRAMs determines size / number of genotyping windows
+    def genotyping_window_base_size = 10000000
+    def cram_bucketsize = 75
+    def cram_count = input_crams.map { crams -> crams.size() as Integer }
+    def cram_bucketcount = cram_count.map { n -> (n + cram_bucketsize - 1) / cram_bucketsize }
+
+    // Genome windows are scaled down from a base size given number of CRAMs
+    define_windows(ref_index, window_size, params.ref_scaffold_name)
     def windows_dir = define_windows.out.windows_dir
     def window_list = define_windows.out.windows.map{path -> file(path.toString())}.readLines()
-    
-    // Prepare a Channel with an input CRAM path list
-    def crams = Channel.fromPath("${params.cram_dir}/**.cram")
-    .map { cram -> "${cram.toString()}\n" }
-    .collectFile()
-    sorted_crams = sort_cramlist(crams)
 
-    // Genotype CRAMs in windows and concatenate windows into per-chromsome VCFs
-    def chromosome_vcfs = genotype_window(sorted_crams, ref_ploidy, ref_genome, ref_index, windows_dir, window_list) \
+    // Genotyping windows are concatenated into chromosome VCFs
+    def chromosome_vcfs = genotype_window(sorted_cram_list_file, ref_ploidy, ref_genome, ref_index, windows_dir, window_list) \
     | map { file ->
         def key = file.baseName.toString().tokenize(':').get(0)
         return tuple(key, file)
@@ -36,18 +44,18 @@ workflow{
     | groupTuple( by:0, sort:true ) \
     | concatenate_windows
 
-    // Normalise, reheader, and sort samples in per chromosome VCFs
+    // Chromosome VCFs are normalised and reheadered
     chromosome_vcfs = normalise_vcf(chromosome_vcfs, ref_genome, ref_index) \
     | reheader_vcf
 
-    // Run bcftools stats on each VCF 
+    // Stats are required per chromosome
     def chromosome_vchks = chromosome_vcfs \
     | summarise_vcf
 
-    // Concatenate and output VCHKs
+    // Stats per chromosome are concatenated together
     concatenate_vchks(chromosome_vchks.collect(), "variants_unfiltered")
 
-    // If concatenated VCF wanted, output
+    // A concatenated VCF is produced if specified in parameters
     if (params.concatenate_vcf == "yes") {
         concatenate_vcfs(chromosome_vcfs.flatten().collect(), ref_index, "", params.ref_scaffold_name, "variants_unfiltered")
     }
@@ -154,9 +162,9 @@ process sort_cramlist {
 process genotype_window {
 
     container "quay.io/biocontainers/bcftools:1.17--h3cc50cf_1"
-    cpus 4
-    memory { 2.GB * task.attempt }
-    time { 4.h * task.attempt }
+    cpus { 1 }
+    memory { 4.GB * task.attempt }
+    time { 8.h * task.attempt }
 
     errorStrategy "retry"
     maxRetries 3

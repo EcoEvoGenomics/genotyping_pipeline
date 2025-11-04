@@ -42,7 +42,6 @@
     exclude_flags=0x400
 
     # SET OPTIONS FOR CALL VARIANTS STEP
-    genotyping_window_size=10000000
     concatenate_unfiltered_vcfs=no
 
     # SET OPTIONS FOR FILTER VARIANTS STEP
@@ -139,7 +138,6 @@ if [ $call_variants = "yes" ]; then
         -profile $nextflow_profile \
         -resume \
         --cram_dir $trim_align_output_dir \
-        --window_size $genotyping_window_size \
         --ref_genome $ref_genome \
         --ref_index $ref_index \
         --ref_scaffold_name $ref_scaffold_name \

@@ -99,7 +99,7 @@ process group_reads {
     
     cpus 1
     memory { 8.MB * task.attempt }
-    time { 30.s * task.attempt }
+    time { 1.m * task.attempt }
 
     errorStrategy "retry"
     maxRetries 3

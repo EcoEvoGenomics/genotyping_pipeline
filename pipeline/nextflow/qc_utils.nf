@@ -101,11 +101,11 @@ process qc_alignment {
 
     output:
     path("${ID}_${processing_stage}.tsv")
-    path("${ID}_${processing_stage}.cramstats")
+    path("${ID}_${processing_stage}.flagstat")
 
     script:
     """
     samtools coverage --reference ${ref_genome} ${cram} | grep -v ${ref_scaffold_name} > ${ID}_${processing_stage}.tsv
-    samtools stats --ref-seq ${ref_genome} ${cram} > ${ID}_${processing_stage}.cramstats
+    samtools flagstat ${cram} > ${ID}_${processing_stage}.flagstat
     """
 }

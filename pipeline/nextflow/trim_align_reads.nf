@@ -48,9 +48,10 @@ workflow {
     def unfiltered_alignments = align_reads(grouped_reads, file(params.ref_genome), file(params.ref_index))
     qc_unfiltered_alignment(unfiltered_alignments, file(params.ref_genome), file(params.ref_index), params.ref_scaffold_name, "unfiltered")
 
-    def filtered_alignments = filter_alignment_flags(unfiltered_alignments, file(params.ref_genome), file(params.ref_index), params.exclude_flags)
-    qc_filtered_alignment(filtered_alignments, file(params.ref_genome), file(params.ref_index), params.ref_scaffold_name, "filtered")
-
+    if (params.exclude_flags != "none") {    
+        def filtered_alignments = filter_alignment_flags(unfiltered_alignments, file(params.ref_genome), file(params.ref_index), params.exclude_flags)
+        qc_filtered_alignment(filtered_alignments, file(params.ref_genome), file(params.ref_index), params.ref_scaffold_name, "filtered")
+    }
 }
 
 // Step 1 - Read trimming

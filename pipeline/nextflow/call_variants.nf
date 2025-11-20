@@ -237,7 +237,7 @@ process reheader_vcf {
     tuple val(key), path('input.vcf.gz'), path('input.vcf.gz.csi')
     
     output:
-    tuple val(key), path("${key}.vcf.gz"), path("${key}.vcf.gz.csi")
+    tuple path("${key}.vcf.gz"), path("${key}.vcf.gz.csi")
 
     script:
     """

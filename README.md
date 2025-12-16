@@ -40,7 +40,7 @@ On occasion we upgrade or modify the pipeline. As a rule this will happen on a s
 ```
 git clone -b experimental https://github.com/EcoEvoGenomics/genotyping_pipeline
 ```
-This is all you need to do to install the software for use!
+This is all you need to do to download the pipeline!
 
 ### Running the pipeline
 In brief the three steps required to run the pipeline once you have cloned the repository are:
@@ -140,7 +140,7 @@ This part of the pipeline produces the following outputs:
 
 ### Step 2: Variant calling
 
-The second script in the pipeline will take aligned crams performs variant calling (genotyping) on all individuals against the specified reference genome. To do this, it uses `bcftools` and will call sites at every position in the genome (i.e. it calls invariant sites as well as variants). This is obviously a large job, especially on larger genomes. So to increase efficiency, the script parallelises across genome windows. The default is 10 Mb but you can set these to whatever size you wish in the slurm script. Previously you had to set windows outside of the pipeline but this step now does this for you automatically. It also takes into account ploidy of the mitochondrial genome. After calling genotypes in windows, the script will take care of sorting and concatenating the windows together so that you are left with a vcf file for each chromosome, the mtDNA and also the unanchored scaffolds in your genome. These are unfiltered and ready for the next step. It also generates some statistics for downstream checking.
+The second script in the pipeline will take aligned crams performs variant calling (genotyping) on all individuals against the specified reference genome. To do this, it uses `bcftools` and will call sites at every position in the genome (i.e. it calls invariant sites as well as variants). This is obviously a large job, especially on larger genomes. So to increase efficiency, the script parallelises across genome windows. These windows are defined internally based on the number of input samples, to parallelise the genotyping most cost-efficiently. The pipeline also takes into account ploidy of the mitochondrial genome (this is, in fact, currently broken - but a fix is planned). After calling genotypes in windows, the script will take care of sorting and concatenating the windows together so that you are left with a vcf file for each chromosome, the mtDNA and also the unanchored scaffolds in your genome. These are unfiltered and ready for the next step. It also generates some statistics for downstream checking.
 
 Optionally, you can enable concatenation of the chromosomal VCFs into one whole-genome VCF. If so, the pipeline will automatically consult the reference genome index in order to concatenate the chromosomes in the correct order. All (non-chromosome) scaffolds are always placed at the end. **Note:** you are unlikely to need an unfiltered whole-genome VCF, and it will be very large. The same concatenation process is always run in the next step of the pipeline (variant filtering) so you will get a whole-genome concatenated *filtered* VCF.
 

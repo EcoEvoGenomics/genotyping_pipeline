@@ -11,23 +11,33 @@
 // Workflow
 workflow{    
 
-    // Input files
+    // Reference files are passed as parameters
     def ref_ploidy = file(params.ref_ploidy_file)
     def ref_genome = file(params.ref_genome)
     def ref_index = file(params.ref_index)
+    
+    // The CRAMs are parsed to variant calling as a sorted list of paths
+    def input_crams = Channel.fromPath("${params.cram_dir}/**.cram").toList()
+    def cram_list_file = input_crams \
+    | flatMap { cram -> cram } \
+    | map { cram -> cram.toString() + "\n" } \
+    | collectFile()
+    sorted_cram_list_file = sort_cramlist(cram_list_file)
 
-    // Prepare Channels for the genome windows
-    define_windows(ref_index, params.window_size, params.ref_scaffold_name)
+    // The number of CRAMs determines size / number of genotyping windows
+    def genotyping_window_base_size = 10000000
+    def cram_bucketsize = 75
+    def cram_count = input_crams.map { crams -> crams.size() as Integer }
+    def cram_bucketcount = cram_count.map { n -> (n + cram_bucketsize - 1) / cram_bucketsize }
+    def window_size = cram_bucketcount.map { bc -> (genotyping_window_base_size / bc) as Integer }
+
+    // Genome windows are scaled down from a base size given number of CRAMs
+    define_windows(ref_index, window_size, params.ref_scaffold_name)
     def windows_dir = define_windows.out.windows_dir
     def window_list = define_windows.out.windows.map{path -> file(path.toString())}.readLines()
-    
-    // Prepare a Channel of input CRAM paths
-    def crams = Channel.fromPath("${params.cram_dir}/**.cram")
-    .map { cram -> "${cram.toString()}\n" }
-    .collectFile()
 
-    // Genotype CRAMs in windows and concatenate windows into per-chromsome VCFs
-    def chromosome_vcfs = genotype_windows(crams, ref_ploidy, ref_genome, ref_index, windows_dir, window_list) \
+    // Genotyping windows are concatenated into chromosome VCFs
+    def chromosome_vcfs = genotype_window(sorted_cram_list_file, ref_ploidy, ref_genome, ref_index, windows_dir, window_list) \
     | map { file ->
         def key = file.baseName.toString().tokenize(':').get(0)
         return tuple(key, file)
@@ -35,19 +45,18 @@ workflow{
     | groupTuple( by:0, sort:true ) \
     | concatenate_windows
 
-    // Normalise, reheader, and sort samples in per chromosome VCFs
+    // Chromosome VCFs are normalised and reheadered
     chromosome_vcfs = normalise_vcf(chromosome_vcfs, ref_genome, ref_index) \
-    | reheader_vcf \
-    | sort_vcf_samples
+    | reheader_vcf
 
-    // Run bcftools stats on each VCF 
+    // Stats are required per chromosome
     def chromosome_vchks = chromosome_vcfs \
     | summarise_vcf
 
-    // Concatenate and output VCHKs
+    // Stats per chromosome are concatenated together
     concatenate_vchks(chromosome_vchks.collect(), "variants_unfiltered")
 
-    // If concatenated VCF wanted, output
+    // A concatenated VCF is produced if specified in parameters
     if (params.concatenate_vcf == "yes") {
         concatenate_vcfs(chromosome_vcfs.flatten().collect(), ref_index, "", params.ref_scaffold_name, "variants_unfiltered")
     }
@@ -131,13 +140,34 @@ process define_windows {
     """
 }
 
+// Step 0 - Sort CRAM list
+process sort_cramlist {
+
+    cpus 1
+    memory 1.GB
+    time 5.m
+
+    input:
+    path(crams)
+
+    output:
+    path("crams_sorted.list")
+
+    script:
+    """
+    sort -V ${crams} > crams_sorted.list
+    """
+}
+
 // Step 1 - Genotyping
-process genotype_windows {
+process genotype_window {
+
+    label "require_pipefail"
 
     container "quay.io/biocontainers/bcftools:1.17--h3cc50cf_1"
-    cpus 4
-    memory { 2.GB * task.attempt }
-    time { 4.h * task.attempt }
+    cpus { 1 }
+    memory { 4.GB * task.attempt }
+    time { 8.h * task.attempt }
 
     errorStrategy "retry"
     maxRetries 3
@@ -155,12 +185,19 @@ process genotype_windows {
 
     script:
     """
-    if [[ "${window}" == "scaffold"* ]]; then
-        bcftools mpileup --threads ${task.cpus} -d 8000 --ignore-RG -R ./genome_windows/${window} -a AD,DP,SP -Ou -f ${ref_genome} -b ${crams} \
-        | bcftools call --threads ${task.cpus} --ploidy-file ${ploidy_file} -f GQ,GP -mO z -o ${window}.vcf.gz
-    else
+    # CALL NONSCAFFOLD WINDOWS AND SCAFFOLD WINDOWS SEPARATELY
+    call_nonscaffold() {
         bcftools mpileup --threads ${task.cpus} -d 8000 --ignore-RG -r ${window} -a AD,DP,SP -Ou -f ${ref_genome} -b ${crams} \
         | bcftools call --threads ${task.cpus} --ploidy-file ${ploidy_file} -f GQ,GP -mO z -o ${window}.vcf.gz
+    }
+    call_scaffold() {
+        bcftools mpileup --threads ${task.cpus} -d 8000 --ignore-RG -R ./genome_windows/${window} -a AD,DP,SP -Ou -f ${ref_genome} -b ${crams} \
+        | bcftools call --threads ${task.cpus} --ploidy-file ${ploidy_file} -f GQ,GP -mO z -o ${window}.vcf.gz
+    }
+    if [[ "${window}" == "scaffold"* ]]; then
+        call_scaffold
+    else
+        call_nonscaffold
     fi
     """
 }
@@ -225,31 +262,6 @@ process normalise_vcf {
 // Step 4 - Reheader VCF and output to per-chromosome directories
 process reheader_vcf {
 
-    container "quay.io/biocontainers/bcftools:1.17--h3cc50cf_1"
-    cpus 2
-    memory { 2.GB * task.attempt }
-    time { 2.h * task.attempt }
-
-    errorStrategy "retry"
-    maxRetries 3
-
-    input:
-    tuple val(key), path('input.vcf.gz'), path('input.vcf.gz.csi')
-    
-    output:
-    tuple val(key), path("${key}.vcf.gz"), path("${key}.vcf.gz.csi")
-
-    script:
-    """
-    bcftools query -l input.vcf.gz | xargs -n 1 basename | awk -F '.' '{print \$1}' > samples.list
-    bcftools reheader --threads ${task.cpus} --samples samples.list -o ${key}.vcf.gz input.vcf.gz
-    bcftools index --threads ${task.cpus} ${key}.vcf.gz
-    """
-}
-
-// Step 5 - Sort the samples in each per-chromosome VCF
-process sort_vcf_samples {
-
     publishDir "${params.publish_dir}/chroms/${key}", saveAs: { filename -> "$filename" }, mode: 'copy'
 
     container "quay.io/biocontainers/bcftools:1.17--h3cc50cf_1"
@@ -262,19 +274,19 @@ process sort_vcf_samples {
 
     input:
     tuple val(key), path('input.vcf.gz'), path('input.vcf.gz.csi')
-
+    
     output:
     tuple path("${key}.vcf.gz"), path("${key}.vcf.gz.csi")
 
     script:
     """
-    bcftools query -l input.vcf.gz | sort -V > sorted_samples.list
-    bcftools view --samples-file sorted_samples.list -o ${key}.vcf.gz input.vcf.gz
+    bcftools query -l input.vcf.gz | xargs -n 1 basename | awk -F '.' '{print \$1}' > samples.list
+    bcftools reheader --threads ${task.cpus} --samples samples.list -o ${key}.vcf.gz input.vcf.gz
     bcftools index --threads ${task.cpus} ${key}.vcf.gz
     """
 }
 
-// Step 6A - Get summary stats for each per-chromosome VCF
+// Step 5A - Get summary stats for each per-chromosome VCF
 process summarise_vcf {
 
     container "quay.io/biocontainers/bcftools:1.17--h3cc50cf_1"
@@ -298,7 +310,7 @@ process summarise_vcf {
     """
 }
 
-// Step 6B - Collect VCHKs and output combined file for MultiQC
+// Step 5B - Collect VCHKs and output combined file for MultiQC
 process concatenate_vchks {
 
     publishDir "${params.publish_dir}", saveAs: { filename -> "$filename" }, mode: 'copy'

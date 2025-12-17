@@ -22,7 +22,7 @@ process run_multiqc {
     
     container "quay.io/biocontainers/multiqc:1.28--pyhdfd78af_0"
     cpus 1
-    memory 1.GB
+    memory 3.GB
     time 30.m
 
     input:

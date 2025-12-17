@@ -35,14 +35,13 @@
 
     # SET OPTIONS FOR TRIM AND ALIGN STEP
     # Note: The read_target is applied separately to R1 and R2 (if downsample_reads=yes)
-    # Note: The default flag, 0x400, is for optical and PCR duplicates
+    # Note: The default exclude_flags=none skip flag filtering. exclude_flags=0x400 is for optical and PCR duplicates.
     deduplicate_reads=no
     downsample_reads=no
     read_target=1000000
-    exclude_flags=0x400
+    exclude_flags=none
 
     # SET OPTIONS FOR CALL VARIANTS STEP
-    genotyping_window_size=10000000
     concatenate_unfiltered_vcfs=no
 
     # SET OPTIONS FOR FILTER VARIANTS STEP
@@ -112,6 +111,12 @@ filter_variants_output_dir=${output_dir}/03-variants_filtered/${filtering_label}
 phase_variants_output_dir=${output_dir}/03-variants_filtered/${filtering_label}/phased
 mkmissingdir $output_dir
 
+nextflow -log ./.nextflow/nextflow.log \
+    run ./pipeline/nextflow/check_inputs.nf \
+    -profile $nextflow_profile \
+    -resume \
+    --ref_index $ref_index
+
 if [ $trim_align_reads = "yes" ]; then
     mkmissingdir $trim_align_output_dir
     nextflow -log ./.nextflow/nextflow.log \
@@ -139,7 +144,6 @@ if [ $call_variants = "yes" ]; then
         -profile $nextflow_profile \
         -resume \
         --cram_dir $trim_align_output_dir \
-        --window_size $genotyping_window_size \
         --ref_genome $ref_genome \
         --ref_index $ref_index \
         --ref_scaffold_name $ref_scaffold_name \

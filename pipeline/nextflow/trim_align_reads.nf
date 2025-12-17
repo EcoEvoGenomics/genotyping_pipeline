@@ -48,9 +48,10 @@ workflow {
     def unfiltered_alignments = align_reads(grouped_reads, file(params.ref_genome), file(params.ref_index))
     qc_unfiltered_alignment(unfiltered_alignments, file(params.ref_genome), file(params.ref_index), params.ref_scaffold_name, "unfiltered")
 
-    def filtered_alignments = filter_alignment_flags(unfiltered_alignments, file(params.ref_genome), file(params.ref_index), params.exclude_flags)
-    qc_filtered_alignment(filtered_alignments, file(params.ref_genome), file(params.ref_index), params.ref_scaffold_name, "filtered")
-
+    if (params.exclude_flags != "none") {    
+        def filtered_alignments = filter_alignment_flags(unfiltered_alignments, file(params.ref_genome), file(params.ref_index), params.exclude_flags)
+        qc_filtered_alignment(filtered_alignments, file(params.ref_genome), file(params.ref_index), params.ref_scaffold_name, "filtered")
+    }
 }
 
 // Step 1 - Read trimming
@@ -98,7 +99,7 @@ process group_reads {
     
     cpus 1
     memory { 8.MB * task.attempt }
-    time { 30.s * task.attempt }
+    time { 1.m * task.attempt }
 
     errorStrategy "retry"
     maxRetries 3
@@ -213,7 +214,7 @@ process filter_alignment_flags {
     container "quay.io/biocontainers/samtools:1.17--hd87286a_1"
     cpus 1
     memory { 1.MB * Math.max(512, 128 * Math.ceil(cram.size() / 1024 ** 3)) * task.attempt }
-    time { 1.m * Math.max(15, 3 * Math.ceil(cram.size() / 1024 ** 3)) * task.attempt }
+    time { 1.m * Math.max(120, 6 * Math.ceil(cram.size() / 1024 ** 3)) * task.attempt }
 
     errorStrategy "retry"
     maxRetries 3

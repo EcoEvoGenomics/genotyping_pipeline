@@ -87,7 +87,7 @@ process qc_alignment {
     container "quay.io/biocontainers/samtools:1.17--hd87286a_1"
     cpus 1
     memory { 1.MB * Math.max(512, 128 * Math.ceil(cram.size() / 1024 ** 3)) * task.attempt }
-    time { 1.m * Math.max(60, 6 * Math.ceil(cram.size() / 1024 ** 3)) * task.attempt }
+    time { 1.m * Math.max(120, 6 * Math.ceil(cram.size() / 1024 ** 3)) * task.attempt }
 
     errorStrategy "retry"
     maxRetries 3
@@ -101,11 +101,11 @@ process qc_alignment {
 
     output:
     path("${ID}_${processing_stage}.tsv")
-    path("${ID}_${processing_stage}.cramstats")
+    path("${ID}_${processing_stage}.flagstat")
 
     script:
     """
     samtools coverage --reference ${ref_genome} ${cram} | grep -v ${ref_scaffold_name} > ${ID}_${processing_stage}.tsv
-    samtools stats --ref-seq ${ref_genome} ${cram} > ${ID}_${processing_stage}.cramstats
+    samtools flagstat ${cram} > ${ID}_${processing_stage}.flagstat
     """
 }

@@ -35,11 +35,11 @@
 
     # SET OPTIONS FOR TRIM AND ALIGN STEP
     # Note: The read_target is applied separately to R1 and R2 (if downsample_reads=yes)
-    # Note: The default exclude_flags=none skip flag filtering. exclude_flags=0x400 is for optical and PCR duplicates.
+    # Note: The default flag, 0x400, is for optical and PCR duplicates
     deduplicate_reads=no
     downsample_reads=no
     read_target=1000000
-    exclude_flags=none
+    exclude_flags=0x400
 
     # SET OPTIONS FOR CALL VARIANTS STEP
     concatenate_unfiltered_vcfs=no

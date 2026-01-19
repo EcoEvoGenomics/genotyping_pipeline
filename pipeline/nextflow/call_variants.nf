@@ -231,9 +231,9 @@ process concatenate_windows {
 process normalise_vcf {
 
     container "quay.io/biocontainers/bcftools:1.17--h3cc50cf_1"
-    cpus 16
-    memory { 8.GB * task.attempt }
-    time { 8.h * task.attempt }
+    cpus 2
+    memory { 1.GB * task.attempt }
+    time { 48.h * task.attempt }
 
     errorStrategy "retry"
     maxRetries 3

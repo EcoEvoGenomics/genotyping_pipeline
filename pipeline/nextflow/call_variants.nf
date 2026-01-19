@@ -144,7 +144,7 @@ process define_windows {
 process sort_cramlist {
 
     cpus 1
-    memory 1.GB
+    memory 256.MB
     time 5.m
 
     input:
@@ -206,7 +206,7 @@ process genotype_window {
 process concatenate_windows {
 
     container "quay.io/biocontainers/bcftools:1.17--h3cc50cf_1"
-    cpus 2
+    cpus 1
     memory { 2.GB * task.attempt }
     time { 2.h * task.attempt }
 
@@ -231,9 +231,9 @@ process concatenate_windows {
 process normalise_vcf {
 
     container "quay.io/biocontainers/bcftools:1.17--h3cc50cf_1"
-    cpus 2
-    memory { 2.GB * task.attempt }
-    time { 4.h * task.attempt }
+    cpus 16
+    memory { 8.GB * task.attempt }
+    time { 8.h * task.attempt }
 
     errorStrategy "retry"
     maxRetries 3
@@ -265,7 +265,7 @@ process reheader_vcf {
     publishDir "${params.publish_dir}/chroms/${key}", saveAs: { filename -> "$filename" }, mode: 'copy'
 
     container "quay.io/biocontainers/bcftools:1.17--h3cc50cf_1"
-    cpus 2
+    cpus 1
     memory { 2.GB * task.attempt }
     time { 2.h * task.attempt }
 
@@ -290,7 +290,7 @@ process reheader_vcf {
 process summarise_vcf {
 
     container "quay.io/biocontainers/bcftools:1.17--h3cc50cf_1"
-    cpus 2
+    cpus 1
     memory { 2.GB * task.attempt }
     time { 2.h * task.attempt }
 
@@ -347,8 +347,8 @@ process concatenate_vcfs {
     publishDir "${params.publish_dir}", saveAs: { filename -> "$filename" }, mode: 'copy'
 
     container "quay.io/biocontainers/bcftools:1.17--h3cc50cf_1"
-    cpus 4
-    memory { 4.GB * task.attempt }
+    cpus 2
+    memory { 1.GB * task.attempt }
     time { 4.h * task.attempt }
 
     errorStrategy "retry"

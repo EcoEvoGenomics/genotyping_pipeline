@@ -341,7 +341,7 @@ process concatenate_vchks {
     """
 }
 
-// (Optional) - Collect VCFs and output combined file
+// (Optional) - Collect VCFs and output combined file with duplicates removed
 process concatenate_vcfs {
     
     publishDir "${params.publish_dir}", saveAs: { filename -> "$filename" }, mode: 'copy'
@@ -369,7 +369,8 @@ process concatenate_vcfs {
     """
     cat ${ref_index} | grep -v ${ref_scaffold_name} | awk '{print "./staged_vcfs/" \$1 "${vcf_suffix}.vcf.gz"}' > reference_sorted_vcfs.list
     echo "./staged_vcfs/scaffolds${vcf_suffix}.vcf.gz" >> reference_sorted_vcfs.list
-    bcftools concat --threads ${task.cpus} --file-list reference_sorted_vcfs.list --naive --output-type z --output ${collection_name}.vcf.gz
+    bcftools concat --threads ${task.cpus} --file-list reference_sorted_vcfs.list --naive --output-type u \
+    | bcftools norm --threads ${task.cpus} -d exact --output-type z --output ${collection_name}.vcf.gz
     bcftools index --threads ${task.cpus} ${collection_name}.vcf.gz
     """
 }

@@ -254,7 +254,7 @@ process normalise_vcf {
 
     # REMOVE SPANNING INDELS AND RE-NORMALISE
     bcftools view --threads ${task.cpus} -V indels -e 'ALT="*" | N_ALT>1' ${key}_tmp.vcf.gz \
-    | bcftools norm --threads ${task.cpus} -d exact -O z -o ${key}.vcf.gz
+    | bcftools norm --threads ${task.cpus} -d all -O z -o ${key}.vcf.gz
     bcftools index --threads ${task.cpus} ${key}.vcf.gz
     """
 }

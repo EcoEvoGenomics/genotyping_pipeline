@@ -55,7 +55,7 @@
     filtering_minDP=5
     filtering_maxDP=30
     filtering_minQ=30
-    filtering_keep=""
+    filtering_keep=
 
     # SET OPTIONS FOR PHASE VARIANTS STEP
     phasing_window_size=10000000

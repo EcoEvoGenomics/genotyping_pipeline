@@ -14,15 +14,17 @@ include { summarise_vcf; concatenate_vchks; concatenate_vcfs } from './call_vari
 // Workflow
 workflow{
 
-  // Obtain chromosome-level unfiltered VCFs and filter
-  def filtered_chromosome_vcfs = Channel
+  // Obtain chromosome-level unfiltered VCFs
+  def chromosome_vcfs = Channel
   .fromPath("${params.vcf_dir}/**.vcf.gz")
   .map { vcf -> 
     def key = vcf.simpleName
     def index = vcf.toString().replace('vcf.gz', 'vcf.gz.csi')
     tuple(key, file(vcf), file(index))
-  } \
-  | filter_vcf
+  }
+
+  // Filter, retain only individuals in keepfile
+  def filtered_chromosome_vcfs = filter_vcf(chromosome_vcfs, file(params.keep))
 
   // Obtain summary stats chromosome-level VCF
   def filtered_chromosome_vchks = filtered_chromosome_vcfs \
@@ -52,7 +54,8 @@ process filter_vcf {
   maxRetries 3
   
   input:
-  tuple val(key), path('input.vcf.gz'), path('input.vcf.gz.csi') 
+  tuple val(key), path('input.vcf.gz'), path('input.vcf.gz.csi')
+  path(keepfile)
 
   output:
   tuple \
@@ -61,9 +64,7 @@ process filter_vcf {
 
   script:
   """
-  # FILTER WITH OR WITHOUT KEEP PARAMETER
-  if [[ -f ${params.keep} ]]; then
-    vcftools --gzvcf input.vcf.gz \
+  vcftools --gzvcf input.vcf.gz \
     --min-alleles ${params.min_alleles} \
     --max-alleles ${params.max_alleles} \
     --max-missing ${params.max_missing} \
@@ -72,7 +73,7 @@ process filter_vcf {
     --minDP ${params.minDP} \
     --maxDP ${params.maxDP} \
     --minQ ${params.minQ} \
-    --keep ${params.keep} \
+    --keep ${keepfile} \
     --remove-filtered-all \
     --remove-indels \
     --recode-INFO-all \
@@ -80,24 +81,6 @@ process filter_vcf {
     --stdout \
   | bcftools view --threads ${task.cpus} -e 'N_ALT>1' -O z \
     -o ${key}_${params.filtering_label}.vcf.gz
-  else
-    vcftools --gzvcf input.vcf.gz \
-    --min-alleles ${params.min_alleles} \
-    --max-alleles ${params.max_alleles} \
-    --max-missing ${params.max_missing} \
-    --min-meanDP ${params.min_meanDP} \
-    --max-meanDP ${params.max_meanDP} \
-    --minDP ${params.minDP} \
-    --maxDP ${params.maxDP} \
-    --minQ ${params.minQ} \
-    --remove-filtered-all \
-    --remove-indels \
-    --recode-INFO-all \
-    --recode \
-    --stdout \
-  | bcftools view --threads ${task.cpus} -e 'N_ALT>1' -O z \
-    -o ${key}_${params.filtering_label}.vcf.gz
-  fi
 
   # INDEX FILTERED VCF
   bcftools index --threads ${task.cpus} ${key}_${params.filtering_label}.vcf.gz

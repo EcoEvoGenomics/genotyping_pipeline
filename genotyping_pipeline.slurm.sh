@@ -155,6 +155,15 @@ fi
 if [ $filter_variants = "yes" ]; then
     chkprevious "Step: filter_variants" $call_variants_output_dir
     mkmissingdir $filter_variants_output_dir
+
+    # Keep all samples if no list of samples to keep is provided
+    if [ -z "$filtering_keep" ] || [ ! -f "$filtering_keep" ]; then
+        awk -F, '{print $1}' $sample_csv | uniq > ${filter_variants_output_dir}/samples_kept.txt
+        filtering_keep=${filter_variants_output_dir}/samples_kept.txt
+    else
+        cat $filtering_keep > ${filter_variants_output_dir}/samples_kept.txt
+    fi
+
     nextflow -log ./.nextflow/nextflow.log \
         run ./pipeline/nextflow/filter_variants.nf \
         -with-report $filter_variants_output_dir/workflow_report.html \

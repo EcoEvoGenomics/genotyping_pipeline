@@ -73,6 +73,8 @@ process filter_vcf {
     --minDP ${params.minDP} \
     --maxDP ${params.maxDP} \
     --minQ ${params.minQ} \
+    --mac ${params.mac} \
+    --hwe ${params.hwe} \
     --keep ${keepfile} \
     --remove-filtered-all \
     --remove-indels \
@@ -110,6 +112,8 @@ process save_filters_to_file {
     'minDP' '${params.minDP}' \
     'maxDP' '${params.maxDP}' \
     'minQ' '${params.minQ}' \
+    'mac' '${params.mac}' \
+    'hwe' '${params.hwe}' \
     'keep' '${params.keep}' \
     > vcftools_${params.filtering_label}.tsv
   """

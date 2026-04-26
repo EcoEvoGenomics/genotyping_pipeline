@@ -55,6 +55,8 @@
     filtering_minDP=5
     filtering_maxDP=30
     filtering_minQ=30
+    filtering_mac=1
+    filtering_hwe=0
     filtering_keep=""
 
     # SET OPTIONS FOR PHASE VARIANTS STEP
@@ -181,6 +183,8 @@ if [ $filter_variants = "yes" ]; then
         --minDP $filtering_minDP \
         --maxDP $filtering_maxDP \
         --minQ $filtering_minQ \
+        --mac $filtering_mac \
+        --hwe $filtering_hwe \
         --keep $filtering_keep \
         --publish_dir $filter_variants_output_dir
 fi

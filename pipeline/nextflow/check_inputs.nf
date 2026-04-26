@@ -26,10 +26,10 @@ process assert_contig_names_are_alphanumeric {
     script:
     """
     while read -r contig size pos base_per_line byte_per_line; do
-        if grep '^[0-9a-zA-Z]*\$' <<< \$contig;
+        if grep -qE '^[[:alnum:]_]+\$' <<< \$contig;
             then : ;
             else
-                echo "ERROR: Chromosome name \$contig contains non-alphanumeric characters."
+                echo "ERROR: Chromosome name \$contig contains non-alphanumeric, non-underscore characters."
                 exit 1
         fi
     done < ${ref_index}

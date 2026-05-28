@@ -68,9 +68,9 @@ process trim_reads {
     }
     time { task.attempt > 1 
         // Double if insufficient in previous attempt, otherwise keep previous allocation
-        ? (task.exitStatus == 140 ? task.previousTrace.time * 1.5 : task.previousTrace.time )
+        ? (task.exitStatus == 140 ? task.previousTrace.time * 2 : task.previousTrace.time )
         // Initial guess
-        : 1.m * Math.max(10 , 1.5 * Math.ceil((R1.size() + R2.size()) / 1024 ** 3))
+        : 3.m * Math.max(10 , 1.5 * Math.ceil((R1.size() + R2.size()) / 1024 ** 3))
     }
 
     errorStrategy "retry"

@@ -48,7 +48,7 @@ process filter_vcf {
   container "community.wave.seqera.io/library/bcftools_vcftools:39fc8ab24f49f2d6"
   cpus 2
   memory { 2.GB * task.attempt }
-  time { 2.h * task.attempt }
+  time { 4.h * task.attempt }
   
   errorStrategy "retry"
   maxRetries 3

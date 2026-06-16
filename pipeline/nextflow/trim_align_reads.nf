@@ -21,39 +21,60 @@ workflow {
         .splitCsv()
         .multiMap { cols -> input_reads: [cols[0], cols[1], cols[2], cols[3]] }
         .set { samples }
-    
-    def input_reads = samples.input_reads
-    qc_raw_reads(input_reads, "raw")
 
+    // Fetch all reference index files
+    def ref_indices = files(params.ref_genome.toString() + "*.{amb,ann,bwt,fai,pac,sa}")
+    
+    // Read preprocessing
+    def input_reads = samples.input_reads
     if (params.deduplicate == 'yes') {
         input_reads = deduplicate_reads(input_reads)
     }
     if (params.downsample == 'yes') {
         input_reads = downsample_reads(input_reads)
     }
-
     def trimmed_reads = trim_reads(input_reads)
-    qc_trimmed_reads(trimmed_reads.keys_and_reads, "trimmed")
-
-    // Group separate file pairs (lanes) for each sample and make read groups
-    def grouped_reads = trimmed_reads.reads_only \
-    | flatten
-    | map { file -> 
-        def id   = file.name.toString().tokenize("_").get(0)
-        return tuple(id, file)
-    } \
-    | groupTuple(by: 0, sort: true, remainder: true) \
-    | group_reads
+    def readgrouped_trimmed_reads = append_readgroups(trimmed_reads)
     
-    def unfiltered_alignments = align_reads(grouped_reads, file(params.ref_genome), file(params.ref_index))
-    qc_unfiltered_alignment(unfiltered_alignments, file(params.ref_genome), file(params.ref_index), params.ref_scaffold_name, "unfiltered")
+    // Read quality control
+    qc_raw_reads(input_reads, "raw")
+    qc_trimmed_reads(trimmed_reads, "trimmed")
 
+    // Alignment
+    if (params.align_on_gpu == 'no') {
+        unfiltered_grouped_lane_alignments = align_reads_cpu(
+            readgrouped_trimmed_reads.align_cpu,
+            file(params.ref_genome),
+            ref_indices
+        ) \
+        | flatten \
+        | map { file -> 
+            def sample_id = file.name.toString().tokenize("_").get(0)
+            return tuple(sample_id, file)
+        } \
+        | groupTuple(by: 0, sort: true, remainder: true)
+        merged_unfiltered_alignments = merge_alignment_cpu(unfiltered_grouped_lane_alignments, params.ref_genome, ref_indices)
+        sorted_unfiltered_alignments = sort_alignment_cpu(merged_unfiltered_alignments, params.ref_genome, ref_indices)
+        unfiltered_alignments = mark_duplicates_cpu(sorted_unfiltered_alignments, params.ref_genome, ref_indices)
+    } else {
+        def reads_for_gpu = readgrouped_trimmed_reads.align_gpu \
+        | flatten \
+        | map { file ->
+            def sample_id = file.name.toString().tokenize("_").get(0)
+            return tuple(sample_id, file)
+        } 
+        | groupTuple(by: 0, sort: true, remainder: true) \
+        | combine_lanes_for_align_reads_gpu
+        unfiltered_alignments = align_reads_gpu(reads_for_gpu, file(params.ref_genome), file(params.ref_index))
+    }
     def filtered_alignments = filter_alignment_flags(unfiltered_alignments, file(params.ref_genome), file(params.ref_index), params.exclude_flags)
+
+    // Alignment quality control
+    qc_unfiltered_alignment(unfiltered_alignments, file(params.ref_genome), file(params.ref_index), params.ref_scaffold_name, "unfiltered")
     qc_filtered_alignment(filtered_alignments, file(params.ref_genome), file(params.ref_index), params.ref_scaffold_name, "filtered")
 
 }
 
-// Step 1 - Read trimming
 process trim_reads {
 
     publishDir "${params.publish_dir}/${ID}/${LANE}", saveAs: { filename -> "$filename" }, mode: 'copy'
@@ -80,8 +101,7 @@ process trim_reads {
     tuple val(ID), val(LANE), path(R1), path(R2)
 
     output:
-    tuple val(ID), val(LANE), path("${ID}_${LANE}_R1.fastq.gz"), path("${ID}_${LANE}_R2.fastq.gz"), emit: keys_and_reads
-    tuple path("${ID}_${LANE}_R1.fastq.gz"), path("${ID}_${LANE}_R2.fastq.gz"), emit: reads_only
+    tuple val(ID), val(LANE), path("${ID}_${LANE}_R1.fastq.gz"), path("${ID}_${LANE}_R2.fastq.gz")
 
     script:
     """
@@ -93,8 +113,47 @@ process trim_reads {
     """
 }
 
-// Step 3.1 Group read files belonging to same individual (L001, L002, etc.)
-process group_reads {
+process append_readgroups {
+
+    cpus 1
+    memory { 8.MB * task.attempt }
+    time { 1.m * task.attempt }
+
+    errorStrategy "retry"
+    maxRetries 3
+
+    input:
+    tuple val(ID), val(LANE), path(R1), path(R2)
+
+    output:
+    tuple val(ID), val(LANE), path("${ID}_${LANE}_R1.fastq.gz"), path("${ID}_${LANE}_R2.fastq.gz"), env("READGROUP"), emit: align_cpu
+    tuple path("${ID}_${LANE}_R1.fastq.gz"), path("${ID}_${LANE}_R2.fastq.gz"), path("${ID}_${LANE}_GROUPED.txt"), emit: align_gpu
+
+    script:
+    """
+    # Obtain info for for read group (https://gatk.broadinstitute.org/hc/en-us/articles/360035890671-Read-groups)
+    READ_HEADER=\$(zcat reads/${ID}_${LANE}_R1.fastq.gz | head -1)
+
+    INSTRUMENT=\$(echo \${READ_HEADER} | awk 'BEGIN {FS = ":"}; { print \$1}' | awk '{sub(/@/,""); print}')
+    FLOWCELL=\$(echo \${READ_HEADER} | awk 'BEGIN {FS = ":"}; {print \$3}')
+    INDEX=\$(echo \${READ_HEADER} | awk 'BEGIN {FS = ":"}; {print \$10}')
+    PLATFORM=Illumina
+
+    # Construct read group
+    FLOWCELL_ID=\${FLOWCELL}.${LANE}
+    PLATFORM_UNIT=\${FLOWCELL_ID}.\${INDEX}
+    LIBRARY=${ID}.\${INDEX}
+    
+    READGROUP="@RG\\tID:\${FLOWCELL_ID}\\tLB:\${LIBRARY}\\tPL:\${PLATFORM}\\tSM:${ID}\\tPU:\${PLATFORM_UNIT}"
+    printf '%s %s %s\\n' \
+        "reads/${ID}_${LANE}_R1.fastq.gz" \
+        "reads/${ID}_${LANE}_R2.fastq.gz" \
+        "\${READGROUP}" \
+    >> ${ID}_${LANE}_GROUPED.txt
+    """
+}
+
+process combine_lanes_for_align_reads_gpu {
     
     cpus 1
     memory { 8.MB * task.attempt }
@@ -111,47 +170,15 @@ process group_reads {
 
     script:
     """
-    # Obtain list of lanes present for the sample
-    find -type l,f -name "${ID}*.fastq.gz" \
-    | awk -F'_' '{print \$2}' \
-    | sort \
-    | uniq \
-    > lanes.list
-
-    # For each lane, write entry to fastq file list
-    while IFS= read -r lane; do
-
-        # Obtain info for for read group (https://gatk.broadinstitute.org/hc/en-us/articles/360035890671-Read-groups)
-        READ_HEADER=\$(zcat reads/${ID}_\${lane}_R1.fastq.gz | head -1)
-
-        INSTRUMENT=\$(echo \${READ_HEADER} | awk 'BEGIN {FS = ":"}; { print \$1}' | awk '{sub(/@/,""); print}')
-        FLOWCELL=\$(echo \${READ_HEADER} | awk 'BEGIN {FS = ":"}; {print \$3}')
-        INDEX=\$(echo \${READ_HEADER} | awk 'BEGIN {FS = ":"}; {print \$10}')
-        PLATFORM=Illumina
-
-        # Construct read group
-        FLOWCELL_ID=\${FLOWCELL}.\${lane}
-        PLATFORM_UNIT=\${FLOWCELL_ID}.\${INDEX}
-        LIBRARY=${ID}.\${INDEX}
-        
-        READGROUP="@RG\\tID:\${FLOWCELL_ID}\\tLB:\${LIBRARY}\\tPL:\${PLATFORM}\\tSM:${ID}\\tPU:\${PLATFORM_UNIT}"
-
-        # Write to list
-        printf '%s %s %s\\n' \
-            "reads/${ID}_\${lane}_R1.fastq.gz" \
-            "reads/${ID}_\${lane}_R2.fastq.gz" \
-            "\${READGROUP}" \
-        >> ${ID}_reads.list
-
-    done < lanes.list
-
-    # Calculate total size of grouped read files
+    find . -type l,f -name "${ID}*_GROUPED.txt" > lane_readgroup_files.txt
+    while IFS= read -r lane_readgroup_file; do
+        cat \$lane_readgroup_file >> ${ID}_reads.list
+    done < lane_readgroup_files.txt
     grouped_reads_total_size=\$( du -sbL reads/ | awk '{ print \$1 }' )
     """
 }
 
-// Step 3.2 - Align to reference genome using GPU and obtain stats pre-removal of marked duplicates
-process align_reads {
+process align_reads_gpu {
 
     container "nvcr.io/nvidia/clara/clara-parabricks:4.5.0-1"
     containerOptions "--nv"
@@ -177,8 +204,8 @@ process align_reads {
 
     input:
     tuple val(ID), path(grouped_reads, stageAs: "reads/*"), path(reads_list), val(grouped_reads_input_size)
-    path(reference_genome)
-    path(reference_genome_index)
+    path(ref_genome)
+    path(ref_index)
 
     output:
     tuple val(ID), path("${ID}_marked.cram"), path("${ID}_marked.cram.crai"), path('qc-metrics/*')
@@ -190,10 +217,12 @@ process align_reads {
 
     # Align with Parabricks FQ2BAM
     pbrun fq2bam \
-    --ref ${reference_genome} \
+    --ref ${ref_genome} \
     --in-fq-list ${reads_list} \
+    --bwa-options="-K 10000000" \
     --out-bam ${ID}_marked.cram \
     --out-qc-metrics-dir qc-metrics \
+    --out-duplicate-metrics qc-metrics/duplicates.txt \
     --tmp .
 
     # Parse QC files
@@ -205,7 +234,125 @@ process align_reads {
     """
 }
 
-// Step 4 - Filter alignments by excluding select SAM flags
+process align_reads_cpu {
+    
+    // Container build page: https://wave.seqera.io/view/builds/bd-7673b9c618b4118a_1
+    container "community.wave.seqera.io/library/bwa_samtools:7673b9c618b4118a"
+    cpus 16
+    memory { 16.GB * task.attempt }
+    time { 24.h * task.attempt }
+
+    errorStrategy "retry"
+    maxRetries 3
+
+    input:
+    tuple val(ID), val(LANE), path(R1), path(R2), val(readgroup)
+    path(ref_genome)
+    path(ref_and_bwa_indices, stageAs: "./*")
+
+    output:
+    path("${ID}_${LANE}.cram")
+
+    script:
+    """
+    bwa mem -t ${task.cpus} -R '${readgroup}' -K 10000000 -M ${ref_genome} ${R1} ${R2} \
+    | samtools view -@ ${task.cpus} -T ${ref_genome} -C | samtools sort -T ${ID} -o ${ID}_${LANE}.cram
+    """
+}
+
+process merge_alignment_cpu {
+    
+    container "quay.io/biocontainers/samtools:1.17--hd87286a_1"
+    cpus 1
+    memory { 4.GB * task.attempt }
+    time { 4.h * task.attempt }
+
+    errorStrategy "retry"
+    maxRetries 3
+
+    input:
+    tuple val(ID), path(crams, stageAs: "crams/*")
+    path(ref_genome)
+    path(ref_and_bwa_indices, stageAs: "./*")
+
+    output:
+    tuple val(ID), path("${ID}.cram")
+
+    script:
+    def cramlist = crams instanceof List ? crams.join(" ") : crams
+    """
+    samtools merge -@ ${task.cpus} -rf ${ID}.cram ${cramlist}
+    """
+}
+
+process sort_alignment_cpu {
+    
+    container "quay.io/biocontainers/gatk4:4.6.2.0--py310hdfd78af_1"
+    cpus 1
+    memory { 5.GB * task.attempt }
+    time { 5.h * task.attempt }
+
+    errorStrategy "retry"
+    maxRetries 3
+
+    input:
+    tuple val(ID), path(cram)
+    path(ref_genome)
+    path(ref_and_bwa_indices, stageAs: "./*")
+
+    output:
+    tuple val(ID), path("${ID}_sorted.cram")
+
+    script:
+    """
+    gatk SortSam \
+        --java-options -Xmx4G \
+        --MAX_RECORDS_IN_RAM 1000000 \
+        -I ${cram} \
+        -O ${ID}_sorted.cram \
+        -R ${ref_genome} \
+        --SORT_ORDER coordinate
+    """
+}
+
+process mark_duplicates_cpu {
+
+    // Container build page: https://wave.seqera.io/view/builds/bd-77c6fcf88cba7ceb_1
+    container "community.wave.seqera.io/library/gatk4_samtools:77c6fcf88cba7ceb"
+    cpus 1
+    memory { 5.GB * task.attempt }
+    time { 5.h * task.attempt }
+
+    errorStrategy "retry"
+    maxRetries 3
+
+    input:
+    tuple val(ID), path(cram)
+    path(ref_genome)
+    path(ref_and_bwa_indices, stageAs: "./*")
+
+    output:
+    tuple val(ID), path("${ID}_marked.cram"), path("${ID}_marked.cram.crai"), path('qc-metrics/*')
+
+    script:
+    """
+    mkdir qc-metrics
+    
+    gatk MarkDuplicates \
+        --java-options -Xmx4G \
+        --MAX_RECORDS_IN_RAM 500000 \
+        -I ${cram} \
+        -O ${ID}_marked.cram \
+        -R ${ref_genome} \
+        -M qc-metrics/duplicates.txt
+    samtools index -@ ${task.cpus} ${ID}_marked.cram
+    
+    for file in qc-metrics/*.txt; do
+        mv \$file qc-metrics/${ID}.\$(basename \$file .txt)
+    done
+    """
+}
+
 process filter_alignment_flags {
 
     publishDir "${params.publish_dir}/${ID}", saveAs: { filename -> "$filename" }, mode: 'copy'

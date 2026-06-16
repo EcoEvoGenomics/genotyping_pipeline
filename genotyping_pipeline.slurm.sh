@@ -39,6 +39,7 @@
     deduplicate_reads=no
     downsample_reads=no
     read_target=1000000
+    align_on_gpu=yes
     exclude_flags=0x400
 
     # SET OPTIONS FOR CALL VARIANTS STEP
@@ -130,6 +131,7 @@ if [ $trim_align_reads = "yes" ]; then
         --deduplicate $deduplicate_reads \
         --downsample $downsample_reads \
         --read_target $read_target \
+        --align_on_gpu $align_on_gpu \
         --exclude_flags $exclude_flags \
         --ref_genome $ref_genome \
         --ref_index $ref_index \

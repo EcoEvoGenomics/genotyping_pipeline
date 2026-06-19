@@ -41,33 +41,43 @@ workflow {
     qc_trimmed_reads(trimmed_reads, "trimmed")
 
     // Alignment
-    if (params.align_on_gpu == 'no') {
-        unfiltered_grouped_lane_alignments = align_reads_cpu(
-            readgrouped_trimmed_reads.align_cpu,
-            file(params.ref_genome),
-            ref_indices
-        ) \
+    if (params.aligner != 'gpu') {
+        if (params.aligner == "mem") {
+            per_lane_unfiltered_alignments = align_bwa_mem(
+                readgrouped_trimmed_reads.bwa_input,
+                file(params.ref_genome),
+                ref_indices
+            )
+        }
+        if(params.aligner == "aln") {
+            per_lane_unfiltered_alignments = align_bwa_aln(
+                readgrouped_trimmed_reads.bwa_input,
+                file(params.ref_genome),
+                ref_indices
+            )
+        }
+        grouped_unfiltered_alignments = per_lane_unfiltered_alignments \
         | flatten \
         | map { file -> 
             def sample_id = file.name.toString().tokenize("_").get(0)
             return tuple(sample_id, file)
         } \
         | groupTuple(by: 0, sort: true, remainder: true)
-        merged_unfiltered_alignments = merge_alignment_cpu(unfiltered_grouped_lane_alignments, params.ref_genome, ref_indices)
-        sorted_unfiltered_alignments = sort_alignment_cpu(merged_unfiltered_alignments, params.ref_genome, ref_indices)
-        unfiltered_alignments = mark_duplicates_cpu(sorted_unfiltered_alignments, params.ref_genome, ref_indices)
+        merged_unfiltered_alignments = merge_lanes(grouped_unfiltered_alignments, params.ref_genome, ref_indices)
+        sorted_unfiltered_alignments = sort_alignment(merged_unfiltered_alignments, params.ref_genome, ref_indices)
+        unfiltered_alignments = mark_duplicates(sorted_unfiltered_alignments, params.ref_genome, ref_indices)
     } else {
-        def reads_for_gpu = readgrouped_trimmed_reads.align_gpu \
+        def reads_for_gpu = readgrouped_trimmed_reads.fq2bam_input \
         | flatten \
         | map { file ->
             def sample_id = file.name.toString().tokenize("_").get(0)
             return tuple(sample_id, file)
         } 
         | groupTuple(by: 0, sort: true, remainder: true) \
-        | combine_lanes_for_align_reads_gpu
-        unfiltered_alignments = align_reads_gpu(reads_for_gpu, file(params.ref_genome), file(params.ref_index))
+        | parse_input_for_fq2bam
+        unfiltered_alignments = align_fq2bam(reads_for_gpu, file(params.ref_genome), file(params.ref_index))
     }
-    def filtered_alignments = filter_alignment_flags(unfiltered_alignments, file(params.ref_genome), file(params.ref_index), params.exclude_flags)
+    def filtered_alignments = filter_alignment(unfiltered_alignments, file(params.ref_genome), file(params.ref_index), params.exclude_flags)
 
     // Alignment quality control
     qc_unfiltered_alignment(unfiltered_alignments, file(params.ref_genome), file(params.ref_index), params.ref_scaffold_name, "unfiltered")
@@ -126,8 +136,8 @@ process append_readgroups {
     tuple val(ID), val(LANE), path(R1), path(R2)
 
     output:
-    tuple val(ID), val(LANE), path("${ID}_${LANE}_R1.fastq.gz"), path("${ID}_${LANE}_R2.fastq.gz"), env("READGROUP"), emit: align_cpu
-    tuple path("${ID}_${LANE}_R1.fastq.gz"), path("${ID}_${LANE}_R2.fastq.gz"), path("${ID}_${LANE}_GROUPED.txt"), emit: align_gpu
+    tuple val(ID), val(LANE), path("${ID}_${LANE}_R1.fastq.gz"), path("${ID}_${LANE}_R2.fastq.gz"), env("READGROUP"), emit: bwa_input
+    tuple path("${ID}_${LANE}_R1.fastq.gz"), path("${ID}_${LANE}_R2.fastq.gz"), path("${ID}_${LANE}_GROUPED.txt"), emit: fq2bam_input
 
     script:
     """
@@ -153,7 +163,7 @@ process append_readgroups {
     """
 }
 
-process combine_lanes_for_align_reads_gpu {
+process parse_input_for_fq2bam {
     
     cpus 1
     memory { 8.MB * task.attempt }
@@ -178,7 +188,7 @@ process combine_lanes_for_align_reads_gpu {
     """
 }
 
-process align_reads_gpu {
+process align_fq2bam {
 
     container "nvcr.io/nvidia/clara/clara-parabricks:4.5.0-1"
     containerOptions "--nv"
@@ -234,7 +244,7 @@ process align_reads_gpu {
     """
 }
 
-process align_reads_cpu {
+process align_bwa_mem {
     
     // Container build page: https://wave.seqera.io/view/builds/bd-7673b9c618b4118a_1
     container "community.wave.seqera.io/library/bwa_samtools:7673b9c618b4118a"
@@ -255,12 +265,40 @@ process align_reads_cpu {
 
     script:
     """
-    bwa mem -t ${task.cpus} -R '${readgroup}' -K 10000000 -M ${ref_genome} ${R1} ${R2} \
+    bwa mem -t ${task.cpus} -K 10000000 -R '${readgroup}' ${ref_genome} ${R1} ${R2} \
     | samtools view -@ ${task.cpus} -T ${ref_genome} -C | samtools sort -T ${ID} -o ${ID}_${LANE}.cram
     """
 }
 
-process merge_alignment_cpu {
+process align_bwa_aln {
+    
+    // Container build page: https://wave.seqera.io/view/builds/bd-7673b9c618b4118a_1
+    container "community.wave.seqera.io/library/bwa_samtools:7673b9c618b4118a"
+    cpus 16
+    memory { 16.GB * task.attempt }
+    time { 24.h * task.attempt }
+
+    errorStrategy "retry"
+    maxRetries 3
+
+    input:
+    tuple val(ID), val(LANE), path(R1), path(R2), val(readgroup)
+    path(ref_genome)
+    path(ref_and_bwa_indices, stageAs: "./*")
+
+    output:
+    path("${ID}_${LANE}.cram")
+
+    script:
+    """
+    bwa aln -t ${task.cpus} ${ref_genome} ${R1} > R1.sai
+    bwa aln -t ${task.cpus} ${ref_genome} ${R2} > R2.sai
+    bwa sampe -r '${readgroup}' ${ref_genome} R1.sai R2.sai ${R1} ${R2} \
+    | samtools view -@ ${task.cpus} -T ${ref_genome} -C | samtools sort -T ${ID} -o ${ID}_${LANE}.cram
+    """
+}
+
+process merge_lanes {
     
     container "quay.io/biocontainers/samtools:1.17--hd87286a_1"
     cpus 1
@@ -285,7 +323,7 @@ process merge_alignment_cpu {
     """
 }
 
-process sort_alignment_cpu {
+process sort_alignment {
     
     container "quay.io/biocontainers/gatk4:4.6.2.0--py310hdfd78af_1"
     cpus 1
@@ -315,7 +353,7 @@ process sort_alignment_cpu {
     """
 }
 
-process mark_duplicates_cpu {
+process mark_duplicates {
 
     // Container build page: https://wave.seqera.io/view/builds/bd-77c6fcf88cba7ceb_1
     container "community.wave.seqera.io/library/gatk4_samtools:77c6fcf88cba7ceb"
@@ -353,7 +391,7 @@ process mark_duplicates_cpu {
     """
 }
 
-process filter_alignment_flags {
+process filter_alignment {
 
     publishDir "${params.publish_dir}/${ID}", saveAs: { filename -> "$filename" }, mode: 'copy'
 

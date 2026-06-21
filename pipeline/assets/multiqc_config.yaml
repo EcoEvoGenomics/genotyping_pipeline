@@ -26,10 +26,13 @@ table_columns_visible:
   fastqc_trimmed_reads-median_sequence_length: false
   "Picard (Unfiltered Alignments): InsertSizeMetrics": false
   "Picard (Unfiltered Alignments): QualityYieldMetrics": false
+  "Picard (Unfiltered Alignments): Mark Duplicates": false
   "SAMtools (Unfiltered Alignments): stats": false
   "SAMtools (Unfiltered Alignments): coverage": false
-  samtools_filtered_alignments_stats-insert_size_average: true
-  samtools_filtered_alignments_stats-reads_MQ0_percent: true
+  samtools_filtered_alignments_coverage-numreads: true
+  samtools_filtered_alignments_coverage-meandepth: true
+  samtools_filtered_alignments_coverage-coverage: true
+  samtools_filtered_alignments_coverage-meanmapq: true
   "Bcftools: Stats": false
 
 table_columns_placement:
@@ -40,15 +43,11 @@ table_columns_placement:
     fastqc_trimmed_reads-percent_duplicates: 1003
     fastqc_trimmed_reads-percent_gc: 1004
     fastqc_trimmed_reads-total_sequences: 1005
-    samtools_filtered_alignments_stats-raw_total_sequences: 1006
-    samtools_filtered_alignments_stats-reads_mapped: 1007
-    samtools_filtered_alignments_stats-reads_mapped_percent: 1008
-    samtools_filtered_alignments_stats-reads_MQ0_percent: 1009
-    samtools_filtered_alignments_stats-reads_properly_paired_percent: 1010
-    samtools_filtered_alignments_coverage-meandepth: 1011
-    samtools_filtered_alignments_stats-insert_size_average: 1012
-    samtools_filtered_alignments_stats-error_rate: 1013
-    samtools_filtered_alignments_stats-non_primary_alignments: 1014
+    samtools_filtered_alignments_coverage-numreads: 1006
+    samtools_filtered_alignments_coverage-meandepth: 1007
+    samtools_filtered_alignments_coverage-coverage: 1008
+    samtools_filtered_alignments_coverage-meanmapq: 1009
+
 
 table_columns_name:
   fastqc_raw_reads-percent_duplicates: "Dups (Raw)"
@@ -57,8 +56,10 @@ table_columns_name:
   fastqc_trimmed_reads-percent_duplicates: "Dups (Trimmed)"
   fastqc_trimmed_reads-percent_gc: "%GC (Trimmed)"
   fastqc_trimmed_reads-total_sequences: "Reads (Trimmed)"
-  samtools_filtered_alignments_stats-raw_total_sequences: "Reads (Filtered CRAM)"
-  samtools_filtered_alignments_stats-reads_mapped: "Reads (Mapped)"
+  samtools_filtered_alignments_coverage-numreads: "Mapped Reads"
+  samtools_filtered_alignments_coverage-meandepth: "Mean Depth"
+  samtools_filtered_alignments_coverage-coverage: "Coverage"
+  samtools_filtered_alignments_coverage-meanmapq: "Mean Mapping Quality"
 
 module_order:
   - "fastqc":
@@ -165,6 +166,7 @@ software_versions:
     fastp: "0.24.0"
   "Read aligning":
     clara-parabricks: "4.5.0-1"
+    bwa: "0.7.17"
     samtools: "1.17"
   "Variant calling":
     bedtools: "2.30.0"

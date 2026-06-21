@@ -35,10 +35,12 @@
 
     # SET OPTIONS FOR TRIM AND ALIGN STEP
     # Note: The read_target is applied separately to R1 and R2 (if downsample_reads=yes)
+    # Note: Aligner options are "gpu" (Nvidia Parabricks FQ2BAM), "mem" (BWA-MEM), and "aln" (BWA-ALN)
     # Note: The default flag, 0x400, is for optical and PCR duplicates
     deduplicate_reads=no
     downsample_reads=no
     read_target=1000000
+    aligner=gpu
     exclude_flags=0x400
 
     # SET OPTIONS FOR CALL VARIANTS STEP
@@ -130,6 +132,7 @@ if [ $trim_align_reads = "yes" ]; then
         --deduplicate $deduplicate_reads \
         --downsample $downsample_reads \
         --read_target $read_target \
+        --aligner $aligner \
         --exclude_flags $exclude_flags \
         --ref_genome $ref_genome \
         --ref_index $ref_index \

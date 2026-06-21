@@ -11,7 +11,7 @@ There are four primary steps in the pipeline, and you can specify whether to run
 
 The primary steps are: 
 
-1. `trim_align_reads`: Trims and optionally deduplicates and / or downsamples reads before aligning to a reference genome.
+1. `trim_align_reads`: Trims (and optionally deduplicates and / or downsamples) reads before aligning to a reference genome.
 2. `call_variants`: Calls SNP variants across and calculates statistics across the whole genome.
 3. `filter_variants`: Applies filters to the SNP variants from the previous step and calculates statistics.
 4. `phase_variants`: You may finally phase the filtered variants.
@@ -82,24 +82,30 @@ A note on the lane codes (L001, L002, ...) - these are necessary to allow the pi
 ## The pipeline
 ### Step 1: Read trimming and alignment
 
-This first workflow will take your raw reads and run them through `fastqc` for a quality assessment. It will then trim them for low-quality bases and remove any adapter sequences with `fastp`. If you enable the deduplication step, then this will be done using `seqkit`. Similarly if the downsampling option is enabled, then `seqkit` will perform this too. Once trimming, and optionally deduplication and downsampling is complete, the `fastqc` quality assessment will be repeated. Then, the pipeline will group reads (i.e. from across lanes) belonging to the same individuals and map them to a reference genome of your choice (default is the 2014 House sparrow reference). This step is now performed using an implementation of `bwa mem` within [NVIDIA Clara Parabricks](https://docs.nvidia.com/clara/parabricks/latest/index.html) - a GPU accelerated genomics suite. This enables extremely fast and efficient alignment (provided you have ample access to suitable GPUs). Once aligned, the pipeline will produce statistics on the mapping efficiency and depth of coverage of each mapped individual before filtering out PCR and optical duplicates (by default) and then repeating the quality assessment.
+This first workflow will take your raw reads and run them through `fastqc` for a quality assessment. It will then trim them for low-quality bases and remove any adapter sequences with `fastp`. If you enable the deduplication step, then this will be done using `seqkit`. Similarly if the downsampling option is enabled, then `seqkit` will perform this too. Once trimming, and optionally deduplication and downsampling is complete, the `fastqc` quality assessment will be repeated. Then, the pipeline will group reads (i.e. from across lanes) belonging to the same individuals and map them to a reference genome of your choice. This step is now performed by default with the `bwa mem` implemantation of [NVIDIA Clara Parabricks](https://docs.nvidia.com/clara/parabricks/latest/index.html) - a GPU accelerated genomics suite. This makes for extremely fast alignment (provided you have ample access to suitable GPUs). Alternatively, you may opt to align using the original CPU-based implementation of `bwa mem` or its predecessor `bwa aln`. While `bwa aln` could be more suitable for very short reads, be mindful that its output is not directly comparable to that of Parabricks' `bwa mem` implementation. Once aligned, the pipeline will produce statistics on the mapping efficiency and depth of coverage of each mapped individual before filtering out PCR and optical duplicates (by default) and then repeating the quality assessment.
 
 ```mermaid
 flowchart TB
    subgraph "Inputs and user parameters"
-   v0["Samples CSV"]
+   v0["Reads CSV"]
    v7["Downsample (Y/N)"]
    v4["Deduplicate (Y/N)"]
-   v14["Reference genome"]
-   v15["Reference genome index"]
+   v14["Reference genome and indices"]
    v18["Scaffold name"]
+   v51["Aligner (gpu/mem/aln)"]
    end
    v2(["Get reads stats (fastqc)"])
    v5(["Optional: Deduplicate reads (seqkit rmdup)"])
    v8(["Optional: Downsample reads (seqkit sample)"])
    v10(["Trim reads (fastp)"])
-   v12(["Group reads"])
-   v16(["Align reads (clara-parabricks)"])
+   v12(["Group reads across lanes"])
+   v50(["Select aligner"])
+   v16(["Align reads (parabricks)"])
+   v48(["Align reads (bwa-mem)"])
+   v40(["Align reads (bwa-aln)"])
+   v43(["Merge alignments from different lanes"])
+   v45(["Sort merged alignment (picard)"])
+   v47(["Mark duplicates in alignment (picard)"])
    v19(["Get alignment stats (samtools)"])
    v25(["Filter alignment (samtools)"])
    v0 --> v2
@@ -108,23 +114,35 @@ flowchart TB
    v8 --> v10
    v10 --> v2
    v10 --> v12
+   v10 --> v40
+   v10 --> v48
    v12 --> v16
    v14 --> v16
-   v15 --> v16
+   v14 --> v40
+   v14 --> v48
    v16 --> v19
    v16 --> v25
    v18 --> v19
    v14 --> v19
-   v15 --> v19
    v25 --> v19
    v4 --> v5
    v7 --> v8
    v10 --> v20
    v2 --> v21
-   v16 --> v22
-   v16 --> v23
+   v25 --> v22
+   v25 --> v23
    v16 --> v24
    v19 --> v24
+   v51 --> v50
+   v50 --> v12
+   v50 --> v48
+   v50 --> v40
+   v48 --> v43
+   v40 --> v43
+   v43 --> v45
+   v45 --> v47
+   v47 --> v19
+   v47 --> v25
    subgraph "Outputs"
    v20["Trimmed reads (R1/R2 per lane)"]
    v21["Read QC metrics (R1/R2 per lane)"]
@@ -209,7 +227,7 @@ This part of the pipeline produces the following outputs:
 
 ### Step 3: Variant filtering
 
-The third workflow filters your vcf files and prepares them for downstream analysis. You need to provide it with the settings you require for filtering (via the main slurm script) and it will use unfiltered chromosome level VCFs to perform filtering. Filters are applied in windows, and windows are concatenated and then normalised to remove any errors. The workflow will produce both per chromosome VCFs and a concatenated whole-genome VCF for additional analysis if required. The pipeline automatically concatenates the per chromosome VCFs in the order specificed by the reference genome index and places all scaffolds at the end. The workflow finally obtains statistics on the filtered variants which can be incorporated in the multiQC reports in the next and final step. 
+The third workflow filters your VCF files to prepare them for downstream analysis. You need to provide the filtering settings you require via the main slurm script, and these filters will be applied to the unfiltered chromosome level VCFs. The filtered per-chromosome VCFs are then concatenated and normalised to yield filtered VCFs both per-chromosome and whole-genome. The pipeline automatically concatenates the per chromosome VCFs in the order specificed by the reference genome index and places all scaffolds at the end. The workflow finally obtains statistics on the filtered variants which can be incorporated in the multiQC reports in the next and final step. 
 
 It is worth noting that filtering is not a black-box/set-and-forget/run-once process! The filters you apply matter, and not only should you think carefully about them, you may very well need to produce datasets with different filters for different downstream analyses (see https://doi.org/10.1038/s41576-024-00738-6). For that reason, the pipeline has been built to make it easy to return to this step after you've produced the MultiQC report and inspected the quality statistics (below). To take an example, you may first run the pipeline through all steps, i.e. `yes` for all `trim_align_reads`, `call_variants`, `filter_variants` (and `phase_variants`) with default filters. Then you can switch off `trim_align_reads` and `call_variants` but re-run `filter_variants` (and, again, `phase_variants`) with different filtering settings (recall that all the settings you can change are exposed in the main SLURM script and you should not change anything elsewhere) in the same directory to produce a re-filtered dataset (**without changing anything else**). To do so, simply change the `filtering_label` variable (to give a new name to your refiltered data) and the relevant filtering settings. Your newly re-filtered dataset will be found in a correspondingly labelled directory under the filtered genotypes directory and the MultiQC report will be updated to show (all) the re-filtered dataset alongside the unfiltered data. You can do this as many times as you need until you are content your filters are appropriate!
 

@@ -35,7 +35,7 @@ workflow{
   concatenate_vcfs(filtered_chromosome_vcfs.flatten().collect(), params.ref_index, "_${params.filtering_label}", params.ref_scaffold_name, "variants_${params.filtering_label}")
 
   // Separately:
-  save_filters_to_file()
+  save_filters_to_file(file(params.filters), params.keep)
 
 }
 
@@ -93,23 +93,16 @@ process save_filters_to_file {
   memory 256.MB
   time 5.m
 
+  input:
+  path(filters)
+  val(keep)
+
   output:
   path("vcftools_${params.filtering_label}.tsv")
 
   script:
   """
-  printf '%s\\t%s\\n' \
-    'min-alleles' '${params.min_alleles}' \
-    'max-alleles' '${params.max_alleles}' \
-    'max-missing' '${params.max_missing}' \
-    'min-meanDP' '${params.min_meanDP}' \
-    'max-meanDP' '${params.max_meanDP}' \
-    'minDP' '${params.minDP}' \
-    'maxDP' '${params.maxDP}' \
-    'minQ' '${params.minQ}' \
-    'mac' '${params.mac}' \
-    'hwe' '${params.hwe}' \
-    'keep' '${params.keep}' \
-    > vcftools_${params.filtering_label}.tsv
+  cat filters >> vcftools_${params.filtering_label}.txt
+  echo '--keep ${keep}' >> vcftools_${params.filtering_label}.txt
   """
 }

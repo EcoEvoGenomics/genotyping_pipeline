@@ -16,10 +16,10 @@ include { qc_alignment as qc_filtered_alignment } from "./qc_utils.nf"
 
 workflow {
     
-    // Take input .CSV with columns ID, LANE, F_READ_PATH, R_READ_PATH
+    // Take input .CSV with columns ID, SEX, LANE, F_READ_PATH, R_READ_PATH
     Channel.fromPath(params.samples)
         .splitCsv()
-        .multiMap { cols -> input_reads: [cols[0], cols[1], cols[2], cols[3]] }
+        .multiMap { cols -> input_reads: [cols[0], cols[2], cols[3], cols[4]] }
         .set { samples }
 
     // Fetch all reference index files

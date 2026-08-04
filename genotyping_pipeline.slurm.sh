@@ -49,7 +49,7 @@
     # SET OPTIONS FOR FILTER VARIANTS STEP
     # Note: To refilter output from call_variants, change filtering_label and re-run the filter_variants step
     filtering_label="default_filters"
-    filtering_flags=.examples/default_filters.txt
+    filtering_flags=./examples/default_filters.txt
     filtering_keep=""
 
     # SET OPTIONS FOR PHASE VARIANTS STEP
@@ -60,7 +60,7 @@
     ref_index=/cluster/projects/nn10082k/ref/house_sparrow_genome_assembly-18-11-14_masked.fa.fai
     ref_recombination_map_dir=/cluster/projects/nn10082k/recombination_maps
     ref_scaffold_name="scaffold"
-    ref_ploidy_file=./pipeline/assets/default.ploidy
+    ref_ploidy_file=./examples/default.ploidy
 
 ### --------------- End user input --------------- ###
 

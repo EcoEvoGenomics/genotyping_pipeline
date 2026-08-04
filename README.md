@@ -61,21 +61,22 @@ Additional details and examples are provided for each step below. If you are unf
 
 ### The samples csv format
 
-The input `.csv` file should be formatted with one sample per row and the following **four** columns:
+The input `.csv` file should be formatted with one sample per row and the following **five** columns:
 
-1. Sample name, e.g. `PDOM2024IND0001M` for a sparrow from our groups collection
-2. Sequencing lane for the sequence files in the format "LXXX" where "XXX" is a number with leading zeroes (e.g. L001). If you have only one set of files per sample, just use "L001".
-3. Forward read location - this should be the **full path** to the forward read
-4. Reverse read location - this should be the **full path** to the reverse read
+1. Sample name, e.g. `PDOM2024IND0001M` for a sparrow from our groups' collection
+2. Sample sex. Required to call sex chromosomes, haploid chromosomes, mtDNA, or other non-diploid chromosomes correctly. By default everything is considered diploid (`pipeline/assets/default.ploidy`). See `examples/passer.ploidy` for a sample ploidy file. The sex codes (e.g. `M` and `F`) are arbitrary but *must* correspond to the ploidy file provided to the `ref_ploidy_file` argument in the pipeline submission script `genotyping_pipeline.slurm.sh`.
+3. Sequencing lane for the sequence files in the format "LXXX" where "XXX" is a number with leading zeroes (e.g. L001). If you have only one set of files per sample, just use "L001".
+4. Forward read location - this should be the **full path** to the forward read
+5. Reverse read location - this should be the **full path** to the reverse read
 
 As an example, your file should look like this but **without headers**:
 
-| Sample ID | Lane | Path to R1 FASTQ.GZ file | Path to R2 FASTQ.GZ file |
-|------------------|------|-------------------------|-------------------------|
-| PDOM2024IND0001M | L001 | /path/to/1M_L001_R1.fastq.gz | /path/to/1M_L001_R2.fastq.gz |
-| PDOM2024IND0001M | L002 | /path/to/1M_L002_R1.fastq.gz | /path/to/1M_L002_R2.fastq.gz |
-| PDOM2024IND0002F | L001 | /path/to/2F_R1.fastq.gz | /path/to/2F_R2.fastq.gz |
-| ... | ... | ... | ... |
+| Sample ID | Sex | Lane | Path to R1 FASTQ.GZ file | Path to R2 FASTQ.GZ file |
+|------------------|---|------|-------------------------|-------------------------|
+| PDOM2024IND0001M | M | L001 | /path/to/1M_L001_R1.fastq.gz | /path/to/1M_L001_R2.fastq.gz |
+| PDOM2024IND0001M | M | L002 | /path/to/1M_L002_R1.fastq.gz | /path/to/1M_L002_R2.fastq.gz |
+| PDOM2024IND0002F | F | L001 | /path/to/2F_R1.fastq.gz | /path/to/2F_R2.fastq.gz |
+| ... | ... | ... | ... | ... |
 
 A note on the lane codes (L001, L002, ...) - these are necessary to allow the pipeline to merge sequencing files from the same individual sequenced on different lanes. You should check the sample catalogue and assess the number of lanes you require for each sample. In *principle* (but **_read on_**), the codes are arbitrary and *could* be L001, L002, ... or L1, L2, ... or similar. **But the QC report will only be organised properly if you use the format L001, L002, and so on**. We note here that other formats are permissible, in case you happen to use another (e.g. by accident); the most important thing is that read files from different lanes are explicitly stated as such, otherwise the pipeline will fail to group reads from the same individual. If in doubt about this, just ask!
 

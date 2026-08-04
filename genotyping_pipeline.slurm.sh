@@ -49,16 +49,7 @@
     # SET OPTIONS FOR FILTER VARIANTS STEP
     # Note: To refilter output from call_variants, change filtering_label and re-run the filter_variants step
     filtering_label="default_filters"
-    filtering_min_alleles=2
-    filtering_max_alleles=2
-    filtering_max_missing=0.8
-    filtering_min_meanDP=5
-    filtering_max_meanDP=30
-    filtering_minDP=5
-    filtering_maxDP=30
-    filtering_minQ=30
-    filtering_mac=1
-    filtering_hwe=0
+    filtering_flags=.examples/default_filters.txt
     filtering_keep=""
 
     # SET OPTIONS FOR PHASE VARIANTS STEP
@@ -178,16 +169,7 @@ if [ $filter_variants = "yes" ]; then
         --ref_index $ref_index \
         --ref_scaffold_name $ref_scaffold_name \
         --filtering_label $filtering_label \
-        --min_alleles $filtering_min_alleles \
-        --max_alleles $filtering_max_alleles \
-        --max_missing $filtering_max_missing \
-        --min_meanDP $filtering_min_meanDP \
-        --max_meanDP $filtering_max_meanDP \
-        --minDP $filtering_minDP \
-        --maxDP $filtering_maxDP \
-        --minQ $filtering_minQ \
-        --mac $filtering_mac \
-        --hwe $filtering_hwe \
+        --filters $filtering_flags \
         --keep $filtering_keep \
         --publish_dir $filter_variants_output_dir
 fi

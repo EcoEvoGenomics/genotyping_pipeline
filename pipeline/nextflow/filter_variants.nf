@@ -24,7 +24,7 @@ workflow{
   }
 
   // Filter, retain only individuals in keepfile
-  def filtered_chromosome_vcfs = filter_vcf(chromosome_vcfs, file(params.keep))
+  def filtered_chromosome_vcfs = filter_vcf(chromosome_vcfs, file(params.filters), file(params.keep))
 
   // Obtain summary stats chromosome-level VCF
   def filtered_chromosome_vchks = filtered_chromosome_vcfs \
@@ -55,6 +55,7 @@ process filter_vcf {
   
   input:
   tuple val(key), path('input.vcf.gz'), path('input.vcf.gz.csi')
+  path(filterfile)
   path(keepfile)
 
   output:
@@ -64,23 +65,17 @@ process filter_vcf {
 
   script:
   """
-  vcftools --gzvcf input.vcf.gz \
-    --min-alleles ${params.min_alleles} \
-    --max-alleles ${params.max_alleles} \
-    --max-missing ${params.max_missing} \
-    --min-meanDP ${params.min_meanDP} \
-    --max-meanDP ${params.max_meanDP} \
-    --minDP ${params.minDP} \
-    --maxDP ${params.maxDP} \
-    --minQ ${params.minQ} \
-    --mac ${params.mac} \
-    --hwe ${params.hwe} \
-    --keep ${keepfile} \
-    --remove-filtered-all \
-    --remove-indels \
-    --recode-INFO-all \
-    --recode \
-    --stdout \
+  echo '--gzvcf input.vcf.gz' >> filters.args
+  cat ${filterfile} >> filters.args
+  echo '--keep ${keepfile}' >> filters.args
+  echo '--remove-filtered-all' >> filters.args
+  echo '--remove-indels' >> filters.args
+  echo '--recode-INFO-all' >> filters.args
+  echo '--recode' >> filters.args
+  echo '--stdout' >> filters.args
+
+  cat filters.args \
+  | xargs vcftools \
   | bcftools view --threads ${task.cpus} -e 'N_ALT>1' -O z \
     -o ${key}_${params.filtering_label}.vcf.gz
 

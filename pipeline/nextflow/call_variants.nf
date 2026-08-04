@@ -12,6 +12,7 @@
 workflow{    
 
     // Reference files are passed as parameters
+    def samples_csv = file(params.samples)
     def ref_ploidy = file(params.ref_ploidy_file)
     def ref_genome = file(params.ref_genome)
     def ref_index = file(params.ref_index)
@@ -37,7 +38,7 @@ workflow{
     def window_list = define_windows.out.windows.map{path -> file(path.toString())}.readLines()
 
     // Genotyping windows are concatenated into chromosome VCFs
-    def chromosome_vcfs = genotype_window(sorted_cram_list_file, ref_ploidy, ref_genome, ref_index, windows_dir, window_list) \
+    def chromosome_vcfs = genotype_window(sorted_cram_list_file, samples_csv, ref_ploidy, ref_genome, ref_index, windows_dir, window_list) \
     | map { file ->
         def key = file.baseName.toString().tokenize(':').get(0)
         return tuple(key, file)
@@ -174,6 +175,7 @@ process genotype_window {
 
     input:
     path(crams)
+    path(samples_csv)
     path(ploidy_file)
     path(ref_genome)
     path(ref_index)
@@ -185,14 +187,17 @@ process genotype_window {
 
     script:
     """
+    # CREATE BCFTOOLS CALL "SAMPLES" FILE WITH ID AND SEX CODE TO CALL CHRs WITH CORRECT PLOIDY
+    cat ${samples_csv} | awk -F, '{print \$1, \$2}' > call.samples
+
     # CALL NONSCAFFOLD WINDOWS AND SCAFFOLD WINDOWS SEPARATELY
     call_nonscaffold() {
         bcftools mpileup --threads ${task.cpus} -d 8000 --ignore-RG -r ${window} -a AD,DP,SP -Ou -f ${ref_genome} -b ${crams} \
-        | bcftools call --threads ${task.cpus} --ploidy-file ${ploidy_file} -f GQ,GP -mO z -o ${window}.vcf.gz
+        | bcftools call --threads ${task.cpus} --samples-file call.samples --ploidy-file ${ploidy_file} -f GQ,GP -mO z -o ${window}.vcf.gz
     }
     call_scaffold() {
         bcftools mpileup --threads ${task.cpus} -d 8000 --ignore-RG -R ./genome_windows/${window} -a AD,DP,SP -Ou -f ${ref_genome} -b ${crams} \
-        | bcftools call --threads ${task.cpus} --ploidy-file ${ploidy_file} -f GQ,GP -mO z -o ${window}.vcf.gz
+        | bcftools call --threads ${task.cpus} --samples-file call.samples --ploidy-file ${ploidy_file} -f GQ,GP -mO z -o ${window}.vcf.gz
     }
     if [[ "${window}" == "scaffold"* ]]; then
         call_scaffold

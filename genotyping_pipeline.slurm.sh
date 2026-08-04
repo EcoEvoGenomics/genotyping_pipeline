@@ -148,6 +148,7 @@ if [ $call_variants = "yes" ]; then
         -with-report $call_variants_output_dir/workflow_report.html \
         -profile $nextflow_profile \
         -resume \
+        --samples $sample_csv \
         --cram_dir $trim_align_output_dir \
         --ref_genome $ref_genome \
         --ref_index $ref_index \

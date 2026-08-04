@@ -1,0 +1,10 @@
+--min-alleles 2
+--max-alleles 2
+--max-missing 0.8
+--min-meanDP 5
+--max-meanDP 30
+--minDP 5
+--maxDP 30
+--minQ 30
+--mac 1
+--hwe 0

@@ -327,11 +327,13 @@ process sort_alignment {
     
     container "quay.io/biocontainers/gatk4:4.6.2.0--py310hdfd78af_1"
     cpus 1
-    memory { 5.GB * task.attempt }
-    time { 5.h * task.attempt }
+    memory { 16.GB * task.attempt }
+    time { 8.h * task.attempt }
 
     errorStrategy "retry"
     maxRetries 3
+
+    label "high_mem_per_cpu"
 
     input:
     tuple val(ID), path(cram)
@@ -344,8 +346,9 @@ process sort_alignment {
     script:
     """
     gatk SortSam \
-        --java-options -Xmx4G \
-        --MAX_RECORDS_IN_RAM 1000000 \
+        --java-options -Xmx${task.memory.toGiga()}G \
+        --MAX_RECORDS_IN_RAM 2500000 \
+        --TMP_DIR . \
         -I ${cram} \
         -O ${ID}_sorted.cram \
         -R ${ref_genome} \
@@ -358,11 +361,13 @@ process mark_duplicates {
     // Container build page: https://wave.seqera.io/view/builds/bd-77c6fcf88cba7ceb_1
     container "community.wave.seqera.io/library/gatk4_samtools:77c6fcf88cba7ceb"
     cpus 1
-    memory { 5.GB * task.attempt }
-    time { 5.h * task.attempt }
+    memory { 16.GB * task.attempt }
+    time { 8.h * task.attempt }
 
     errorStrategy "retry"
     maxRetries 3
+
+    label "high_mem_per_cpu"
 
     input:
     tuple val(ID), path(cram)
@@ -377,8 +382,8 @@ process mark_duplicates {
     mkdir qc-metrics
     
     gatk MarkDuplicates \
-        --java-options -Xmx4G \
-        --MAX_RECORDS_IN_RAM 500000 \
+        --java-options -Xmx${task.memory.toGiga()}G \
+        --TMP_DIR . \
         -I ${cram} \
         -O ${ID}_marked.cram \
         -R ${ref_genome} \

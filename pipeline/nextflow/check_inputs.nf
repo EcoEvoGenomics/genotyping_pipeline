@@ -10,11 +10,11 @@
 
 workflow {
 
-    assert_contig_names_are_alphanumeric(params.ref_index)
+    check_ref_contig_names(params.ref_index)
 
 }
 
-process assert_contig_names_are_alphanumeric {
+process check_ref_contig_names {
 
     cpus { 1 }
     memory { 1.GB }
@@ -35,3 +35,4 @@ process assert_contig_names_are_alphanumeric {
     done < ${ref_index}
     """
 }
+

@@ -163,8 +163,6 @@ process sort_cramlist {
 // Step 1 - Genotyping
 process genotype_window {
 
-    label "require_pipefail"
-
     container "quay.io/biocontainers/bcftools:1.17--h3cc50cf_1"
     cpus { 1 }
     memory { 4.GB * task.attempt }

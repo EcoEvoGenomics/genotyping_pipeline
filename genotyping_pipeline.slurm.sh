@@ -20,9 +20,6 @@
     # Note: One row per sample, with unheadered columns "ID, LANE, R1_FASTQ_PATH, R2_FASTQ_PATH"
     sample_csv=
     
-    # NAME A NEXTFLOW CONFIGURATION PROFILE
-    nextflow_profile="saga"
-
     # SELECT STEPS TO RUN
     # Note: Must be run in order, but filter_variants and phase_variants can be repeated with different settings
     trim_align_reads=yes
@@ -108,7 +105,6 @@ mkmissingdir $output_dir
 
 nextflow -log ./.nextflow/nextflow.log \
     run ./source/nextflow/check_inputs.nf \
-    -profile $nextflow_profile \
     -resume \
     --ref_index $ref_index
 
@@ -117,7 +113,6 @@ if [ $trim_align_reads = "yes" ]; then
     nextflow -log ./.nextflow/nextflow.log \
         run ./source/nextflow/trim_align_reads.nf \
         -with-report $trim_align_output_dir/workflow_report.html \
-        -profile $nextflow_profile \
         -resume \
         --samples $sample_csv \
         --deduplicate $deduplicate_reads \
@@ -137,7 +132,6 @@ if [ $call_variants = "yes" ]; then
     nextflow -log ./.nextflow/nextflow.log \
         run ./source/nextflow/call_variants.nf \
         -with-report $call_variants_output_dir/workflow_report.html \
-        -profile $nextflow_profile \
         -resume \
         --samples $sample_csv \
         --cram_dir $trim_align_output_dir \
@@ -164,7 +158,6 @@ if [ $filter_variants = "yes" ]; then
     nextflow -log ./.nextflow/nextflow.log \
         run ./source/nextflow/filter_variants.nf \
         -with-report $filter_variants_output_dir/workflow_report.html \
-        -profile $nextflow_profile \
         -resume \
         --vcf_dir $call_variants_output_dir/chroms \
         --ref_index $ref_index \
@@ -181,7 +174,6 @@ if [ $phase_variants = "yes" ]; then
     nextflow -log ./.nextflow/nextflow.log \
         run ./source/nextflow/phase_variants.nf \
         -with-report $phase_variants_output_dir/workflow_report.html \
-        -profile $nextflow_profile \
         -resume \
         --unphased_vcf ${filter_variants_output_dir}/variants_${filtering_label}.vcf.gz \
         --unphased_csi ${filter_variants_output_dir}/variants_${filtering_label}.vcf.gz.csi \
@@ -194,7 +186,6 @@ fi
 
 nextflow -log ./.nextflow/nextflow.log \
     run ./source/nextflow/run_multiqc.nf \
-    -profile $nextflow_profile \
     --results_dir $output_dir \
     --publish_dir $output_dir
 

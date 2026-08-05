@@ -64,7 +64,7 @@ Additional details and examples are provided for each step below. If you are unf
 The input `.csv` file should be formatted with one sample per row and the following **five** columns:
 
 1. Sample name, e.g. `PDOM2024IND0001M` for a sparrow from our groups' collection
-2. Sample sex. Required to call sex chromosomes, haploid chromosomes, mtDNA, or other non-diploid chromosomes correctly. By default everything is considered diploid (`pipeline/assets/default.ploidy`). See `examples/passer.ploidy` for a sample ploidy file. The sex codes (e.g. `M` and `F`) are arbitrary but *must* correspond to the ploidy file provided to the `ref_ploidy_file` argument in the pipeline submission script `genotyping_pipeline.slurm.sh`.
+2. Sample sex. Required to call sex chromosomes, haploid chromosomes, mtDNA, or other non-diploid chromosomes correctly. By default everything is considered diploid (`examples/default.ploidy`). See `examples/passer.ploidy` for a sample ploidy file. The sex codes (e.g. `M` and `F`) are arbitrary but *must* correspond to the ploidy file provided to the `ref_ploidy_file` argument in the pipeline submission script `genotyping_pipeline.slurm.sh`.
 3. Sequencing lane for the sequence files in the format "LXXX" where "XXX" is a number with leading zeroes (e.g. L001). If you have only one set of files per sample, just use "L001".
 4. Forward read location - this should be the **full path** to the forward read
 5. Reverse read location - this should be the **full path** to the reverse read

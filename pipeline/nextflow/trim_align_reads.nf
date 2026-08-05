@@ -95,13 +95,13 @@ process trim_reads {
         // Double if insufficient in previous attempt - otherwise aim for real peak usage + 50 % from previous
         ? (task.exitStatus == 137 ? task.previousTrace.memory * 2 : task.previousTrace.peak_rss * 1.5)
         // Initial guess
-        : 1.MB * Math.max(2048 , 512 * Math.ceil((R1.size() + R2.size()) / 1024 ** 3))
+        : 1.MB * Math.max(8192 , 512 * Math.ceil((R1.size() + R2.size()) / 1024 ** 3))
     }
     time { task.attempt > 1 
         // Double if insufficient in previous attempt, otherwise keep previous allocation
         ? (task.exitStatus == 140 ? task.previousTrace.time * 2 : task.previousTrace.time )
         // Initial guess
-        : 3.m * Math.max(10 , 1.5 * Math.ceil((R1.size() + R2.size()) / 1024 ** 3))
+        : 3.m * Math.max(30 , 1.5 * Math.ceil((R1.size() + R2.size()) / 1024 ** 3))
     }
 
     errorStrategy "retry"
@@ -327,7 +327,7 @@ process sort_alignment {
     
     container "quay.io/biocontainers/gatk4:4.6.2.0--py310hdfd78af_1"
     cpus 1
-    memory { 16.GB * task.attempt }
+    memory { 32.GB * task.attempt }
     time { 8.h * task.attempt }
 
     errorStrategy "retry"
@@ -347,7 +347,7 @@ process sort_alignment {
     """
     gatk SortSam \
         --java-options -Xmx${task.memory.toGiga()}G \
-        --MAX_RECORDS_IN_RAM 2500000 \
+        --MAX_RECORDS_IN_RAM 5000000 \
         --TMP_DIR . \
         -I ${cram} \
         -O ${ID}_sorted.cram \
@@ -361,7 +361,7 @@ process mark_duplicates {
     // Container build page: https://wave.seqera.io/view/builds/bd-77c6fcf88cba7ceb_1
     container "community.wave.seqera.io/library/gatk4_samtools:77c6fcf88cba7ceb"
     cpus 1
-    memory { 16.GB * task.attempt }
+    memory { 32.GB * task.attempt }
     time { 8.h * task.attempt }
 
     errorStrategy "retry"
@@ -402,8 +402,8 @@ process filter_alignment {
 
     container "quay.io/biocontainers/samtools:1.17--hd87286a_1"
     cpus 1
-    memory { 1.MB * Math.max(512, 128 * Math.ceil(cram.size() / 1024 ** 3)) * task.attempt }
-    time { 1.m * Math.max(120, 6 * Math.ceil(cram.size() / 1024 ** 3)) * task.attempt }
+    memory { 1.MB * Math.max(2048, 128 * Math.ceil(cram.size() / 1024 ** 3)) * task.attempt }
+    time { 1.m * Math.max(240, 6 * Math.ceil(cram.size() / 1024 ** 3)) * task.attempt }
 
     errorStrategy "retry"
     maxRetries 3

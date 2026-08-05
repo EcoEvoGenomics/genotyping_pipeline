@@ -107,7 +107,7 @@ phase_variants_output_dir=${output_dir}/03-variants_filtered/${filtering_label}/
 mkmissingdir $output_dir
 
 nextflow -log ./.nextflow/nextflow.log \
-    run ./pipeline/nextflow/check_inputs.nf \
+    run ./source/nextflow/check_inputs.nf \
     -profile $nextflow_profile \
     -resume \
     --ref_index $ref_index
@@ -115,7 +115,7 @@ nextflow -log ./.nextflow/nextflow.log \
 if [ $trim_align_reads = "yes" ]; then
     mkmissingdir $trim_align_output_dir
     nextflow -log ./.nextflow/nextflow.log \
-        run ./pipeline/nextflow/trim_align_reads.nf \
+        run ./source/nextflow/trim_align_reads.nf \
         -with-report $trim_align_output_dir/workflow_report.html \
         -profile $nextflow_profile \
         -resume \
@@ -135,7 +135,7 @@ if [ $call_variants = "yes" ]; then
     chkprevious "Step: call_variants" $trim_align_output_dir
     mkmissingdir $call_variants_output_dir
     nextflow -log ./.nextflow/nextflow.log \
-        run ./pipeline/nextflow/call_variants.nf \
+        run ./source/nextflow/call_variants.nf \
         -with-report $call_variants_output_dir/workflow_report.html \
         -profile $nextflow_profile \
         -resume \
@@ -162,7 +162,7 @@ if [ $filter_variants = "yes" ]; then
     fi
 
     nextflow -log ./.nextflow/nextflow.log \
-        run ./pipeline/nextflow/filter_variants.nf \
+        run ./source/nextflow/filter_variants.nf \
         -with-report $filter_variants_output_dir/workflow_report.html \
         -profile $nextflow_profile \
         -resume \
@@ -179,7 +179,7 @@ if [ $phase_variants = "yes" ]; then
     chkprevious "Step: phase_variants" $filter_variants_output_dir
     mkmissingdir $phase_variants_output_dir
     nextflow -log ./.nextflow/nextflow.log \
-        run ./pipeline/nextflow/phase_variants.nf \
+        run ./source/nextflow/phase_variants.nf \
         -with-report $phase_variants_output_dir/workflow_report.html \
         -profile $nextflow_profile \
         -resume \
@@ -193,7 +193,7 @@ if [ $phase_variants = "yes" ]; then
 fi
 
 nextflow -log ./.nextflow/nextflow.log \
-    run ./pipeline/nextflow/run_multiqc.nf \
+    run ./source/nextflow/run_multiqc.nf \
     -profile $nextflow_profile \
     --results_dir $output_dir \
     --publish_dir $output_dir

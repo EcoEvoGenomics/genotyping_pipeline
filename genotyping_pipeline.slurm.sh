@@ -20,9 +20,6 @@
     # Note: One row per sample, with unheadered columns "ID, LANE, R1_FASTQ_PATH, R2_FASTQ_PATH"
     sample_csv=
     
-    # PROVIDE PATH TO THIS REPOSITORY
-    repository_path=
-
     # NAME A NEXTFLOW CONFIGURATION PROFILE
     nextflow_profile="saga"
 
@@ -98,7 +95,10 @@ chkprevious() {
     fi
 }
 
+this_script_path=$(readlink -f "$0")
+repository_path=$(dirname "$this_script_path")
 cd $repository_path
+
 output_dir=${repository_path}/output
 trim_align_output_dir=${output_dir}/01-aligned_reads
 call_variants_output_dir=${output_dir}/02-variants_unfiltered

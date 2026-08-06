@@ -185,23 +185,50 @@ process genotype_window {
 
     script:
     """
-    # CREATE BCFTOOLS CALL "SAMPLES" FILE WITH ID AND SEX CODE TO CALL CHRs WITH CORRECT PLOIDY
-    cat ${samples_csv} | awk -F, '{print \$1, \$2}' > call.samples
+    pileup_contig() {
+        bcftools mpileup \
+        --threads ${task.cpus} \
+        --ignore-RG \
+        --fasta-ref ${ref_genome} \
+        --annotate AD,DP,SP -d 8000 \
+        --output-type b --output ${window}_pileup.bcf \
+        -r ${window} \
+        -b ${crams}
+    }
 
-    # CALL NONSCAFFOLD WINDOWS AND SCAFFOLD WINDOWS SEPARATELY
-    call_nonscaffold() {
-        bcftools mpileup --threads ${task.cpus} -d 8000 --ignore-RG -r ${window} -a AD,DP,SP -Ou -f ${ref_genome} -b ${crams} \
-        | bcftools call --threads ${task.cpus} --samples-file call.samples --ploidy-file ${ploidy_file} -f GQ,GP -mO z -o ${window}.vcf.gz
+    pileup_scaffold() {
+        bcftools mpileup \
+        --threads ${task.cpus} \
+        --ignore-RG \
+        --fasta-ref ${ref_genome} \
+        --annotate AD,DP,SP -d 8000 \
+        --output-type b --output ${window}_pileup.bcf \
+        -R ./genome_windows/${window} \
+        -b ${crams}
     }
-    call_scaffold() {
-        bcftools mpileup --threads ${task.cpus} -d 8000 --ignore-RG -R ./genome_windows/${window} -a AD,DP,SP -Ou -f ${ref_genome} -b ${crams} \
-        | bcftools call --threads ${task.cpus} --samples-file call.samples --ploidy-file ${ploidy_file} -f GQ,GP -mO z -o ${window}.vcf.gz
-    }
+
     if [[ "${window}" == "scaffold"* ]]; then
-        call_scaffold
+        pileup_scaffold
     else
-        call_nonscaffold
+        pileup_contig
     fi
+
+    bcftools query --list-samples ${window}_pileup.bcf > pileup_crams.txt
+
+    while read -r cram_path; do
+        cram_basename="\${cram_path##*/}"
+        sample_id="\${cram_basename%.cram}"
+        sample_sex=\$(grep -w \$sample_id ${samples_csv} | awk -F, '{print \$2}')
+        echo -e "\${cram_path}\\t\${sample_sex}" >> sample_sexes.ped
+    done < "pileup_crams.txt"
+
+    bcftools call \
+    --threads ${task.cpus} \
+    --samples-file sample_sexes.ped \
+    --ploidy-file ${ploidy_file} \
+    --output ${window}.vcf.gz \
+    -f GQ,GP -mO z \
+    ${window}_pileup.bcf
     """
 }
 

@@ -1,84 +1,86 @@
-# Sparrow genotyping pipeline
+# XENO: Expedient Genotyping for Non-Model Organims
 
-**Authors:** Mark Ravinet and Erik Sandertun Røed
+## What is XENO?
+XENO is a beginner-friendly genotyping pipeline built for evolutionary and ecological genomics. With the submission of one script, any biologist of minimal bioinformatic experience can use XENO to (1) trim and align reads to a reference genome, (2) call variants, (3) filter those variants, and finally (4) phase the variants. These four stages of XENO may be performed separately in stepwise order or end-to-end. At each stage, XENO outputs alignments, variant call files, and / or quality control statistics. These outputs may be passed directly to RIPLEY (link) to conduct many of the most common analyses in evolutionary and ecological genomics with similar ease.
 
-**Maintainer:** Erik Sandertun Røed
+The Wiki describes XENO in greater detail. There you will also find guides for some specific use-cases or users.
 
-## Introduction
-Welcome to the guide for the Ecological & Evolutionary Genomics Group sparrow genotyping pipeline. The design philosophy behind this utility is that you will only have to submit a single script to convert raw reads into a filtered `vcf` file ready for your analyses. More than merely *simplifying* the process, the pipeline *standardises* genotyping within the group so that different projects produce and use compatible datasets. Just as important, the construction of the pipeline emphasises *reproducibility* to promote open science. Readers of our papers (and perhaps also authors) should be able to reproduce our results with minimal effort.
-
-There are four primary steps in the pipeline, and you can specify whether to run all in one go or perform them in a stepwise order. Each of these is a different Nextflow workflow but they are all controlled by a master slurm script - `genotyping_pipeline.slurm.sh`. So you only ever have to interact with this slurm script - not Nextflow directly. For those who used previous iterations of this pipeline, we hope this greatly simplifies things. 
-
-The primary steps are: 
-
-1. `trim_align_reads`: Trims (and optionally deduplicates and / or downsamples) reads before aligning to a reference genome.
-2. `call_variants`: Calls SNP variants across and calculates statistics across the whole genome.
-3. `filter_variants`: Applies filters to the SNP variants from the previous step and calculates statistics.
-4. `phase_variants`: You may finally phase the filtered variants.
-
-More details on each step and how to run them are provided below. Additionally, the pipeline will always produce a MultiQC report showing quality control statistics.
-
-## Quick-start and installation
-This pipeline is developed primarily for in-house use on the NRIS Saga HPC, but should run on other compute resources and for other projects with minor modifications to its configuration files. Note that at present, we can only maintain support for the Saga version of the pipeline - i.e. that used by the group. If you want to use it elsewhere, you are welcome to but we are limited in how much we can help set this up. 
-
+## Installation
 ### Prerequisites
-The Nextflow pipeline is configured to run on a Linux HPC environment with the job management software Slurm, the container software Singularity (or Apptainer). If you are working on the NRIS Saga HPC, Slurm and Apptainer are pre-installed and the pipeline pre-configured to use them without manual intervention. If you are an advanced Nextflow user, you may re-configure the pipeline to use other resources.
+XENO is built for HPC environments configured with the job manager Slurm and the container manager Apptainer. Note that on some HPCs, Apptainer (or its sibling Singularity) is enabled by default - on others you must manually load it. While advanced users will be able to re-configure XENO for HPC environments without Slurm and / or Apptainer, we are regrettably not able to provide much support for such use cases. In any case, the primary workhorse and only absolute dependency of XENO is Nextflow version 25.04.6. Please be mindful that the specific version is not a suggestion, it is a requirement. With Slurm, Apptainer, and Nextflow configured, XENO automatically obtains remaining software dependencies on-demand. One notable exception is that you will need the software bwa (link) to index your reference genome if it is not already indexed (see [here](#required-reference-files)).
 
 ### Installing Nextflow with Conda
-To maximise portability, especially for external users, most of the pipeline dependencies are managed automatically with containers obtained on-demand. But the software Nextflow manages this automation, so Nextflow itself must be manually installed - for instance in a Conda environment. External users are welcome to replicate the Conda environment we use for Nextflow with the included YAML file:
+If you must install Nextflow version 25.04.6, you can e.g. do so with Conda: the environment we used to develop XENO is listed in the included YAML file.
 ```
 conda create --name nf -f examples/nextflow-25.04.6.conda.yaml 
 ```
-**NB:** If you are working on Saga as part of the group **YOU DO NOT NEED TO RUN THIS STEP**. Members of the Ecological and Evolutionary Genomics Group *can* and *should* use our pre-configured environment, which the pipeline is set to use by default. 
 
-### Obtaining the pipeline
-The easiest (and the intended) way to obtain and run the pipeline is to clone this GitHub repository to a suitable HPC location (on the NIRS Saga HPC, this is *exclusively* your `$USERWORK` directory, as the pipeline can produce terabytes of working files):
+### Installing XENO
+The intended way to "install" XENO is simply to clone this GitHub repository to a suitable location on your HPC environment:
 ```
 git clone https://github.com/EcoEvoGenomics/genotyping_pipeline
 ```
-On occasion we upgrade or modify the pipeline. As a rule this will happen on a separate branch to maintain consistency on the main branch. If you wish to use an in-development version of the pipeline you can obtain a specific branch, e.g. `experimental`:
+Be mindful that XENO can and often will produce terabytes of working files. It is therefore ill-advised to install XENO to a location with limited storage space and especially to locations where you share limited storage space with others (unless you are certain what you are doing).
+
+### Installing a development version of XENO
+While XENO is not in active development for new features, we do strive to maintain it. For instance we try to respond to bug reports and improve robustness to different inputs as more users bring their unique data to XENO. As such, there will on occasion be branches that are more recent than `main`. If you wish to use an in-development version you can obtain a specific branch, e.g. `dev`:
 ```
-git clone -b experimental https://github.com/EcoEvoGenomics/genotyping_pipeline
+git clone -b dev https://github.com/EcoEvoGenomics/genotyping_pipeline
 ```
-This is all you need to do to download the pipeline!
 
-### Running the pipeline
-In brief the three steps required to run the pipeline once you have cloned the repository are:
+## Quickstart
+### Summary
+Once installed, the steps to use XENO are:
 
-1. Download your reads to a location where the pipeline can reach them. If you have e.g. stored your reads on the NRIS NIRD storage infrastructure, you should copy them to your `$USERWORK` on the NRIS Saga HPC.
-2. Prepare a comma-separated `.csv` file with sample information. See below.
-3. Submit the `genotyping_pipeline.slurm.sh` script, completing and modifying `SETTINGS (1 / 2) User input` as required.
+1. Ensure XENO has read-access to your sequence files in fastq.gz format. You may e.g. have to download them if they are stored externally.
+2. Ensure XENO has read-access to your reference genome files and that the reference files are correctly formatted (see [here](#required-reference-files)).
+3. Prepare an input file with sample information in comma-separated format (see [here](#how-to-correctly-format-your-input-csv-file)).
+4. Adjust settings as necessary (see [here](#how-to-launch-xeno)) and finally launch XENO through the Slurm job scheduler (see [here](#launching-xeno-through-slurm)) or on a screen (see [here](#launching-xeno-on-a-screen-terminal)).
 
-If for any reason the pipeline encounters an error and stops (e.g. due to a faulty read file), you may simply remove the offending sample from the input `.csv` and resubmit the same script (potentially disabling steps that ran to completion, although errors are most likely to occur at the onset, in the first step, when each sample is processed separately). This is because the pipeline caches working files (in a directory called `work`) and by default will recognise processes it has already completed, even if the pipeline should exit with an error.
+If for any reason XENO encounters an error, it will stop. Most often this happens early because of a faulty read file for a sample. If this befalls you, you may simply remove the offending sample from the input file and relaunch XENO. Thanks to the Nextflow cache (in the directory called `/work`), XENO will by default recognise processes it has completed before. If XENO stops for another reason than a bad sample, feel free to post an issue describing the error (link).
 
-**NB:** For step 3, users of  HPC resources other than the NRIS Saga HPC will likely have to modify the `SETTINGS (2 / 2) Set up environment` section to ensure Slurm, Singularity, and Conda are set up appropriately. Apart from modifying the SLURM header you should not modify the script outside the `SETTINGS` blocks.
+### Required reference files
+When you configure the XENO script (more on this [later](#how-to-launch-xeno)), you will encounter the following section of unset variables:
+```
+# PROVIDE DETAILS OF REFERENCE GENOME
+ref_genome=
+ref_recombination_map_dir=
+ref_scaffold_name=
+ref_ploidy_file=./examples/default.ploidy
+```
+You must prepare your reference files to set each of these variables, but not all are necessary. In order, they are:
 
-**NB:** Contigs / chromosomes in the reference genome must be named with alphanumerical characters and underscores only. The pipeline *will* check, and it *will* stop, if the reference genome you use has contig names with e.g. dots or other special characters.
-You may find this is the case for your reference of choice. If so, you can simply rename the chromosomes in the reference (and in your supporting files like GFFs) and the pipeline will happily accept it. We regret the inconvenience of this and may update the
-pipeline in the future to handle contig names with any characters.
+- `ref_genome`: The absolute path to your reference genome in uncompressed fasta format (.fa, .fasta). The reference genome must have been indexed with `bwa index`. The index output files must be found at the same path (they have the following additional extensions: `.amb`, `.ann`, `.bwt`, `.fai`, `.pac`, and `.sa`).
+- `ref_recombination_map_dir`: **Optional.** The absolute path to a directory containing recombination rate maps for variant phasing. The recombination maps must be compatible with SHAPEIT5 (link). Within the directory should be one recombination map file for each contig in the reference genome and they must be named on the format "contig.map". If for instance your reference genome has the contigs "chr1" and "chr2", the recombination map directory must contain two files: "chr1.map" and "chr2.map". If you do not have recombination maps, you may set this variable to an arbitrary path: then XENO will statistically phase the variants instead of using maps.
+- `ref_scaffold_name`: A text string. Many reference genomes distinguish contigs (e.g. chr1, chr2, ...) from loosely assembled scaffolds with prefixes or naming conventions. If your reference genome index does, provide a prefix characteristic of scaffolds here. For instance, NCBI reference genomes may prefix contigs with "NC_" while scaffolds are prefixed "NW_". Then, you should set this variable to `"NW_"`. This is to more efficiently distribute genotyping windows. If the reference genome you use makes no distinction between contigs and scaffolds, set this variable to an arbitrary string that matches no contig.
+- `ref_ploidy_file`: See the ploidy files in the examples directory. This file is required to call sex chromosomes, haploid chromosomes, mtDNA, or other non-diploid chromosomes correctly. By default everything is considered diploid (`examples/default.ploidy`). See `examples/passer.ploidy` for a sample ploidy file encoding female heterogamy and mitochondrial haploidy.
 
-Additional details and examples are provided for each step below. If you are unfamiliar with the pipeline, please do read on!
+**NB:** Contigs and scaffolds in the reference genome *must* be named with alphanumerical characters and underscores only. XENO *will* stop if the reference genome does not satisfy this requirement. Many users will find their reference genome does not: for instance, NCBI reference genomes usually contain punctuation. If this applies to you, you can simply rename the contigs in the reference index and in supporting metadata such as GFF files. We regret the inconvenience of this and may update XENO in the future to accomodate more contig names.
 
-### The samples csv format
+### How to correctly format your input CSV file
 
-The input `.csv` file should be formatted with one sample per row and the following **five** columns:
+For each sample you wish to genotype, XENO requires five inputs. You must provide the inputs in a comma-separated file with one row per sample and five columns:
 
-1. Sample name, e.g. `PDOM2024IND0001M` for a sparrow from our groups' collection
-2. Sample sex. Required to call sex chromosomes, haploid chromosomes, mtDNA, or other non-diploid chromosomes correctly. By default everything is considered diploid (`examples/default.ploidy`). See `examples/passer.ploidy` for a sample ploidy file. The sex codes (e.g. `M` and `F`) are arbitrary but *must* correspond to the ploidy file provided to the `ref_ploidy_file` argument in the pipeline submission script `genotyping_pipeline.slurm.sh`.
-3. Sequencing lane for the sequence files in the format "LXXX" where "XXX" is a number with leading zeroes (e.g. L001). If you have only one set of files per sample, just use "L001".
-4. Forward read location - this should be the **full path** to the forward read
-5. Reverse read location - this should be the **full path** to the reverse read
+1. Sample ID. A single text string of *only* alphanumeric characters, e.g. "SAMPLE1" but not "SAMPLE_1" or "SAMPLE.1".
+2. Sample sex. The sex codes (e.g. F, M) are arbitrary but *must* correspond to the ploidy file provided to the `ref_ploidy_file` variable (see [above](#required-reference-files)).
+3. Lane code to distinguish reads from the same sample but different lanes. Use the format "LXXX" where "XXX" is a number with leading zeroes (e.g. L001). If you have only one set of files per sample, use "L001".
+4. Forward read location. Absolute path to the forward read file.
+5. Reverse read location. Absolute path to the reverse read file.
 
-As an example, your file should look like this but **without headers**:
+These inputs must be in the above order from left to right. For example (but **do not include headers**):
 
 | Sample ID | Sex | Lane | Path to R1 FASTQ.GZ file | Path to R2 FASTQ.GZ file |
 |------------------|---|------|-------------------------|-------------------------|
 | PDOM2024IND0001M | M | L001 | /path/to/1M_L001_R1.fastq.gz | /path/to/1M_L001_R2.fastq.gz |
 | PDOM2024IND0001M | M | L002 | /path/to/1M_L002_R1.fastq.gz | /path/to/1M_L002_R2.fastq.gz |
 | PDOM2024IND0002F | F | L001 | /path/to/2F_R1.fastq.gz | /path/to/2F_R2.fastq.gz |
-| ... | ... | ... | ... | ... |
 
-A note on the lane codes (L001, L002, ...) - these are necessary to allow the pipeline to merge sequencing files from the same individual sequenced on different lanes. You should check the sample catalogue and assess the number of lanes you require for each sample. In *principle* (but **_read on_**), the codes are arbitrary and *could* be L001, L002, ... or L1, L2, ... or similar. **But the QC report will only be organised properly if you use the format L001, L002, and so on**. We note here that other formats are permissible, in case you happen to use another (e.g. by accident); the most important thing is that read files from different lanes are explicitly stated as such, otherwise the pipeline will fail to group reads from the same individual. If in doubt about this, just ask!
+Ensure that the file corresponds to regular CSV conventions: separate values only by commas, add no trailing or leading spaces, and include a newline at the end. A final note on the lane codes: in *principle* the format is arbitrary and XENO will accept L1, L2, etc. as well as L001, L002, etc. The most critical is that lanes are distinguished by different codes and that each lane has a separate row. **However, the QC report will only be organised properly if you use the format LXXX (L001, L002, ...).**
+
+### How to launch XENO
+**NB:** For step 3, users of  HPC resources other than the NRIS Saga HPC will likely have to modify the `SETTINGS (2 / 2) Set up environment` section to ensure Slurm, Singularity, and Conda are set up appropriately. Apart from modifying the SLURM header you should not modify the script outside the `SETTINGS` blocks.
+#### Launching XENO through Slurm
+#### Launching XENO on a screen terminal 18:45 - 23:45 (5hrs)
 
 ## The pipeline
 ### Step 1: Read trimming and alignment

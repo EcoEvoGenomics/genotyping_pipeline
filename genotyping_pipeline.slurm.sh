@@ -53,9 +53,9 @@
     phasing_window_size=10000000
 
     # PROVIDE DETAILS OF REFERENCE GENOME
-    ref_genome=/cluster/projects/nn10082k/ref/house_sparrow_genome_assembly-18-11-14_masked.fa
-    ref_recombination_map_dir=/cluster/projects/nn10082k/recombination_maps
-    ref_scaffold_name="scaffold"
+    ref_genome=
+    ref_recombination_map_dir=
+    ref_scaffold_name=
     ref_ploidy_file=./examples/default.ploidy
 
 ### --------------- End user input --------------- ###

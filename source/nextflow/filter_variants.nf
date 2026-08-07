@@ -76,8 +76,8 @@ process filter_vcf {
 
   cat filters.args \
   | xargs vcftools \
-  | bcftools view --threads ${task.cpus} -e 'N_ALT>1' -O z \
-    -o ${key}_${params.filtering_label}.vcf.gz
+  | bcftools view --threads ${task.cpus} \
+    -O z -o ${key}_${params.filtering_label}.vcf.gz
 
   # INDEX FILTERED VCF
   bcftools index --threads ${task.cpus} ${key}_${params.filtering_label}.vcf.gz

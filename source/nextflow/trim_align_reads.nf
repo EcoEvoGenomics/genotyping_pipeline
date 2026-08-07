@@ -22,7 +22,8 @@ workflow {
         .multiMap { cols -> input_reads: [cols[0], cols[2], cols[3], cols[4]] }
         .set { samples }
 
-    // Fetch all reference index files
+    // Fetch reference index files
+    def ref_index = file(params.ref_genome.toString() + ".fai")
     def ref_indices = files(params.ref_genome.toString() + "*.{amb,ann,bwt,fai,pac,sa}")
     
     // Read preprocessing
@@ -75,13 +76,13 @@ workflow {
         } 
         | groupTuple(by: 0, sort: true, remainder: true) \
         | parse_input_for_fq2bam
-        unfiltered_alignments = align_fq2bam(reads_for_gpu, file(params.ref_genome), file(params.ref_index))
+        unfiltered_alignments = align_fq2bam(reads_for_gpu, file(params.ref_genome), ref_index)
     }
-    def filtered_alignments = filter_alignment(unfiltered_alignments, file(params.ref_genome), file(params.ref_index), params.exclude_flags)
+    def filtered_alignments = filter_alignment(unfiltered_alignments, file(params.ref_genome), ref_index, params.exclude_flags)
 
     // Alignment quality control
-    qc_unfiltered_alignment(unfiltered_alignments, file(params.ref_genome), file(params.ref_index), params.ref_scaffold_name, "unfiltered")
-    qc_filtered_alignment(filtered_alignments, file(params.ref_genome), file(params.ref_index), params.ref_scaffold_name, "filtered")
+    qc_unfiltered_alignment(unfiltered_alignments, file(params.ref_genome), ref_index, params.ref_scaffold_name, "unfiltered")
+    qc_filtered_alignment(filtered_alignments, file(params.ref_genome), ref_index, params.ref_scaffold_name, "filtered")
 
 }
 

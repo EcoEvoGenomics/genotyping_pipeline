@@ -51,7 +51,6 @@
 
     # PROVIDE DETAILS OF REFERENCE GENOME
     ref_genome=/cluster/projects/nn10082k/ref/house_sparrow_genome_assembly-18-11-14_masked.fa
-    ref_index=/cluster/projects/nn10082k/ref/house_sparrow_genome_assembly-18-11-14_masked.fa.fai
     ref_recombination_map_dir=/cluster/projects/nn10082k/recombination_maps
     ref_scaffold_name="scaffold"
     ref_ploidy_file=./examples/default.ploidy
@@ -106,7 +105,7 @@ mkmissingdir $output_dir
 nextflow -log ./.nextflow/nextflow.log \
     run ./source/nextflow/check_inputs.nf \
     -resume \
-    --ref_index $ref_index
+    --ref_genome $ref_genome
 
 if [ $trim_align_reads = "yes" ]; then
     mkmissingdir $trim_align_output_dir
@@ -121,7 +120,6 @@ if [ $trim_align_reads = "yes" ]; then
         --aligner $aligner \
         --exclude_flags $exclude_flags \
         --ref_genome $ref_genome \
-        --ref_index $ref_index \
         --ref_scaffold_name $ref_scaffold_name \
         --publish_dir $trim_align_output_dir
 fi
@@ -136,7 +134,6 @@ if [ $call_variants = "yes" ]; then
         --samples $sample_csv \
         --cram_dir $trim_align_output_dir \
         --ref_genome $ref_genome \
-        --ref_index $ref_index \
         --ref_scaffold_name $ref_scaffold_name \
         --ref_ploidy_file $ref_ploidy_file \
         --concatenate_vcf $concatenate_unfiltered_vcfs \
@@ -160,7 +157,7 @@ if [ $filter_variants = "yes" ]; then
         -with-report $filter_variants_output_dir/workflow_report.html \
         -resume \
         --vcf_dir $call_variants_output_dir/chroms \
-        --ref_index $ref_index \
+        --ref_genome $ref_genome \
         --ref_scaffold_name $ref_scaffold_name \
         --filtering_label $filtering_label \
         --filters $filtering_flags \
@@ -177,7 +174,7 @@ if [ $phase_variants = "yes" ]; then
         -resume \
         --unphased_vcf ${filter_variants_output_dir}/variants_${filtering_label}.vcf.gz \
         --unphased_csi ${filter_variants_output_dir}/variants_${filtering_label}.vcf.gz.csi \
-        --ref_index $ref_index \
+        --ref_genome $ref_genome \
         --ref_scaffold_name $ref_scaffold_name \
         --window_size $phasing_window_size \
         --ref_recombination_map_dir $ref_recombination_map_dir \

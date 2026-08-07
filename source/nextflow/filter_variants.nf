@@ -14,6 +14,8 @@ include { summarise_vcf; concatenate_vchks; concatenate_vcfs } from './call_vari
 // Workflow
 workflow{
 
+  def ref_index = file(params.ref_genome.toString() + ".fai")
+
   // Obtain chromosome-level unfiltered VCFs
   def chromosome_vcfs = Channel
   .fromPath("${params.vcf_dir}/**.vcf.gz")
@@ -32,7 +34,7 @@ workflow{
 
   // Concatenate and output chromosome-level VCFs and VCHKs
   concatenate_vchks(filtered_chromosome_vchks.collect(), "variants_${params.filtering_label}")
-  concatenate_vcfs(filtered_chromosome_vcfs.flatten().collect(), params.ref_index, "_${params.filtering_label}", params.ref_scaffold_name, "variants_${params.filtering_label}")
+  concatenate_vcfs(filtered_chromosome_vcfs.flatten().collect(), ref_index, "_${params.filtering_label}", params.ref_scaffold_name, "variants_${params.filtering_label}")
 
   // Separately:
   save_filters_to_file(file(params.filters), params.keep)

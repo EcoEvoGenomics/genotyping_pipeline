@@ -15,7 +15,7 @@ workflow{
     def samples_csv = file(params.samples)
     def ref_ploidy = file(params.ref_ploidy_file)
     def ref_genome = file(params.ref_genome)
-    def ref_index = file(params.ref_index)
+    def ref_index = file(params.ref_genome.toString() + ".fai")
     
     // The CRAMs are parsed to variant calling as a sorted list of paths
     def input_crams = Channel.fromPath("${params.cram_dir}/**.cram").toList()

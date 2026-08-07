@@ -10,7 +10,8 @@
 
 workflow {
 
-    check_ref_contig_names(params.ref_index)
+    def ref_index = file(params.ref_genome.toString() + ".fai")
+    check_ref_contig_names(ref_index)
 
 }
 

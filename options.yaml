@@ -1,0 +1,31 @@
+# INPUT SAMPLES
+samples: 
+
+# SELECT STEPS
+trim_align: true
+call_variants: true
+filter_variants: true
+phase_variants: true
+
+# READ PROCESSING AND ALIGNMENT OPTIONS
+deduplicate: false
+downsample: false
+read_target: 1000000
+aligner: gpu
+exclude_flags: 0x400
+
+# VARIANT CALLING OPTIONS
+concatenate_raw_vcf: false
+
+# FILTERING OPTIONS
+filtering_label: default_filters
+filtering_flags: ./examples/default_filters.txt
+
+# PHASING OPTIONS
+phasing_window_size: 10000000
+
+# REFERENCE INFORMATION
+ref_genome: 
+ref_recombination_map_dir: 
+ref_scaffold_name: 
+ref_ploidy_file: ./examples/default.ploidy

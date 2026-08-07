@@ -28,10 +28,10 @@ workflow {
     
     // Read preprocessing
     def input_reads = samples.input_reads
-    if (params.deduplicate == 'yes') {
+    if (params.deduplicate) {
         input_reads = deduplicate_reads(input_reads)
     }
-    if (params.downsample == 'yes') {
+    if (params.downsample) {
         input_reads = downsample_reads(input_reads)
     }
     def trimmed_reads = trim_reads(input_reads)

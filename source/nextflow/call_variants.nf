@@ -58,7 +58,7 @@ workflow{
     concatenate_vchks(chromosome_vchks.collect(), "variants_unfiltered")
 
     // A concatenated VCF is produced if specified in parameters
-    if (params.concatenate_vcf == "yes") {
+    if (params.concatenate_raw_vcf) {
         concatenate_vcfs(chromosome_vcfs.flatten().collect(), ref_index, "", params.ref_scaffold_name, "variants_unfiltered")
     }
 }

@@ -14,7 +14,7 @@ workflow{
 
     def ref_index = file(params.ref_genome.toString() + ".fai")
 
-    define_windows(ref_index, params.window_size, params.ref_scaffold_name)
+    define_windows(ref_index, params.phasing_window_size, params.ref_scaffold_name)
     def window_list = define_windows.out.windows.map{path -> file(path.toString())}.readLines()
     def unphased_vcf = Channel.fromPath("${params.unphased_vcf}")
     def unphased_csi = Channel.fromPath("${params.unphased_csi}")

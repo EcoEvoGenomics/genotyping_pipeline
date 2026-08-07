@@ -26,7 +26,7 @@ workflow{
   }
 
   // Filter, retain only individuals in keepfile
-  def filtered_chromosome_vcfs = filter_vcf(chromosome_vcfs, file(params.filters))
+  def filtered_chromosome_vcfs = filter_vcf(chromosome_vcfs, file(params.filtering_flags))
 
   // Obtain summary stats chromosome-level VCF
   def filtered_chromosome_vchks = filtered_chromosome_vcfs \
@@ -37,7 +37,7 @@ workflow{
   concatenate_vcfs(filtered_chromosome_vcfs.flatten().collect(), ref_index, "_${params.filtering_label}", params.ref_scaffold_name, "variants_${params.filtering_label}")
 
   // Separately:
-  save_filters_to_file(file(params.filters))
+  save_filters_to_file(file(params.filtering_flags))
 
 }
 
@@ -95,10 +95,10 @@ process save_filters_to_file {
   path(filters)
 
   output:
-  path("vcftools_${params.filtering_label}.tsv")
+  path("vcftools_${params.filtering_label}.txt")
 
   script:
   """
-  cat filters >> vcftools_${params.filtering_label}.txt
+  mv ${filters} vcftools_${params.filtering_label}.txt
   """
 }

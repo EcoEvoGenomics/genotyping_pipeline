@@ -26,7 +26,7 @@ workflow{
   }
 
   // Filter, retain only individuals in keepfile
-  def filtered_chromosome_vcfs = filter_vcf(chromosome_vcfs, file(params.filters), file(params.keep))
+  def filtered_chromosome_vcfs = filter_vcf(chromosome_vcfs, file(params.filters))
 
   // Obtain summary stats chromosome-level VCF
   def filtered_chromosome_vchks = filtered_chromosome_vcfs \
@@ -37,7 +37,7 @@ workflow{
   concatenate_vcfs(filtered_chromosome_vcfs.flatten().collect(), ref_index, "_${params.filtering_label}", params.ref_scaffold_name, "variants_${params.filtering_label}")
 
   // Separately:
-  save_filters_to_file(file(params.filters), params.keep)
+  save_filters_to_file(file(params.filters))
 
 }
 
@@ -58,7 +58,6 @@ process filter_vcf {
   input:
   tuple val(key), path('input.vcf.gz'), path('input.vcf.gz.csi')
   path(filterfile)
-  path(keepfile)
 
   output:
   tuple \
@@ -69,7 +68,6 @@ process filter_vcf {
   """
   echo '--gzvcf input.vcf.gz' >> filters.args
   cat ${filterfile} >> filters.args
-  echo '--keep ${keepfile}' >> filters.args
   echo '--remove-filtered-all' >> filters.args
   echo '--remove-indels' >> filters.args
   echo '--recode-INFO-all' >> filters.args
@@ -97,7 +95,6 @@ process save_filters_to_file {
 
   input:
   path(filters)
-  val(keep)
 
   output:
   path("vcftools_${params.filtering_label}.tsv")
@@ -105,6 +102,5 @@ process save_filters_to_file {
   script:
   """
   cat filters >> vcftools_${params.filtering_label}.txt
-  echo '--keep ${keep}' >> vcftools_${params.filtering_label}.txt
   """
 }

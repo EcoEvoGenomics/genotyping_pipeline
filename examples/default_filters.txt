@@ -8,3 +8,5 @@
 --minQ 30
 --mac 1
 --hwe 0
+--remove-filtered-all
+--remove-indels

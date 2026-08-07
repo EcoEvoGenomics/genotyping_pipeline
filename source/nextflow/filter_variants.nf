@@ -67,12 +67,10 @@ process filter_vcf {
   script:
   """
   echo '--gzvcf input.vcf.gz' >> filters.args
-  cat ${filterfile} >> filters.args
-  echo '--remove-filtered-all' >> filters.args
-  echo '--remove-indels' >> filters.args
   echo '--recode-INFO-all' >> filters.args
   echo '--recode' >> filters.args
   echo '--stdout' >> filters.args
+  cat ${filterfile} >> filters.args
 
   cat filters.args \
   | xargs vcftools \

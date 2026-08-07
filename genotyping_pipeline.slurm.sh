@@ -44,7 +44,6 @@
     # Note: To refilter output from call_variants, change filtering_label and re-run the filter_variants step
     filtering_label="default_filters"
     filtering_flags=./examples/default_filters.txt
-    filtering_keep=""
 
     # SET OPTIONS FOR PHASE VARIANTS STEP
     phasing_window_size=10000000
@@ -143,15 +142,6 @@ fi
 if [ $filter_variants = "yes" ]; then
     chkprevious "Step: filter_variants" $call_variants_output_dir
     mkmissingdir $filter_variants_output_dir
-
-    # Keep all samples if no list of samples to keep is provided
-    if [ -z "$filtering_keep" ] || [ ! -f "$filtering_keep" ]; then
-        awk -F, '{print $1}' $sample_csv | uniq > ${filter_variants_output_dir}/samples_kept.txt
-        filtering_keep=${filter_variants_output_dir}/samples_kept.txt
-    else
-        cat $filtering_keep > ${filter_variants_output_dir}/samples_kept.txt
-    fi
-
     nextflow -log ./.nextflow/nextflow.log \
         run ./source/nextflow/filter_variants.nf \
         -with-report $filter_variants_output_dir/workflow_report.html \
@@ -161,7 +151,6 @@ if [ $filter_variants = "yes" ]; then
         --ref_scaffold_name $ref_scaffold_name \
         --filtering_label $filtering_label \
         --filters $filtering_flags \
-        --keep $filtering_keep \
         --publish_dir $filter_variants_output_dir
 fi
 

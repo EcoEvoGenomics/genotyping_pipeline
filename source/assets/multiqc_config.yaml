@@ -160,21 +160,29 @@ picard_config:
   s_name_filenames: true
 
 software_versions:
-  "Read pre-processing":
-    fastqc: "0.12.1"
+  "Read deduplication and downsampling":
     seqkit: "2.10.0"
+  "Read trimming":
+    fastqc: "0.12.1"
     fastp: "0.24.0"
-  "Read aligning":
+  "Alignment ('gpu' option)":
     clara-parabricks: "4.5.0-1"
+    samtools: "1.17"
+  "Alignment ('mem' and 'aln' option)":
     bwa: "0.7.17"
     samtools: "1.17"
+    gatk4: "4.6.2.0"
   "Variant calling":
     bedtools: "2.30.0"
     bcftools: "1.17"
   "Variant filtering":
-    bcftools: "1.17"
     vcftools: "0.1.16"
+    bcftools: "1.17"
   "Variant phasing":
     SHAPEIT5: "5.1.1"
+    bedtools: "2.30.0"
+    bcftools: "1.17"
+  "MultiQC report":
+    multiqc: "1.28"
 
 disable_version_detection: true

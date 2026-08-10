@@ -1,30 +1,30 @@
-# INPUT SAMPLES
+# Absolute path to input CSV
 samples: 
 
-# SELECT STEPS
+# Which steps to run?
 trim_align: true
 call_variants: true
 filter_variants: true
 phase_variants: true
 
-# READ PROCESSING AND ALIGNMENT OPTIONS
+# Options for read pre-processing and alignment
 deduplicate: false
 downsample: false
 read_target: 1000000
 aligner: gpu
 exclude_flags: 0x400
 
-# VARIANT CALLING OPTIONS
+# Options for variant calling
 concatenate_raw_vcf: false
 
-# FILTERING OPTIONS
+# Options for variant filtering
 filtering_label: default_filters
 filtering_flags: ./examples/default_filters.txt
 
-# PHASING OPTIONS
+# Options for phasing
 phasing_window_size: 10000000
 
-# REFERENCE INFORMATION
+# Reference genome
 ref_genome: 
 ref_recombination_map_dir: 
 ref_scaffold_name: 

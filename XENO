@@ -1,0 +1,88 @@
+#!/bin/bash
+
+set -o errexit
+set -o nounset
+
+# Function to handle missing output directories
+mkmissingdir() {
+    if [ ! -e $1 ]; then
+        mkdir -p $1
+    fi
+}
+
+# Function to check previous step is done
+chkprevious() {
+    if [ ! -e $2 ]; then
+        echo "Error. ${1} expected output from previous step to exist in directory ${2}."
+        exit
+    fi
+}
+
+this_script_path=$(readlink -f "$0")
+repository_path=$(dirname "$this_script_path")
+cd $repository_path
+
+filtering_label=$(grep "filtering_label: " options.yaml | awk '{print $2}')
+output_dir=${repository_path}/output
+trim_align_output_dir=${output_dir}/01-aligned_reads
+call_variants_output_dir=${output_dir}/02-variants_unfiltered
+filter_variants_output_dir=${output_dir}/03-variants_filtered/${filtering_label}
+phase_variants_output_dir=${output_dir}/03-variants_filtered/${filtering_label}/phased
+mkmissingdir $output_dir
+
+nextflow -log ./.nextflow/nextflow.log \
+    run ./source/nextflow/check_inputs.nf \
+    -resume \
+    -params-file ./options.yaml
+
+if grep -q "trim_align: true" ./options.yaml; then
+    mkmissingdir $trim_align_output_dir
+    nextflow -log ./.nextflow/nextflow.log \
+        run ./source/nextflow/trim_align_reads.nf \
+        -with-report $trim_align_output_dir/workflow_report.html \
+        -resume \
+        -params-file ./options.yaml \
+        --publish_dir $trim_align_output_dir
+fi
+
+if grep -q "call_variants: true" ./options.yaml; then
+    chkprevious "Step: call_variants" $trim_align_output_dir
+    mkmissingdir $call_variants_output_dir
+    nextflow -log ./.nextflow/nextflow.log \
+        run ./source/nextflow/call_variants.nf \
+        -with-report $call_variants_output_dir/workflow_report.html \
+        -resume \
+        -params-file ./options.yaml \
+        --cram_dir $trim_align_output_dir \
+        --publish_dir $call_variants_output_dir
+fi
+
+if grep -q "filter_variants: true" ./options.yaml; then
+    chkprevious "Step: filter_variants" $call_variants_output_dir
+    mkmissingdir $filter_variants_output_dir
+    nextflow -log ./.nextflow/nextflow.log \
+        run ./source/nextflow/filter_variants.nf \
+        -with-report $filter_variants_output_dir/workflow_report.html \
+        -resume \
+        -params-file ./options.yaml \
+        --vcf_dir $call_variants_output_dir/chroms \
+        --publish_dir $filter_variants_output_dir
+fi
+
+if grep -q "phase_variants: true" ./options.yaml; then
+    chkprevious "Step: phase_variants" $filter_variants_output_dir
+    mkmissingdir $phase_variants_output_dir
+    nextflow -log ./.nextflow/nextflow.log \
+        run ./source/nextflow/phase_variants.nf \
+        -with-report $phase_variants_output_dir/workflow_report.html \
+        -resume \
+        -params-file ./options.yaml \
+        --unphased_vcf ${filter_variants_output_dir}/variants_${filtering_label}.vcf.gz \
+        --unphased_csi ${filter_variants_output_dir}/variants_${filtering_label}.vcf.gz.csi \
+        --publish_dir $phase_variants_output_dir
+fi
+
+nextflow -log ./.nextflow/nextflow.log \
+    run ./source/nextflow/run_multiqc.nf \
+    --results_dir $output_dir \
+    --publish_dir $output_dir

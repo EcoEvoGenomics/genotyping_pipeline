@@ -10,11 +10,12 @@
 
 workflow {
 
-    assert_contig_names_are_alphanumeric(params.ref_index)
+    def ref_index = file(params.ref_genome.toString() + ".fai")
+    check_ref_contig_names(ref_index)
 
 }
 
-process assert_contig_names_are_alphanumeric {
+process check_ref_contig_names {
 
     cpus { 1 }
     memory { 1.GB }
@@ -35,3 +36,4 @@ process assert_contig_names_are_alphanumeric {
     done < ${ref_index}
     """
 }
+

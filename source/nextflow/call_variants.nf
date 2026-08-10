@@ -12,9 +12,10 @@
 workflow{    
 
     // Reference files are passed as parameters
+    def samples_csv = file(params.samples)
     def ref_ploidy = file(params.ref_ploidy_file)
     def ref_genome = file(params.ref_genome)
-    def ref_index = file(params.ref_index)
+    def ref_index = file(params.ref_genome.toString() + ".fai")
     
     // The CRAMs are parsed to variant calling as a sorted list of paths
     def input_crams = Channel.fromPath("${params.cram_dir}/**.cram").toList()
@@ -37,7 +38,7 @@ workflow{
     def window_list = define_windows.out.windows.map{path -> file(path.toString())}.readLines()
 
     // Genotyping windows are concatenated into chromosome VCFs
-    def chromosome_vcfs = genotype_window(sorted_cram_list_file, ref_ploidy, ref_genome, ref_index, windows_dir, window_list) \
+    def chromosome_vcfs = genotype_window(sorted_cram_list_file, samples_csv, ref_ploidy, ref_genome, ref_index, windows_dir, window_list) \
     | map { file ->
         def key = file.baseName.toString().tokenize(':').get(0)
         return tuple(key, file)
@@ -57,7 +58,7 @@ workflow{
     concatenate_vchks(chromosome_vchks.collect(), "variants_unfiltered")
 
     // A concatenated VCF is produced if specified in parameters
-    if (params.concatenate_vcf == "yes") {
+    if (params.concatenate_raw_vcf) {
         concatenate_vcfs(chromosome_vcfs.flatten().collect(), ref_index, "", params.ref_scaffold_name, "variants_unfiltered")
     }
 }
@@ -162,8 +163,6 @@ process sort_cramlist {
 // Step 1 - Genotyping
 process genotype_window {
 
-    label "require_pipefail"
-
     container "quay.io/biocontainers/bcftools:1.17--h3cc50cf_1"
     cpus { 1 }
     memory { 4.GB * task.attempt }
@@ -174,6 +173,7 @@ process genotype_window {
 
     input:
     path(crams)
+    path(samples_csv)
     path(ploidy_file)
     path(ref_genome)
     path(ref_index)
@@ -185,20 +185,50 @@ process genotype_window {
 
     script:
     """
-    # CALL NONSCAFFOLD WINDOWS AND SCAFFOLD WINDOWS SEPARATELY
-    call_nonscaffold() {
-        bcftools mpileup --threads ${task.cpus} -d 8000 --ignore-RG -r ${window} -a AD,DP,SP -Ou -f ${ref_genome} -b ${crams} \
-        | bcftools call --threads ${task.cpus} --ploidy-file ${ploidy_file} -f GQ,GP -mO z -o ${window}.vcf.gz
+    pileup_contig() {
+        bcftools mpileup \
+        --threads ${task.cpus} \
+        --ignore-RG \
+        --fasta-ref ${ref_genome} \
+        --annotate AD,DP,SP -d 8000 \
+        --output-type b --output ${window}_pileup.bcf \
+        -r ${window} \
+        -b ${crams}
     }
-    call_scaffold() {
-        bcftools mpileup --threads ${task.cpus} -d 8000 --ignore-RG -R ./genome_windows/${window} -a AD,DP,SP -Ou -f ${ref_genome} -b ${crams} \
-        | bcftools call --threads ${task.cpus} --ploidy-file ${ploidy_file} -f GQ,GP -mO z -o ${window}.vcf.gz
+
+    pileup_scaffold() {
+        bcftools mpileup \
+        --threads ${task.cpus} \
+        --ignore-RG \
+        --fasta-ref ${ref_genome} \
+        --annotate AD,DP,SP -d 8000 \
+        --output-type b --output ${window}_pileup.bcf \
+        -R ./genome_windows/${window} \
+        -b ${crams}
     }
+
     if [[ "${window}" == "scaffold"* ]]; then
-        call_scaffold
+        pileup_scaffold
     else
-        call_nonscaffold
+        pileup_contig
     fi
+
+    bcftools query --list-samples ${window}_pileup.bcf > pileup_crams.txt
+
+    while read -r cram_path; do
+        cram_basename="\${cram_path##*/}"
+        sample_id="\${cram_basename%.cram}"
+        sample_sex=\$(grep -w \$sample_id ${samples_csv} | awk -F, '{print \$2}')
+        echo -e "\${cram_path}\\t\${sample_sex}" >> sample_sexes.ped
+    done < "pileup_crams.txt"
+
+    bcftools call \
+    --threads ${task.cpus} \
+    --samples-file sample_sexes.ped \
+    --ploidy-file ${ploidy_file} \
+    --output ${window}.vcf.gz \
+    -f GQ,GP -mO z \
+    ${window}_pileup.bcf
     """
 }
 

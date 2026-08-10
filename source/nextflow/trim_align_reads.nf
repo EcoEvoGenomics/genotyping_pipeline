@@ -16,21 +16,22 @@ include { qc_alignment as qc_filtered_alignment } from "./qc_utils.nf"
 
 workflow {
     
-    // Take input .CSV with columns ID, LANE, F_READ_PATH, R_READ_PATH
+    // Take input .CSV with columns ID, SEX, LANE, F_READ_PATH, R_READ_PATH
     Channel.fromPath(params.samples)
         .splitCsv()
-        .multiMap { cols -> input_reads: [cols[0], cols[1], cols[2], cols[3]] }
+        .multiMap { cols -> input_reads: [cols[0], cols[2], cols[3], cols[4]] }
         .set { samples }
 
-    // Fetch all reference index files
+    // Fetch reference index files
+    def ref_index = file(params.ref_genome.toString() + ".fai")
     def ref_indices = files(params.ref_genome.toString() + "*.{amb,ann,bwt,fai,pac,sa}")
     
     // Read preprocessing
     def input_reads = samples.input_reads
-    if (params.deduplicate == 'yes') {
+    if (params.deduplicate) {
         input_reads = deduplicate_reads(input_reads)
     }
-    if (params.downsample == 'yes') {
+    if (params.downsample) {
         input_reads = downsample_reads(input_reads)
     }
     def trimmed_reads = trim_reads(input_reads)
@@ -75,13 +76,13 @@ workflow {
         } 
         | groupTuple(by: 0, sort: true, remainder: true) \
         | parse_input_for_fq2bam
-        unfiltered_alignments = align_fq2bam(reads_for_gpu, file(params.ref_genome), file(params.ref_index))
+        unfiltered_alignments = align_fq2bam(reads_for_gpu, file(params.ref_genome), ref_index)
     }
-    def filtered_alignments = filter_alignment(unfiltered_alignments, file(params.ref_genome), file(params.ref_index), params.exclude_flags)
+    def filtered_alignments = filter_alignment(unfiltered_alignments, file(params.ref_genome), ref_index, params.exclude_flags)
 
     // Alignment quality control
-    qc_unfiltered_alignment(unfiltered_alignments, file(params.ref_genome), file(params.ref_index), params.ref_scaffold_name, "unfiltered")
-    qc_filtered_alignment(filtered_alignments, file(params.ref_genome), file(params.ref_index), params.ref_scaffold_name, "filtered")
+    qc_unfiltered_alignment(unfiltered_alignments, file(params.ref_genome), ref_index, params.ref_scaffold_name, "unfiltered")
+    qc_filtered_alignment(filtered_alignments, file(params.ref_genome), ref_index, params.ref_scaffold_name, "filtered")
 
 }
 
@@ -95,13 +96,13 @@ process trim_reads {
         // Double if insufficient in previous attempt - otherwise aim for real peak usage + 50 % from previous
         ? (task.exitStatus == 137 ? task.previousTrace.memory * 2 : task.previousTrace.peak_rss * 1.5)
         // Initial guess
-        : 1.MB * Math.max(2048 , 512 * Math.ceil((R1.size() + R2.size()) / 1024 ** 3))
+        : 1.MB * Math.max(8192 , 512 * Math.ceil((R1.size() + R2.size()) / 1024 ** 3))
     }
     time { task.attempt > 1 
         // Double if insufficient in previous attempt, otherwise keep previous allocation
         ? (task.exitStatus == 140 ? task.previousTrace.time * 2 : task.previousTrace.time )
         // Initial guess
-        : 3.m * Math.max(10 , 1.5 * Math.ceil((R1.size() + R2.size()) / 1024 ** 3))
+        : 3.m * Math.max(30 , 1.5 * Math.ceil((R1.size() + R2.size()) / 1024 ** 3))
     }
 
     errorStrategy "retry"
@@ -142,7 +143,7 @@ process append_readgroups {
     script:
     """
     # Obtain info for for read group (https://gatk.broadinstitute.org/hc/en-us/articles/360035890671-Read-groups)
-    READ_HEADER=\$(zcat reads/${ID}_${LANE}_R1.fastq.gz | head -1)
+    READ_HEADER=\$(zcat ${ID}_${LANE}_R1.fastq.gz | head -1)
 
     INSTRUMENT=\$(echo \${READ_HEADER} | awk 'BEGIN {FS = ":"}; { print \$1}' | awk '{sub(/@/,""); print}')
     FLOWCELL=\$(echo \${READ_HEADER} | awk 'BEGIN {FS = ":"}; {print \$3}')
@@ -327,7 +328,7 @@ process sort_alignment {
     
     container "quay.io/biocontainers/gatk4:4.6.2.0--py310hdfd78af_1"
     cpus 1
-    memory { 16.GB * task.attempt }
+    memory { 32.GB * task.attempt }
     time { 8.h * task.attempt }
 
     errorStrategy "retry"
@@ -347,7 +348,7 @@ process sort_alignment {
     """
     gatk SortSam \
         --java-options -Xmx${task.memory.toGiga()}G \
-        --MAX_RECORDS_IN_RAM 2500000 \
+        --MAX_RECORDS_IN_RAM 5000000 \
         --TMP_DIR . \
         -I ${cram} \
         -O ${ID}_sorted.cram \
@@ -361,7 +362,7 @@ process mark_duplicates {
     // Container build page: https://wave.seqera.io/view/builds/bd-77c6fcf88cba7ceb_1
     container "community.wave.seqera.io/library/gatk4_samtools:77c6fcf88cba7ceb"
     cpus 1
-    memory { 16.GB * task.attempt }
+    memory { 32.GB * task.attempt }
     time { 8.h * task.attempt }
 
     errorStrategy "retry"
@@ -402,8 +403,8 @@ process filter_alignment {
 
     container "quay.io/biocontainers/samtools:1.17--hd87286a_1"
     cpus 1
-    memory { 1.MB * Math.max(512, 128 * Math.ceil(cram.size() / 1024 ** 3)) * task.attempt }
-    time { 1.m * Math.max(120, 6 * Math.ceil(cram.size() / 1024 ** 3)) * task.attempt }
+    memory { 1.MB * Math.max(2048, 128 * Math.ceil(cram.size() / 1024 ** 3)) * task.attempt }
+    time { 1.m * Math.max(240, 6 * Math.ceil(cram.size() / 1024 ** 3)) * task.attempt }
 
     errorStrategy "retry"
     maxRetries 3

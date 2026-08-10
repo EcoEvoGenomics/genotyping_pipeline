@@ -27,7 +27,7 @@ The Nextflow pipeline is configured to run on a Linux HPC environment with the j
 ### Installing Nextflow with Conda
 To maximise portability, especially for external users, most of the pipeline dependencies are managed automatically with containers obtained on-demand. But the software Nextflow manages this automation, so Nextflow itself must be manually installed - for instance in a Conda environment. External users are welcome to replicate the Conda environment we use for Nextflow with the included YAML file:
 ```
-conda create --name nf -f nextflow-25.04.6.conda.yaml 
+conda create --name nf -f examples/nextflow-25.04.6.conda.yaml 
 ```
 **NB:** If you are working on Saga as part of the group **YOU DO NOT NEED TO RUN THIS STEP**. Members of the Ecological and Evolutionary Genomics Group *can* and *should* use our pre-configured environment, which the pipeline is set to use by default. 
 
@@ -61,21 +61,22 @@ Additional details and examples are provided for each step below. If you are unf
 
 ### The samples csv format
 
-The input `.csv` file should be formatted with one sample per row and the following **four** columns:
+The input `.csv` file should be formatted with one sample per row and the following **five** columns:
 
-1. Sample name, e.g. `PDOM2024IND0001M` for a sparrow from our groups collection
-2. Sequencing lane for the sequence files in the format "LXXX" where "XXX" is a number with leading zeroes (e.g. L001). If you have only one set of files per sample, just use "L001".
-3. Forward read location - this should be the **full path** to the forward read
-4. Reverse read location - this should be the **full path** to the reverse read
+1. Sample name, e.g. `PDOM2024IND0001M` for a sparrow from our groups' collection
+2. Sample sex. Required to call sex chromosomes, haploid chromosomes, mtDNA, or other non-diploid chromosomes correctly. By default everything is considered diploid (`examples/default.ploidy`). See `examples/passer.ploidy` for a sample ploidy file. The sex codes (e.g. `M` and `F`) are arbitrary but *must* correspond to the ploidy file provided to the `ref_ploidy_file` argument in the pipeline submission script `genotyping_pipeline.slurm.sh`.
+3. Sequencing lane for the sequence files in the format "LXXX" where "XXX" is a number with leading zeroes (e.g. L001). If you have only one set of files per sample, just use "L001".
+4. Forward read location - this should be the **full path** to the forward read
+5. Reverse read location - this should be the **full path** to the reverse read
 
 As an example, your file should look like this but **without headers**:
 
-| Sample ID | Lane | Path to R1 FASTQ.GZ file | Path to R2 FASTQ.GZ file |
-|------------------|------|-------------------------|-------------------------|
-| PDOM2024IND0001M | L001 | /path/to/1M_L001_R1.fastq.gz | /path/to/1M_L001_R2.fastq.gz |
-| PDOM2024IND0001M | L002 | /path/to/1M_L002_R1.fastq.gz | /path/to/1M_L002_R2.fastq.gz |
-| PDOM2024IND0002F | L001 | /path/to/2F_R1.fastq.gz | /path/to/2F_R2.fastq.gz |
-| ... | ... | ... | ... |
+| Sample ID | Sex | Lane | Path to R1 FASTQ.GZ file | Path to R2 FASTQ.GZ file |
+|------------------|---|------|-------------------------|-------------------------|
+| PDOM2024IND0001M | M | L001 | /path/to/1M_L001_R1.fastq.gz | /path/to/1M_L001_R2.fastq.gz |
+| PDOM2024IND0001M | M | L002 | /path/to/1M_L002_R1.fastq.gz | /path/to/1M_L002_R2.fastq.gz |
+| PDOM2024IND0002F | F | L001 | /path/to/2F_R1.fastq.gz | /path/to/2F_R2.fastq.gz |
+| ... | ... | ... | ... | ... |
 
 A note on the lane codes (L001, L002, ...) - these are necessary to allow the pipeline to merge sequencing files from the same individual sequenced on different lanes. You should check the sample catalogue and assess the number of lanes you require for each sample. In *principle* (but **_read on_**), the codes are arbitrary and *could* be L001, L002, ... or L1, L2, ... or similar. **But the QC report will only be organised properly if you use the format L001, L002, and so on**. We note here that other formats are permissible, in case you happen to use another (e.g. by accident); the most important thing is that read files from different lanes are explicitly stated as such, otherwise the pipeline will fail to group reads from the same individual. If in doubt about this, just ask!
 
@@ -227,7 +228,7 @@ This part of the pipeline produces the following outputs:
 
 ### Step 3: Variant filtering
 
-The third workflow filters your VCF files to prepare them for downstream analysis. You need to provide the filtering settings you require via the main slurm script, and these filters will be applied to the unfiltered chromosome level VCFs. The filtered per-chromosome VCFs are then concatenated and normalised to yield filtered VCFs both per-chromosome and whole-genome. The pipeline automatically concatenates the per chromosome VCFs in the order specificed by the reference genome index and places all scaffolds at the end. The workflow finally obtains statistics on the filtered variants which can be incorporated in the multiQC reports in the next and final step. 
+The third workflow filters your VCF files to prepare them for downstream analysis. You need to provide the filtering flags you require in a text file via the main slurm script. See `examples/default_filters.txt` for formatting - the required format is a file with `vcftools` flags, so you have complete freedom to specify any combination of filtering flags accepted by `vcftools` (see the `vcftools` [documentation](https://vcftools.github.io/man_latest.html#SITE%20FILTERING%20OPTIONS)). The filters you specify will be applied to the unfiltered chromosome level VCFs. The filtered per-chromosome VCFs are then concatenated and normalised to yield filtered VCFs both per-chromosome and whole-genome. The pipeline automatically concatenates the per chromosome VCFs in the order specificed by the reference genome index and places all scaffolds at the end. The workflow finally outputs statistics on the filtered variants which can be incorporated in the multiQC reports in the next and final step. 
 
 It is worth noting that filtering is not a black-box/set-and-forget/run-once process! The filters you apply matter, and not only should you think carefully about them, you may very well need to produce datasets with different filters for different downstream analyses (see https://doi.org/10.1038/s41576-024-00738-6). For that reason, the pipeline has been built to make it easy to return to this step after you've produced the MultiQC report and inspected the quality statistics (below). To take an example, you may first run the pipeline through all steps, i.e. `yes` for all `trim_align_reads`, `call_variants`, `filter_variants` (and `phase_variants`) with default filters. Then you can switch off `trim_align_reads` and `call_variants` but re-run `filter_variants` (and, again, `phase_variants`) with different filtering settings (recall that all the settings you can change are exposed in the main SLURM script and you should not change anything elsewhere) in the same directory to produce a re-filtered dataset (**without changing anything else**). To do so, simply change the `filtering_label` variable (to give a new name to your refiltered data) and the relevant filtering settings. Your newly re-filtered dataset will be found in a correspondingly labelled directory under the filtered genotypes directory and the MultiQC report will be updated to show (all) the re-filtered dataset alongside the unfiltered data. You can do this as many times as you need until you are content your filters are appropriate!
 

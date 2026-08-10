@@ -14,6 +14,8 @@ include { summarise_vcf; concatenate_vchks; concatenate_vcfs } from './call_vari
 // Workflow
 workflow{
 
+  def ref_index = file(params.ref_genome.toString() + ".fai")
+
   // Obtain chromosome-level unfiltered VCFs
   def chromosome_vcfs = Channel
   .fromPath("${params.vcf_dir}/**.vcf.gz")
@@ -24,7 +26,7 @@ workflow{
   }
 
   // Filter, retain only individuals in keepfile
-  def filtered_chromosome_vcfs = filter_vcf(chromosome_vcfs, file(params.keep))
+  def filtered_chromosome_vcfs = filter_vcf(chromosome_vcfs, file(params.filtering_flags))
 
   // Obtain summary stats chromosome-level VCF
   def filtered_chromosome_vchks = filtered_chromosome_vcfs \
@@ -32,10 +34,10 @@ workflow{
 
   // Concatenate and output chromosome-level VCFs and VCHKs
   concatenate_vchks(filtered_chromosome_vchks.collect(), "variants_${params.filtering_label}")
-  concatenate_vcfs(filtered_chromosome_vcfs.flatten().collect(), params.ref_index, "_${params.filtering_label}", params.ref_scaffold_name, "variants_${params.filtering_label}")
+  concatenate_vcfs(filtered_chromosome_vcfs.flatten().collect(), ref_index, "_${params.filtering_label}", params.ref_scaffold_name, "variants_${params.filtering_label}")
 
   // Separately:
-  save_filters_to_file()
+  save_filters_to_file(file(params.filtering_flags))
 
 }
 
@@ -55,7 +57,7 @@ process filter_vcf {
   
   input:
   tuple val(key), path('input.vcf.gz'), path('input.vcf.gz.csi')
-  path(keepfile)
+  path(filterfile)
 
   output:
   tuple \
@@ -64,25 +66,16 @@ process filter_vcf {
 
   script:
   """
-  vcftools --gzvcf input.vcf.gz \
-    --min-alleles ${params.min_alleles} \
-    --max-alleles ${params.max_alleles} \
-    --max-missing ${params.max_missing} \
-    --min-meanDP ${params.min_meanDP} \
-    --max-meanDP ${params.max_meanDP} \
-    --minDP ${params.minDP} \
-    --maxDP ${params.maxDP} \
-    --minQ ${params.minQ} \
-    --mac ${params.mac} \
-    --hwe ${params.hwe} \
-    --keep ${keepfile} \
-    --remove-filtered-all \
-    --remove-indels \
-    --recode-INFO-all \
-    --recode \
-    --stdout \
-  | bcftools view --threads ${task.cpus} -e 'N_ALT>1' -O z \
-    -o ${key}_${params.filtering_label}.vcf.gz
+  echo '--gzvcf input.vcf.gz' >> filters.args
+  echo '--recode-INFO-all' >> filters.args
+  echo '--recode' >> filters.args
+  echo '--stdout' >> filters.args
+  cat ${filterfile} >> filters.args
+
+  cat filters.args \
+  | xargs vcftools \
+  | bcftools view --threads ${task.cpus} \
+    -O z -o ${key}_${params.filtering_label}.vcf.gz
 
   # INDEX FILTERED VCF
   bcftools index --threads ${task.cpus} ${key}_${params.filtering_label}.vcf.gz
@@ -98,23 +91,14 @@ process save_filters_to_file {
   memory 256.MB
   time 5.m
 
+  input:
+  path(filters)
+
   output:
-  path("vcftools_${params.filtering_label}.tsv")
+  path("vcftools_${params.filtering_label}.txt")
 
   script:
   """
-  printf '%s\\t%s\\n' \
-    'min-alleles' '${params.min_alleles}' \
-    'max-alleles' '${params.max_alleles}' \
-    'max-missing' '${params.max_missing}' \
-    'min-meanDP' '${params.min_meanDP}' \
-    'max-meanDP' '${params.max_meanDP}' \
-    'minDP' '${params.minDP}' \
-    'maxDP' '${params.maxDP}' \
-    'minQ' '${params.minQ}' \
-    'mac' '${params.mac}' \
-    'hwe' '${params.hwe}' \
-    'keep' '${params.keep}' \
-    > vcftools_${params.filtering_label}.tsv
+  mv ${filters} vcftools_${params.filtering_label}.txt
   """
 }

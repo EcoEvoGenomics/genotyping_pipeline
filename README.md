@@ -1,4 +1,4 @@
-# XENO: Expedient Genotyping for Non-Model Organims
+# XENO: Expedient Genotyping for Nonmodel Organisms
 
 ## What is XENO?
 XENO is a beginner-friendly genotyping pipeline built for evolutionary and ecological genomics. With XENO, you can (1) trim reads and align them to a reference genome, (2) call variants, (3) filter those variants, and finally (4) phase the variants. These four stages of XENO may be performed separately in stepwise order or end-to-end. At each stage, XENO outputs alignments, variant call files, and / or quality control statistics. These outputs may be passed directly to workflows from XENO's companion repository [RIPLEY](https://github.com/EcoEvoGenomics/RIPLEY), which automate many of the most common analyses in evolutionary and ecological genomics.
@@ -12,9 +12,9 @@ The Wiki describes XENO in greater detail. There you will also find guides for s
 XENO is intended to run on a high-performance computing (HPC) system and is built with [Nextflow](https://www.nextflow.io/) version 25.04.6. This *specific* version of Nextflow must be installed to use XENO. Out of the box, XENO also depends on the HPC job manager Slurm and the software container system Apptainer. Users familiar with Nextflow may alternatively reconfigure the nextflow.config file to use another job manager and another Docker-compatible container system, but regrettably we are unable to provide much support for such use cases. Once you have installed Nextflow on an HPC with Slurm and Apptainer, XENO automatically fetches the remaining software requirements. Note that XENO therefore must be run from an environment with internet access.
 
 ### Installing Nextflow with Conda
-If you must install Nextflow version 25.04.6, you can e.g. do so with Conda: the environment we used to develop XENO is listed in the included YAML file.
+You may install Nextflow 25.04.6 any way you prefer to run XENO. If you wish, you can replicate the Conda environment we used to develop XENO with the included [YAML file](https://github.com/EcoEvoGenomics/XENO/blob/main/examples/nextflow-25.04.6.conda.yaml). You may copy that file directly from GitHub or run the following command after [installing XENO](#installing-xeno).
 ```sh
-conda create --name nf -f examples/nextflow-25.04.6.conda.yaml 
+conda create --name nf --file examples/nextflow-25.04.6.conda.yaml 
 ```
 
 ### Installing XENO
@@ -66,9 +66,9 @@ These inputs must be in the above order from left to right. For example:
 **Do not include headers** and ensure that the file corresponds to regular CSV conventions: separate values only by commas, add no trailing or leading spaces, and include a newline at the end. You should prepare the CSV in a raw text editor to avoid unexpected formatting discrepancies from spreadsheet software such as Microsoft Excel or Numbers.
 
 ### How to launch XENO
-#### Setting required launch options
-Before launching XENO, you must edit two files: `nextflow.config` and `options.yaml`. In `nextflow.config`, you should configure Nextflow to interface correctly with the HPC system you use. For instance, you should configure Nextflow to use the correct job queue names for jobs which require access to GPUs or large amounts of memory:
-```json
+#### Configuring Nextflow
+Before launching XENO, you must configure the file `nextflow.config` so Nextflow interfaces correctly with the HPC system you use. For instance, you should configure Nextflow to use the correct job queue names for jobs which require access to GPUs or large amounts of memory:
+```yaml
 process {
 
   withLabel: "require_gpu" {
@@ -83,49 +83,31 @@ process {
   
 }
 ```
-Consult the documentation for the HPC you use to select an appropriate queue for each of these labels. This is *especially* salient for the `high_mem_per_cpu` label. The cost of jobs with a high memory allocation could increase drastically on a queue with limited memory - at no benefit to you (or other users of the same HPC). While to some extent we have optimised XENO's resource consumption, XENO does not (and cannot) estimate the monetary cost of a job: your use of paid (and indeed, shared) resources is your own responsibilty. After configuring Nextflow appropriately, you may optionally modify settings such as the maximum number of concurrent tasks. See the [Nextflow documentation](https://docs.seqera.io/nextflow/config) for options.
+Consult the documentation for the HPC you use to select an appropriate queue for each of these labels. This is *especially* salient for the `high_mem_per_cpu` label. The cost of jobs with a high memory allocation could increase drastically on a queue with limited memory - at no benefit to you (or other users of the same HPC). While to some extent we have optimised XENO's resource consumption, XENO does not (and cannot) estimate the monetary cost of a job: your use of paid (and indeed, shared) resources is your own responsibility. After configuring Nextflow appropriately, you may optionally modify settings such as the maximum number of concurrent tasks. See the [Nextflow documentation](https://docs.seqera.io/nextflow/config) for options.
 
-You must provide options other than the Nextflow configuration settings in `options.yaml`. These options are:
-```yaml
-# Absolute path to input CSV
-samples: 
+#### Setting XENO options
+XENO has user-configurable options. For instance you may change the alignment method or variant filters you apply. These options are read from `options.yaml`, which you must configure before launching XENO. The available options are:
 
-# Which steps to run?
-trim_align: true
-call_variants: true
-filter_variants: true
-phase_variants: true
-
-# Options for read pre-processing and alignment
-deduplicate: false
-downsample: false
-read_target: 1000000
-aligner: gpu
-exclude_flags: 0x400
-
-# Options for variant calling
-concatenate_raw_vcf: false
-
-# Options for variant filtering
-filtering_label: default_filters
-filtering_flags: ./examples/default_filters.txt
-
-# Options for phasing
-phasing_window_size: 10000000
-
-# Reference genome
-ref_genome: 
-ref_recombination_map_dir: 
-ref_scaffold_name: 
-ref_ploidy_file: ./examples/default.ploidy
-```
-First provide an absolute path to your sample CSV to `samples`. Then indicate which steps to run by setting `trim_align`, `call_variants`, `filter_variants`, and `phase_variants` to `true` or `false`. You may repeat steps (usally variant filtering) with different settings by setting the previous steps to `false` and relaunching.
-
-For the read trimming and alignment step, indicate whether to `deduplicate` read files with `true` or `false`, and whether to `downsample` read files to the number of reads specified by `read_target`. Next, pick an alignment method by setting `aligner` to one of `gpu` ([Nvidia Parabricks fq2bam](https://docs.nvidia.com/clara/parabricks/tool-reference/tools/fq2bam)), `mem` (bwa mem), or `aln` (bwa aln). The most efficient is `gpu`, but note that you must have access to [compatible GPUs](https://docs.nvidia.com/clara/parabricks/get-started/installation-requirements#hardware-requirements) to use that option. After alignment, exclude reads with alignment flags specified by `exclude_flags` from alignment maps. The default setting (0x400) filters out PCR and optical duplicates.
-
-The variant calling step has only one option: whether to `concatenate_raw_vcf` (`true` or `false`). By default (`false`), XENO outputs raw, unfiltered variant calls in one VCF file per chromosome. If `concatenate_raw_vcf: true`, XENO will also output a whole-genome VCF of the raw variant calls. Note that such a file can occupy hundreds of gigabytes or even terabytes. For variant filtering, provide the path to a file with VCFtools filtering flags to `filtering_flags` and name these filters by setting `filtering_label`. Here, you may refer to the default filters and the [VCFtools documentation](https://vcftools.github.io/man_latest.html#SITE%20FILTERING%20OPTIONS). If you have enabled phasing, you may adjust the degree of parallelisation by changing `phasing_window_size`.
-
-Finally, provide the [required reference files](#required-reference-files). For paths, use absolute paths.
+| Option | Description | Example | Default |
+|--------|-------------|---------|---------|
+| `samples` | Path to sample CSV file. | `/user/path/samples.csv` | |
+| `trim_align` | Run trimming and alignment stage? | `true` | `true` |
+| `call_variants` | Run variant calling stage? | `true` | `true` |
+| `filter_variants` | Run variant filtering stage? | `true` | `true` |
+| `phase_variants` | Run variant phasing stage? | `true` | `true` |
+| `deduplicate` | Deduplicate reads before trimming? | `false` | `false` |
+| `downsample` | Downsample R1 and R2 files to `read_target` before trimming? | `false` | `false` |
+| `read_target` | Number of reads to downsample to in each of R1 and R2 files.  | `250000` | `1000000` |
+| `aligner` | Align with `gpu` ([fq2bam](https://docs.nvidia.com/clara/parabricks/tool-reference/tools/fq2bam)), `mem` (bwa mem), or `aln` (bwa aln)? While `gpu` is most efficient, you need [compatible GPUs](https://docs.nvidia.com/clara/parabricks/get-started/installation-requirements#hardware-requirements) to use it.  | `mem` | `gpu` |
+| `exclude_flags` | Exclude reads with this/these flag(s) from alignments. See options [here](https://www.htslib.org/doc/samtools-flags.html). | `DUP,UNMAP` | `0x400` |
+| `concatenate_raw_vcf` | If `false`, only output variants in per-chromosome files. If `true`, also create whole-genome VCF of raw variants. | `true` | `false` |
+| `filtering_label` | A label for the filters in `filtering_flags`. Change between runs to re-filter with different settings. | `biallelic_variants` | `default_filters` |
+| `filtering_flags` | Path to a file with [VCFtools filtering flags](https://vcftools.github.io/man_latest.html#SITE%20FILTERING%20OPTIONS) | `/user/path/filters_biallelic_variants.txt` | `./example/default_filters.txt` |
+| `phasing_window_size` | Number of phasing windows. Greater numbers yield greater parallelisation.  | `20000000` | `10000000` |
+| `ref_genome` | Path to [reference genome](#required-reference-files). | `/user/path/ref/reference_genome.fa` | |
+| `ref_recombination_map_dir` | Path to directory of [recombination maps](#required-reference-files). | `/user/path/ref/recombination_maps/` | |
+| `ref_scaffold_name` | [Prefix](#required-reference-files) characteristic of scaffolds in reference genome. | `NW_` | |
+| `ref_ploidy_file` | Path to [ploidy file](#required-reference-files). | `/user/path/ref/reference.ploidy` | `./examples/default.ploidy` |
 
 #### Launching XENO through the job scheduler
 Experienced UNIX / HPC users will require no assistance launching XENO: simply load the required dependencies and call `bash ./XENO` in the way you see fit. This section and the next will cover two such ways for less experienced bioinformaticians.

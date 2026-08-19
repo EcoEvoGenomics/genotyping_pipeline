@@ -102,7 +102,7 @@ XENO has user-configurable options. For instance you may change the alignment me
 | `exclude_flags` | Exclude reads with this/these flag(s) from alignments. See options [here](https://www.htslib.org/doc/samtools-flags.html). | `DUP,UNMAP` | `0x400` |
 | `concatenate_raw_vcf` | If `false`, only output variants in per-chromosome files. If `true`, also create whole-genome VCF of raw variants. | `true` | `false` |
 | `filtering_label` | A label for the filters in `filtering_flags`. Change between runs to re-filter with different settings. | `biallelic_variants` | `default_filters` |
-| `filtering_flags` | Path to a file with [VCFtools filtering flags](https://vcftools.github.io/man_latest.html#SITE%20FILTERING%20OPTIONS) | `/user/path/filters_biallelic_variants.txt` | `./example/default_filters.txt` |
+| `filtering_flags` | Path to a file with [VCFtools filtering flags](https://vcftools.github.io/man_latest.html#SITE%20FILTERING%20OPTIONS). Regardless, XENO only retains SNPs - not indels. | `/user/path/filters_biallelic_variants.txt` | `./example/default_filters.txt` |
 | `phasing_window_size` | Number of phasing windows. Greater numbers yield greater parallelisation.  | `20000000` | `10000000` |
 | `ref_genome` | Path to [reference genome](#required-reference-files). | `/user/path/ref/reference_genome.fa` | |
 | `ref_recombination_map_dir` | Path to directory of [recombination maps](#required-reference-files). | `/user/path/ref/recombination_maps/` | |

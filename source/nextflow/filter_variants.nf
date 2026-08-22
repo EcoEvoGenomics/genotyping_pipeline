@@ -67,6 +67,7 @@ process filter_vcf {
   script:
   """
   echo '--gzvcf input.vcf.gz' >> filters.args
+  echo '--remove-indels' >> filters.args
   echo '--recode-INFO-all' >> filters.args
   echo '--recode' >> filters.args
   echo '--stdout' >> filters.args
@@ -75,6 +76,7 @@ process filter_vcf {
   cat filters.args \
   | xargs vcftools \
   | bcftools view --threads ${task.cpus} \
+    -e 'ALT="*" || TYPE!="snp"' \
     -O z -o ${key}_${params.filtering_label}.vcf.gz
 
   # INDEX FILTERED VCF

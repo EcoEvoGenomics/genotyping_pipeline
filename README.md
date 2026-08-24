@@ -103,7 +103,7 @@ XENO has user-configurable options. For instance you may change the alignment me
 | `concatenate_raw_vcf` | If `false`, only output variants in per-chromosome files. If `true`, also create whole-genome VCF of raw variants. | `true` | `false` |
 | `filtering_label` | A label for the filters in `filtering_flags`. Change between runs to re-filter with different settings. | `biallelic_variants` | `default_filters` |
 | `filtering_flags` | Path to a file with [VCFtools filtering flags](https://vcftools.github.io/man_latest.html#SITE%20FILTERING%20OPTIONS). Regardless, XENO only retains SNPs - not indels. | `/user/path/filters_biallelic_variants.txt` | `./example/default_filters.txt` |
-| `phasing_window_size` | Number of phasing windows. Greater numbers yield greater parallelisation.  | `20000000` | `10000000` |
+| `phasing_window_size` | Size of phasing windows. Lower sizes yield greater parallelisation.  | `20000000` | `10000000` |
 | `ref_genome` | Path to [reference genome](#required-reference-files). | `/user/path/ref/reference_genome.fa` | |
 | `ref_recombination_map_dir` | Path to directory of [recombination maps](#required-reference-files). | `/user/path/ref/recombination_maps/` | |
 | `ref_scaffold_name` | [Prefix](#required-reference-files) characteristic of scaffolds in reference genome. | `NW_` | |
@@ -194,4 +194,4 @@ Thank you for using XENO. If you wish to cite XENO, you should first cite the th
 We plan to provide a citeable persistent identifier for XENO later. For the time being, you are welcome to cite this GitHub repository.
 
 ______
-XENO v. 4.0.0 | 2026 | Erik Sandertun Røed & Mark Ravinet | https://github.com/EcoEvoGenomics/XENO 
+XENO v. 4.0.1 | 2026 | Erik Sandertun Røed & Mark Ravinet | https://github.com/EcoEvoGenomics/XENO 

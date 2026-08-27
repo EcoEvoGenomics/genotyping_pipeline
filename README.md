@@ -181,6 +181,7 @@ It is not entirely unusual for HPC jobs to stop prematurely - perhaps because yo
 Thank you for using XENO. If you wish to cite XENO, you should first cite the third-party software XENO uses. Below is an exhaustive list: please take care to cite appropriately to your own use-case.
 
 ### Citing third-party software
+- Data flow management: [Nextflow v. 25.04.6](https://doi.org/10.1038/nbt.3820)
 - Read deduplication and downsampling: [SeqKit v. 2.10.0](https://doi.org/10.1002/imt2.191)
 - Read trimming: [fastp v. 0.24.0](https://doi.org/10.1002/imt2.70078); [FastQC v. 0.12.1](https://www.bioinformatics.babraham.ac.uk/projects/fastqc/)
 - Alignment ("gpu" option): [Parabricks v. 4.5.0-1](https://doi.org/10.1101/2025.07.23.666378); [SAMtools v. 1.17](https://doi.org/10.1093/gigascience/giab008)

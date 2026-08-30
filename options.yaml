@@ -18,8 +18,8 @@ exclude_flags: 0x400
 concatenate_raw_vcf: false
 
 # Options for variant filtering
-filtering_label: default_filters
-filtering_flags: ./examples/default_filters.txt
+filtering_label: default
+filtering_flags: ./examples/default.filt
 
 # Options for phasing
 phasing_window_size: 10000000

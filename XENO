@@ -24,10 +24,10 @@ cd $repository_path
 
 filtering_label=$(grep "filtering_label: " options.yaml | awk '{print $2}')
 output_dir=${repository_path}/output
-trim_align_output_dir=${output_dir}/01-aligned_reads
-call_variants_output_dir=${output_dir}/02-variants_unfiltered
-filter_variants_output_dir=${output_dir}/03-variants_filtered/${filtering_label}
-phase_variants_output_dir=${output_dir}/03-variants_filtered/${filtering_label}/phased
+trim_align_output_dir=${output_dir}/alignments
+call_variants_output_dir=${output_dir}/genotypes
+filter_variants_output_dir=${output_dir}/filtered/${filtering_label}
+phase_variants_output_dir=${output_dir}/filtered/${filtering_label}/phased
 mkmissingdir $output_dir
 
 nextflow -log ./.nextflow/nextflow.log \
@@ -77,8 +77,8 @@ if grep -q "phase_variants: true" ./options.yaml; then
         -with-report $phase_variants_output_dir/workflow_report.html \
         -resume \
         -params-file ./options.yaml \
-        --unphased_vcf ${filter_variants_output_dir}/variants_${filtering_label}.vcf.gz \
-        --unphased_csi ${filter_variants_output_dir}/variants_${filtering_label}.vcf.gz.csi \
+        --unphased_vcf ${filter_variants_output_dir}/${filtering_label}.vcf.gz \
+        --unphased_csi ${filter_variants_output_dir}/${filtering_label}.vcf.gz.csi \
         --publish_dir $phase_variants_output_dir
 fi
 

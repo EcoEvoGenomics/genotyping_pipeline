@@ -188,4 +188,4 @@ Thank you for using XENO. If you wish to cite XENO, you should first cite the th
 We plan to provide a citeable persistent identifier for XENO later. For the time being, you are welcome to cite this GitHub repository.
 
 ______
-XENO v. 4.0.1 | 2026 | Erik Sandertun Røed & Mark Ravinet | https://github.com/EcoEvoGenomics/XENO 
+XENO v. 4.1.0 | 2026 | Erik Sandertun Røed & Mark Ravinet | https://github.com/EcoEvoGenomics/XENO 

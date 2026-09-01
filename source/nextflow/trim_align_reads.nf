@@ -81,18 +81,18 @@ process trim_reads {
     publishDir "${params.publish_dir}/${ID}/${LANE}", saveAs: { filename -> "$filename" }, mode: 'copy'
 
     container "quay.io/biocontainers/fastp:0.24.0--heae3180_1"
-    cpus 4
+    cpus 16
     memory { task.attempt > 1
         // Double if insufficient in previous attempt - otherwise aim for real peak usage + 50 % from previous
         ? (task.exitStatus == 137 ? task.previousTrace.memory * 2 : task.previousTrace.peak_rss * 1.5)
         // Initial guess
-        : 1.MB * Math.max(8192 , 512 * Math.ceil((R1.size() + R2.size()) / 1024 ** 3))
+        : 1.GB * Math.max(32 , 3 * Math.ceil((R1.size() + R2.size()) / 1024 ** 3))
     }
     time { task.attempt > 1 
         // Double if insufficient in previous attempt, otherwise keep previous allocation
         ? (task.exitStatus == 140 ? task.previousTrace.time * 2 : task.previousTrace.time )
         // Initial guess
-        : 3.m * Math.max(30 , 1.5 * Math.ceil((R1.size() + R2.size()) / 1024 ** 3))
+        : 3.m * Math.max(60 , 1.5 * Math.ceil((R1.size() + R2.size()) / 1024 ** 3))
     }
 
     errorStrategy "retry"
@@ -107,6 +107,7 @@ process trim_reads {
 
     script:
     """
+    echo '--thread ${task.cpus}' >> fastp.args
     echo '--in1 ${R1}' >> fastp.args
     echo '--in2 ${R2}' >> fastp.args
     echo '--out1 ${ID}_${LANE}_R1.fastq.gz' >> fastp.args

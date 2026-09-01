@@ -98,11 +98,12 @@ XENO has user-configurable options. For instance you may change the alignment me
 | `deduplicate` | Deduplicate reads before trimming? | `false` | `false` |
 | `downsample` | Downsample R1 and R2 files to `read_target` before trimming? | `false` | `false` |
 | `read_target` | Number of reads to downsample to in each of R1 and R2 files.  | `250000` | `1000000` |
+| `trimming_flags` | Path to a file with [fastp read trimming flags](https://github.com/OpenGene/fastp#filtering). | `/user/path/trim.txt`| `./example/default.trim`|
 | `aligner` | Align with `gpu` ([fq2bam](https://docs.nvidia.com/clara/parabricks/tool-reference/tools/fq2bam)), `mem` (bwa mem), or `aln` (bwa aln)? While `gpu` is most efficient, you need [compatible GPUs](https://docs.nvidia.com/clara/parabricks/get-started/installation-requirements#hardware-requirements) to use it.  | `mem` | `gpu` |
 | `exclude_flags` | Exclude reads with this/these flag(s) from alignments. See options [here](https://www.htslib.org/doc/samtools-flags.html). | `DUP,UNMAP` | `0x400` |
 | `concatenate_raw_vcf` | If `false`, only output variants in per-chromosome files. If `true`, also create whole-genome VCF of raw variants. | `true` | `false` |
 | `filtering_label` | A label for the filters in `filtering_flags`. Change between runs to re-filter with different settings. | `biallelic_variants` | `default_filters` |
-| `filtering_flags` | Path to a file with [VCFtools filtering flags](https://vcftools.github.io/man_latest.html#SITE%20FILTERING%20OPTIONS). Regardless, XENO only retains SNPs - not indels. | `/user/path/filters_biallelic_variants.txt` | `./example/default_filters.txt` |
+| `filtering_flags` | Path to a file with [VCFtools filtering flags](https://vcftools.github.io/man_latest.html#SITE%20FILTERING%20OPTIONS). Regardless, XENO only retains SNPs - not indels. | `/user/path/filters_biallelic_variants.txt` | `./example/default.filt` |
 | `phasing_window_size` | Size of phasing windows. Lower sizes yield greater parallelisation.  | `20000000` | `10000000` |
 | `ref_genome` | Path to [reference genome](#required-reference-files). | `/user/path/ref/reference_genome.fa` | |
 | `ref_recombination_map_dir` | Path to directory of [recombination maps](#required-reference-files). | `/user/path/ref/recombination_maps/` | |

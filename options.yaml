@@ -11,6 +11,7 @@ phase_variants: true
 deduplicate: false
 downsample: false
 read_target: 1000000
+trimming_flags: ./examples/default.trim
 aligner: gpu
 exclude_flags: 0x400
 

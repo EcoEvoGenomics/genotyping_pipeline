@@ -24,7 +24,7 @@ workflow {
     if (params.downsample) {
         input_reads = downsample_reads(input_reads)
     }
-    def trimmed_reads = trim_reads(input_reads)
+    def trimmed_reads = trim_reads(input_reads, file(params.trimming_flags))
     def readgrouped_trimmed_reads = append_readgroups(trimmed_reads)
     
     // Read quality control
@@ -100,17 +100,20 @@ process trim_reads {
 
     input:
     tuple val(ID), val(LANE), path(R1), path(R2)
+    path(filterfile)
 
     output:
     tuple val(ID), val(LANE), path("${ID}_${LANE}_R1.fastq.gz"), path("${ID}_${LANE}_R2.fastq.gz")
 
     script:
     """
-    fastp \
-    --in1 ${R1} \
-    --in2 ${R2} \
-    --out1 ${ID}_${LANE}_R1.fastq.gz \
-    --out2 ${ID}_${LANE}_R2.fastq.gz
+    echo '--in1 ${R1}' >> fastp.args
+    echo '--in2 ${R2}' >> fastp.args
+    echo '--out1 ${ID}_${LANE}_R1.fastq.gz' >> fastp.args
+    echo '--out2 ${ID}_${LANE}_R2.fastq.gz' >> fastp.args
+    cat ${filterfile} >> fastp.args
+
+    cat fastp.args | xargs fastp
     """
 }
 

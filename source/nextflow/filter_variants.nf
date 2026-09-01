@@ -54,14 +54,14 @@ process filter_vcf {
 
   script:
   """
-  echo '--gzvcf input.vcf.gz' >> filters.args
-  echo '--remove-indels' >> filters.args
-  echo '--recode-INFO-all' >> filters.args
-  echo '--recode' >> filters.args
-  echo '--stdout' >> filters.args
-  cat ${filterfile} >> filters.args
+  echo '--gzvcf input.vcf.gz' >> vcftools.args
+  echo '--remove-indels' >> vcftools.args
+  echo '--recode-INFO-all' >> vcftools.args
+  echo '--recode' >> vcftools.args
+  echo '--stdout' >> vcftools.args
+  cat ${filterfile} >> vcftools.args
 
-  cat filters.args \
+  cat vcftools.args \
   | xargs vcftools \
   | bcftools view --threads ${task.cpus} \
     -e 'ALT="*" || TYPE!="snp"' \

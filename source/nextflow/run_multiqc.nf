@@ -1,13 +1,3 @@
-#!/usr/bin/env nextflow
-
-// CEES Ecological and evolutionary genomics group - genotyping pipeline
-// https://github.com/EcoEvoGenomics/genotyping_pipeline
-//
-// Workflow: MultiQC
-//
-// Originally developed by Mark Ravinet
-// Co-developed and maintained by Erik Sandertun Røed
-
 workflow {
 
     def config = file("./source/assets/multiqc_config.yaml")

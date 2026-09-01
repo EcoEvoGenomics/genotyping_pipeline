@@ -1,13 +1,3 @@
-#!/usr/bin/env nextflow
-
-// CEES Ecological and evolutionary genomics group - genotyping pipeline
-// https://github.com/EcoEvoGenomics/genotyping_pipeline
-//
-// Workflow: Trim and align reads
-//
-// Originally developed by Mark Ravinet
-// Co-developed and maintained by Erik Sandertun Røed
-
 include { downsample_reads; deduplicate_reads } from "./qc_utils.nf"
 include { qc_reads as qc_raw_reads } from "./qc_utils.nf"
 include { qc_reads as qc_trimmed_reads } from "./qc_utils.nf"

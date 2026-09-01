@@ -1,17 +1,5 @@
-#!/usr/bin/env nextflow
-
-// CEES Ecological and evolutionary genomics group - genotyping pipeline
-// https://github.com/EcoEvoGenomics/genotyping_pipeline
-//
-// Workflow: Filter VCF
-//
-// Originally developed by Mark Ravinet
-// Co-developed and maintained by Erik Sandertun Røed
-
-// Include duplicate processes
 include { summarise_vcf; concatenate_vchks; concatenate_vcfs } from './call_variants.nf'
 
-// Workflow
 workflow{
 
   def ref_index = file(params.ref_genome.toString() + ".fai")

@@ -49,8 +49,8 @@ process filter_vcf {
 
   output:
   tuple \
-  path("${key}_${params.filtering_label}.vcf.gz"), \
-  path("${key}_${params.filtering_label}.vcf.gz.csi")
+  path("${key}.vcf.gz"), \
+  path("${key}.vcf.gz.csi")
 
   script:
   """
@@ -65,10 +65,10 @@ process filter_vcf {
   | xargs vcftools \
   | bcftools view --threads ${task.cpus} \
     -e 'ALT="*" || TYPE!="snp"' \
-    -O z -o ${key}_${params.filtering_label}.vcf.gz
+    -O z -o ${key}.vcf.gz
 
   # INDEX FILTERED VCF
-  bcftools index --threads ${task.cpus} ${key}_${params.filtering_label}.vcf.gz
+  bcftools index --threads ${task.cpus} ${key}.vcf.gz
   """
 }
 

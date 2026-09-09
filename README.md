@@ -43,7 +43,7 @@ XENO requires three mandatory and one optional piece of reference information. T
 
 - A reference genome in uncompressed fasta format (`.fa`, `.fasta`). This must have been separately indexed with `bwa index`, and the index output files (`.amb`, `.ann`, `.bwt`, `.fai`, `.pac`, and `.sa`) must be found at the same path. Please note that the name of every contig (including detached scaffolds) in the reference genome **must** be exclusively alphanumeric. You can easily rename contigs and build the required bwa index with [MORPH](https://github.com/EcoEvoGenomics/MORPH).
 - A prefix (as a text string) to distinguish scaffolds from contigs. Many reference genomes distinguish loosely assembled scaffolds from full contigs (e.g. `chr1`, `chr2`, ...) by prefixing their names with different strings. For instance, NCBI reference genomes may prefix contigs with "NC_" and scaffolds with "NW_". If applicable, you should provide the prefix characteristic of scaffolds (e.g. `NW_`) to enable more efficient distribution of genotyping windows. If not applicable, you may provide an arbitrary string that matches no contig.
-- A ploidy file (such as in the `examples/` directory). This file is required to call sex chromosomes, haploid chromosomes, mtDNA, or other non-diploid chromosomes correctly. By default every contig is considered diploid.
+- A ploidy file (see the BCFtools documentation for [--ploidy-file](https://samtools.github.io/bcftools/bcftools.html#ploidy)). This file is required to call sex chromosomes, haploid chromosomes, mtDNA, or other non-diploid chromosomes correctly. By default every contig is considered diploid.
 - **Optional:** For variant phasing, you *may* provide XENO the absolute path to a directory containing recombination rate maps. The recombination maps must be compatible with [SHAPEIT5](https://odelaneau.github.io/shapeit/). The directory should contain one recombination map file for each contig in the reference genome and they must be named on the format "contig.map". If for instance your reference genome has the contigs "chr1" and "chr2", the recombination map directory must contain two files: "chr1.map" and "chr2.map". If you do not have recombination maps, you may set this variable to an arbitrary path: XENO will statistically phase the variants instead of using maps.
 
 ### How to correctly format your input CSV file
@@ -98,11 +98,12 @@ XENO has user-configurable options. For instance you may change the alignment me
 | `deduplicate` | Deduplicate reads before trimming? | `false` | `false` |
 | `downsample` | Downsample R1 and R2 files to `read_target` before trimming? | `false` | `false` |
 | `read_target` | Number of reads to downsample to in each of R1 and R2 files.  | `250000` | `1000000` |
+| `trimming_flags` | Path to a file with [fastp read trimming flags](https://github.com/OpenGene/fastp#filtering). | `/user/path/trim.txt`| `./example/default.trim`|
 | `aligner` | Align with `gpu` ([fq2bam](https://docs.nvidia.com/clara/parabricks/tool-reference/tools/fq2bam)), `mem` (bwa mem), or `aln` (bwa aln)? While `gpu` is most efficient, you need [compatible GPUs](https://docs.nvidia.com/clara/parabricks/get-started/installation-requirements#hardware-requirements) to use it.  | `mem` | `gpu` |
 | `exclude_flags` | Exclude reads with this/these flag(s) from alignments. See options [here](https://www.htslib.org/doc/samtools-flags.html). | `DUP,UNMAP` | `0x400` |
 | `concatenate_raw_vcf` | If `false`, only output variants in per-chromosome files. If `true`, also create whole-genome VCF of raw variants. | `true` | `false` |
 | `filtering_label` | A label for the filters in `filtering_flags`. Change between runs to re-filter with different settings. | `biallelic_variants` | `default_filters` |
-| `filtering_flags` | Path to a file with [VCFtools filtering flags](https://vcftools.github.io/man_latest.html#SITE%20FILTERING%20OPTIONS). Regardless, XENO only retains SNPs - not indels. | `/user/path/filters_biallelic_variants.txt` | `./example/default_filters.txt` |
+| `filtering_flags` | Path to a file with [VCFtools filtering flags](https://vcftools.github.io/man_latest.html#SITE%20FILTERING%20OPTIONS). Regardless, XENO only retains SNPs - not indels. | `/user/path/filters_biallelic_variants.txt` | `./example/default.filt` |
 | `phasing_window_size` | Size of phasing windows. Lower sizes yield greater parallelisation.  | `20000000` | `10000000` |
 | `ref_genome` | Path to [reference genome](#required-reference-files). | `/user/path/ref/reference_genome.fa` | |
 | `ref_recombination_map_dir` | Path to directory of [recombination maps](#required-reference-files). | `/user/path/ref/recombination_maps/` | |
@@ -112,17 +113,13 @@ XENO has user-configurable options. For instance you may change the alignment me
 #### Launching XENO through the job scheduler
 Experienced UNIX / HPC users will require no assistance launching XENO: simply load the required dependencies and call `bash ./XENO` in the way you see fit. This section and the next will cover two such ways for less experienced bioinformaticians.
 
-A simple way to run XENO is to write a Slurm job script to load dependencies and launch XENO. For example, see `./examples/quickstart.sh`:
+A simple way to run XENO is to write a Slurm job script to load dependencies and launch XENO. For example:
 ```sh
 #!/bin/bash
 
-# ADMIN
 #SBATCH --job-name=XENO
 #SBATCH --output=SLURM-%j-%x.out
 #SBATCH --error=SLURM-%j-%x.err
-#SBATCH --account=nn10082k
-
-# RESOURCE ALLOCATION
 #SBATCH --nodes=1
 #SBATCH --tasks=1
 #SBATCH --ntasks-per-node=1
@@ -130,16 +127,12 @@ A simple way to run XENO is to write a Slurm job script to load dependencies and
 #SBATCH --mem-per-cpu=5G
 #SBATCH --time=99:00:00
 
-# This quickstart script works on the NRIS Saga HPC for users with access
-# to the nn10082k project number. Must be run from top-level in the repo.
-
 module --quiet purge
 module load Miniconda3/22.11.1-1
-source ${EBROOTMINICONDA3}/bin/activate
-conda activate /cluster/projects/nn10082k/conda_group/Nextflow25.04.6
+conda activate Nextflow25.04.6
 bash ./XENO
 ```
-Note that the `quickstart.sh` script was written for the NRIS Saga HPC. It is a working example, but not universally applicable. You should consult your HPC documentation to modify this script to the specifications of your HPC environment. When you have prepared your Slurm script, simply delegate it to a compute node with:
+Note that this is a generalised example, *not* a working script. You must consult your HPC documentation to adapt this script to the specifications of your HPC environment. When you have prepared your Slurm script, simply delegate it to a compute node with:
 ```sh
 sbatch your_launch_script.sh
 ```
@@ -195,4 +188,4 @@ Thank you for using XENO. If you wish to cite XENO, you should first cite the th
 We plan to provide a citeable persistent identifier for XENO later. For the time being, you are welcome to cite this GitHub repository.
 
 ______
-XENO v. 4.0.1 | 2026 | Erik Sandertun Røed & Mark Ravinet | https://github.com/EcoEvoGenomics/XENO 
+XENO v. 4.1.0 | 2026 | Erik Sandertun Røed & Mark Ravinet | https://github.com/EcoEvoGenomics/XENO 

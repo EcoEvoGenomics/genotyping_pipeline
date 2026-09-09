@@ -1,0 +1,10 @@
+--qualified_quality_phred 20
+--unqualified_percent_limit 40
+--average_qual 20
+--length_required 50
+--length_limit 0
+--complexity_threshold 30
+--cut_window_size 1
+--cut_mean_quality 20
+--cut_front
+--cut_tail

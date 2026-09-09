@@ -1,17 +1,5 @@
-#!/usr/bin/env nextflow
-
-// CEES Ecological and evolutionary genomics group - genotyping pipeline
-// https://github.com/EcoEvoGenomics/genotyping_pipeline
-//
-// Workflow: Filter VCF
-//
-// Originally developed by Mark Ravinet
-// Co-developed and maintained by Erik Sandertun Røed
-
-// Include duplicate processes
 include { summarise_vcf; concatenate_vchks; concatenate_vcfs } from './call_variants.nf'
 
-// Workflow
 workflow{
 
   def ref_index = file(params.ref_genome.toString() + ".fai")
@@ -33,8 +21,8 @@ workflow{
   | summarise_vcf
 
   // Concatenate and output chromosome-level VCFs and VCHKs
-  concatenate_vchks(filtered_chromosome_vchks.collect(), "variants_${params.filtering_label}")
-  concatenate_vcfs(filtered_chromosome_vcfs.flatten().collect(), ref_index, "_${params.filtering_label}", params.ref_scaffold_name, "variants_${params.filtering_label}")
+  concatenate_vchks(filtered_chromosome_vchks.collect(), "${params.filtering_label}")
+  concatenate_vcfs(filtered_chromosome_vcfs.flatten().collect(), ref_index, params.ref_scaffold_name, "${params.filtering_label}")
 
   // Separately:
   save_filters_to_file(file(params.filtering_flags))
@@ -61,26 +49,26 @@ process filter_vcf {
 
   output:
   tuple \
-  path("${key}_${params.filtering_label}.vcf.gz"), \
-  path("${key}_${params.filtering_label}.vcf.gz.csi")
+  path("${key}.vcf.gz"), \
+  path("${key}.vcf.gz.csi")
 
   script:
   """
-  echo '--gzvcf input.vcf.gz' >> filters.args
-  echo '--remove-indels' >> filters.args
-  echo '--recode-INFO-all' >> filters.args
-  echo '--recode' >> filters.args
-  echo '--stdout' >> filters.args
-  cat ${filterfile} >> filters.args
+  echo '--gzvcf input.vcf.gz' >> vcftools.args
+  echo '--remove-indels' >> vcftools.args
+  echo '--recode-INFO-all' >> vcftools.args
+  echo '--recode' >> vcftools.args
+  echo '--stdout' >> vcftools.args
+  cat ${filterfile} >> vcftools.args
 
-  cat filters.args \
+  cat vcftools.args \
   | xargs vcftools \
   | bcftools view --threads ${task.cpus} \
     -e 'ALT="*" || TYPE!="snp"' \
-    -O z -o ${key}_${params.filtering_label}.vcf.gz
+    -O z -o ${key}.vcf.gz
 
   # INDEX FILTERED VCF
-  bcftools index --threads ${task.cpus} ${key}_${params.filtering_label}.vcf.gz
+  bcftools index --threads ${task.cpus} ${key}.vcf.gz
   """
 }
 

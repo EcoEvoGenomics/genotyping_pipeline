@@ -1,3 +1,0 @@
-SAMPLE_A,F,L001,reads_directory/SAMPLE_A_L001_R1.fastq.gz,reads_directory/SAMPLE_A_L001_R2.fastq.gz
-SAMPLE_B,M,L001,reads_directory/SAMPLE_B_L001_R1.fastq.gz,reads_directory/SAMPLE_B_L001_R2.fastq.gz
-SAMPLE_B,M,L002,reads_directory/SAMPLE_B_L002_R1.fastq.gz,reads_directory/SAMPLE_B_L002_R2.fastq.gz

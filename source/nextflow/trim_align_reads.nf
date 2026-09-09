@@ -1,13 +1,3 @@
-#!/usr/bin/env nextflow
-
-// CEES Ecological and evolutionary genomics group - genotyping pipeline
-// https://github.com/EcoEvoGenomics/genotyping_pipeline
-//
-// Workflow: Trim and align reads
-//
-// Originally developed by Mark Ravinet
-// Co-developed and maintained by Erik Sandertun Røed
-
 include { downsample_reads; deduplicate_reads } from "./qc_utils.nf"
 include { qc_reads as qc_raw_reads } from "./qc_utils.nf"
 include { qc_reads as qc_trimmed_reads } from "./qc_utils.nf"
@@ -34,7 +24,7 @@ workflow {
     if (params.downsample) {
         input_reads = downsample_reads(input_reads)
     }
-    def trimmed_reads = trim_reads(input_reads)
+    def trimmed_reads = trim_reads(input_reads, file(params.trimming_flags))
     def readgrouped_trimmed_reads = append_readgroups(trimmed_reads)
     
     // Read quality control
@@ -91,18 +81,18 @@ process trim_reads {
     publishDir "${params.publish_dir}/${ID}/${LANE}", saveAs: { filename -> "$filename" }, mode: 'copy'
 
     container "quay.io/biocontainers/fastp:0.24.0--heae3180_1"
-    cpus 4
+    cpus 16
     memory { task.attempt > 1
         // Double if insufficient in previous attempt - otherwise aim for real peak usage + 50 % from previous
         ? (task.exitStatus == 137 ? task.previousTrace.memory * 2 : task.previousTrace.peak_rss * 1.5)
         // Initial guess
-        : 1.MB * Math.max(8192 , 512 * Math.ceil((R1.size() + R2.size()) / 1024 ** 3))
+        : 1.GB * Math.max(32 , 3 * Math.ceil((R1.size() + R2.size()) / 1024 ** 3))
     }
     time { task.attempt > 1 
         // Double if insufficient in previous attempt, otherwise keep previous allocation
         ? (task.exitStatus == 140 ? task.previousTrace.time * 2 : task.previousTrace.time )
         // Initial guess
-        : 3.m * Math.max(30 , 1.5 * Math.ceil((R1.size() + R2.size()) / 1024 ** 3))
+        : 3.m * Math.max(60 , 1.5 * Math.ceil((R1.size() + R2.size()) / 1024 ** 3))
     }
 
     errorStrategy "retry"
@@ -110,17 +100,21 @@ process trim_reads {
 
     input:
     tuple val(ID), val(LANE), path(R1), path(R2)
+    path(filterfile)
 
     output:
     tuple val(ID), val(LANE), path("${ID}_${LANE}_R1.fastq.gz"), path("${ID}_${LANE}_R2.fastq.gz")
 
     script:
     """
-    fastp \
-    --in1 ${R1} \
-    --in2 ${R2} \
-    --out1 ${ID}_${LANE}_R1.fastq.gz \
-    --out2 ${ID}_${LANE}_R2.fastq.gz
+    echo '--thread ${task.cpus}' >> fastp.args
+    echo '--in1 ${R1}' >> fastp.args
+    echo '--in2 ${R2}' >> fastp.args
+    echo '--out1 ${ID}_${LANE}_R1.fastq.gz' >> fastp.args
+    echo '--out2 ${ID}_${LANE}_R2.fastq.gz' >> fastp.args
+    cat ${filterfile} >> fastp.args
+
+    cat fastp.args | xargs fastp
     """
 }
 
